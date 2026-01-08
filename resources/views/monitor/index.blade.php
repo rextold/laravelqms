@@ -38,8 +38,9 @@
 </head>
 <body class="bg-gray-900 text-white">
     <!-- Header -->
-    <div class="bg-blue-600 py-4">
-        <h1 class="text-4xl font-bold text-center">Queue Management System</h1>
+    <div class="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 py-6 shadow-2xl">
+        <h1 class="text-5xl font-bold text-center text-white drop-shadow-lg animate-pulse">Queue Management System</h1>
+        <p class="text-center text-white text-xl mt-2 opacity-90"><i class="fas fa-broadcast-tower"></i> Live Display</p>
     </div>
 
     <!-- Video Section -->
@@ -52,21 +53,23 @@
     @endif
 
     <!-- Counters Display -->
-    <div class="container mx-auto px-4 py-8">
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="countersGrid">
+    <div class="container mx-auto px-6 py-8">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6" id="countersGrid">
             @foreach($onlineCounters as $counter)
-                <div class="bg-white text-gray-900 rounded-lg p-6 shadow-lg" data-counter-id="{{ $counter->id }}">
+                <div class="bg-gradient-to-br from-white to-gray-100 text-gray-900 rounded-2xl p-6 shadow-2xl transform hover:scale-105 transition-all border-4 border-blue-200" data-counter-id="{{ $counter->id }}">
                     <div class="text-center">
-                        <div class="text-2xl font-bold text-blue-600 mb-2">Counter {{ $counter->counter_number }}</div>
-                        <div class="text-lg font-semibold mb-2">{{ $counter->display_name }}</div>
+                        <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-4xl font-bold rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-3 shadow-lg">
+                            {{ $counter->counter_number }}
+                        </div>
+                        <div class="text-xl font-bold mb-2 text-gray-800">{{ $counter->display_name }}</div>
                         <div class="text-sm text-gray-600 mb-4">{{ $counter->short_description }}</div>
-                        <div class="bg-blue-100 p-4 rounded">
-                            <div class="text-sm text-gray-600 mb-1">Now Serving</div>
-                            <div class="text-4xl font-bold text-blue-600 current-queue">
+                        <div class="bg-gradient-to-r from-blue-500 to-indigo-600 p-6 rounded-xl shadow-inner">
+                            <div class="text-xs text-blue-100 mb-2 font-semibold">NOW SERVING</div>
+                            <div class="text-5xl font-bold text-white current-queue drop-shadow-lg">
                                 @if(isset($counterQueues[$counter->id]) && $counterQueues[$counter->id])
                                     {{ $counterQueues[$counter->id]->queue_number }}
                                 @else
-                                    ---
+                                    <span class="opacity-50">---</span>
                                 @endif
                             </div>
                         </div>

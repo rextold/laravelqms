@@ -7,45 +7,53 @@
     <h1 class="text-3xl font-bold mb-8">Admin Dashboard</h1>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div class="bg-white p-6 rounded-lg shadow">
-            <div class="flex items-center">
-                <div class="p-3 bg-green-100 rounded-full">
-                    <i class="fas fa-users text-green-600 text-2xl"></i>
+        <div class="bg-gradient-to-br from-green-500 to-green-600 p-6 rounded-xl shadow-lg hover:shadow-2xl transition-all transform hover:scale-105">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-green-100 text-sm font-medium mb-1">Online Counters</p>
+                    <p class="text-4xl font-bold text-white">{{ $onlineCounters->count() }}</p>
+                    <p class="text-green-100 text-xs mt-2"><i class="fas fa-circle animate-pulse"></i> Active Now</p>
                 </div>
-                <div class="ml-4">
-                    <p class="text-gray-500">Online Counters</p>
-                    <p class="text-2xl font-bold">{{ $onlineCounters->count() }}</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-white p-6 rounded-lg shadow">
-            <div class="flex items-center">
-                <div class="p-3 bg-blue-100 rounded-full">
-                    <i class="fas fa-desktop text-blue-600 text-2xl"></i>
-                </div>
-                <div class="ml-4">
-                    <p class="text-gray-500">Total Counters</p>
-                    <p class="text-2xl font-bold">{{ $counters->count() }}</p>
+                <div class="p-4 bg-white bg-opacity-20 rounded-full">
+                    <i class="fas fa-users text-white text-3xl"></i>
                 </div>
             </div>
         </div>
 
-        <div class="bg-white p-6 rounded-lg shadow">
-            <div class="flex items-center">
-                <div class="p-3 bg-purple-100 rounded-full">
-                    <i class="fas fa-list text-purple-600 text-2xl"></i>
+        <div class="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-xl shadow-lg hover:shadow-2xl transition-all transform hover:scale-105">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-blue-100 text-sm font-medium mb-1">Total Counters</p>
+                    <p class="text-4xl font-bold text-white">{{ $counters->count() }}</p>
+                    <p class="text-blue-100 text-xs mt-2"><i class="fas fa-check-circle"></i> Registered</p>
                 </div>
-                <div class="ml-4">
-                    <p class="text-gray-500">Total Queues Today</p>
-                    <p class="text-2xl font-bold">{{ \App\Models\Queue::whereDate('created_at', today())->count() }}</p>
+                <div class="p-4 bg-white bg-opacity-20 rounded-full">
+                    <i class="fas fa-desktop text-white text-3xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-purple-500 to-purple-600 p-6 rounded-xl shadow-lg hover:shadow-2xl transition-all transform hover:scale-105">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-purple-100 text-sm font-medium mb-1">Queues Today</p>
+                    <p class="text-4xl font-bold text-white">{{ \App\Models\Queue::whereDate('created_at', today())->count() }}</p>
+                    <p class="text-purple-100 text-xs mt-2"><i class="fas fa-calendar-day"></i> {{ date('M d, Y') }}</p>
+                </div>
+                <div class="p-4 bg-white bg-opacity-20 rounded-full">
+                    <i class="fas fa-list text-white text-3xl"></i>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="bg-white rounded-lg shadow p-6">
-        <h2 class="text-xl font-bold mb-4">Counter Status</h2>
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl font-bold text-gray-800 flex items-center">
+                <i class="fas fa-list-ul mr-3 text-blue-600"></i> Counter Status
+            </h2>
+            <span class="text-sm text-gray-500"><i class="fas fa-sync-alt animate-spin"></i> Live</span>
+        </div>
         <div class="overflow-x-auto">
             <table class="min-w-full">
                 <thead>

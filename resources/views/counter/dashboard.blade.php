@@ -15,40 +15,72 @@
 
     <!-- Stats -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <div class="bg-white p-6 rounded-lg shadow">
-            <div class="text-gray-500 mb-2">Waiting</div>
-            <div class="text-3xl font-bold" id="waitingCount">{{ $stats['waiting'] }}</div>
+        <div class="bg-gradient-to-br from-yellow-400 to-orange-500 p-6 rounded-xl shadow-lg transform hover:scale-105 transition-all">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-orange-100 text-sm font-medium mb-1">Waiting</div>
+                    <div class="text-4xl font-bold text-white" id="waitingCount">{{ $stats['waiting'] }}</div>
+                    <div class="text-orange-100 text-xs mt-2"><i class="fas fa-clock"></i> In Queue</div>
+                </div>
+                <div class="p-4 bg-white bg-opacity-20 rounded-full">
+                    <i class="fas fa-hourglass-half text-white text-3xl"></i>
+                </div>
+            </div>
         </div>
-        <div class="bg-white p-6 rounded-lg shadow">
-            <div class="text-gray-500 mb-2">Completed Today</div>
-            <div class="text-3xl font-bold" id="completedCount">{{ $stats['completed_today'] }}</div>
+        <div class="bg-gradient-to-br from-green-400 to-green-600 p-6 rounded-xl shadow-lg transform hover:scale-105 transition-all">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-green-100 text-sm font-medium mb-1">Completed Today</div>
+                    <div class="text-4xl font-bold text-white" id="completedCount">{{ $stats['completed_today'] }}</div>
+                    <div class="text-green-100 text-xs mt-2"><i class="fas fa-check-circle"></i> Served</div>
+                </div>
+                <div class="p-4 bg-white bg-opacity-20 rounded-full">
+                    <i class="fas fa-check-double text-white text-3xl"></i>
+                </div>
+            </div>
         </div>
-        <div class="bg-white p-6 rounded-lg shadow">
-            <div class="text-gray-500 mb-2">Current Queue</div>
-            <div class="text-3xl font-bold" id="currentQueue">
-                {{ $stats['current_queue'] ? $stats['current_queue']->queue_number : 'None' }}
+        <div class="bg-gradient-to-br from-blue-500 to-indigo-600 p-6 rounded-xl shadow-lg transform hover:scale-105 transition-all">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-blue-100 text-sm font-medium mb-1">Current Queue</div>
+                    <div class="text-3xl font-bold text-white" id="currentQueue">
+                        {{ $stats['current_queue'] ? $stats['current_queue']->queue_number : 'None' }}
+                    </div>
+                    <div class="text-blue-100 text-xs mt-2"><i class="fas fa-user-clock"></i> Serving</div>
+                </div>
+                <div class="p-4 bg-white bg-opacity-20 rounded-full">
+                    <i class="fas fa-user-tie text-white text-3xl"></i>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- Current Queue -->
-    <div class="bg-white rounded-lg shadow p-6 mb-6">
-        <h2 class="text-xl font-bold mb-4">Current Queue</h2>
+    <div class="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-2xl p-8 mb-6 border-4 border-white">
+        <h2 class="text-2xl font-bold mb-6 text-white flex items-center">
+            <i class="fas fa-tv mr-3"></i> Current Queue
+        </h2>
         <div id="currentQueueDisplay" class="text-center">
             @if($stats['current_queue'])
-                <div class="text-6xl font-bold text-blue-600 mb-4">
-                    {{ $stats['current_queue']->queue_number }}
+                <div class="bg-white bg-opacity-20 backdrop-blur-lg rounded-xl p-8 mb-6 animate-pulse">
+                    <p class="text-white text-lg mb-3">NOW SERVING</p>
+                    <div class="text-8xl font-bold text-white mb-4 drop-shadow-2xl">
+                        {{ $stats['current_queue']->queue_number }}
+                    </div>
                 </div>
-                <div class="space-x-4">
-                    <button onclick="moveToNext()" class="bg-green-600 text-white px-6 py-3 rounded hover:bg-green-700">
-                        <i class="fas fa-check mr-2"></i>Complete & Next
+                <div class="flex justify-center space-x-4">
+                    <button onclick="moveToNext()" class="bg-green-500 hover:bg-green-600 text-white px-8 py-4 rounded-xl shadow-lg transform hover:scale-105 transition-all font-bold">
+                        <i class="fas fa-check-circle mr-2"></i>Complete & Next
                     </button>
                 </div>
             @else
-                <p class="text-gray-500 text-xl">No queue being served</p>
-                <button onclick="callNext()" class="mt-4 bg-blue-600 text-white px-6 py-3 rounded hover:bg-blue-700">
-                    <i class="fas fa-bell mr-2"></i>Call Next Queue
-                </button>
+                <div class="bg-white bg-opacity-10 backdrop-blur-lg rounded-xl p-12">
+                    <i class="fas fa-inbox text-white text-6xl mb-4 opacity-50"></i>
+                    <p class="text-white text-2xl mb-6">No queue being served</p>
+                    <button onclick="callNext()" class="bg-white text-indigo-600 px-8 py-4 rounded-xl hover:bg-gray-100 shadow-lg transform hover:scale-105 transition-all font-bold">
+                        <i class="fas fa-bell mr-2"></i>Call Next Queue
+                    </button>
+                </div>
             @endif
         </div>
     </div>
