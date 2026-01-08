@@ -111,30 +111,130 @@
             .then(data => {
                 // Update video control
                 if (video && data.video_control) {
-                    video.volume = (data.video_control.volume || 50) / 100;
+                    const newVolume = (data.video_control.volume || 50) / 100;
+                    if (Math.abs(video.volume - newVolume) > 0.01) {
+                        video.volume = newVolume;
+                    }
+                    
                     if (data.video_control.is_playing && video.paused) {
-                        video.play();
+                        video.play().catch(() => {});
                     } else if (!data.video_control.is_playing && !video.paused) {
                         video.pause();
                     }
                 }
 
-                // Update counters
-                data.counters.forEach(item => {
-                    const counterDiv = document.querySelector(`[data-counter-id="${item.counter.id}"]`);
-                    if (counterDiv) {
-                        const queueDisplay = counterDiv.querySelector('.current-queue');
-                        const newQueue = item.queue ? item.queue.queue_number : '---';
-                        
-                        if (queueDisplay.textContent.trim() !== newQueue) {
-                            queueDisplay.textContent = newQueue;
-                            // Flash animation
-                            counterDiv.classList.add('animate-pulse');
-                            setTimeout(() => counterDiv.classList.remove('animate-pulse'), 2000);
+                // Track existing counter IDs on screen
+                const existingCounterIds = new Set(
+                    Array.from(document.querySelectorAll('[data-counter-id]'))
+                        .map(el => el.getAttribute('data-counter-id'))
+                );
+
+                // Track new counter IDs from data
+                const newCounterIds = new Set(data.counters.map(item => String(item.counter.id)));
+
+                // Remove counters that went offline
+                existingCounterIds.forEach(id => {
+                    if (!newCounterIds.has(id)) {
+                        const counterDiv = document.querySelector(`[data-counter-id="${id}"]`);
+                        if (counterDiv) {
+                            counterDiv.style.transition = 'all 0.5s ease-out';
+                            counterDiv.style.opacity = '0';
+                            counterDiv.style.transform = 'scale(0.8)';
+                            setTimeout(() => counterDiv.remove(), 500);
                         }
                     }
                 });
+
+                // Update existing counters and add new ones
+                data.counters.forEach(item => {
+                    let counterDiv = document.querySelector(`[data-counter-id="${item.counter.id}"]`);
+                    
+                    // Add new counter if it doesn't exist
+                    if (!counterDiv) {
+                        const gridContainer = document.getElementById('countersGrid');
+                        counterDiv = createCounterElement(item);
+                        gridContainer.appendChild(counterDiv);
+                        
+                        // Fade in animation
+                        setTimeout(() => {
+                            counterDiv.style.opacity = '1';
+                            counterDiv.style.transform = 'scale(1)';
+                        }, 10);
+                    } else {
+                        // Update existing counter queue
+                        const queueDisplay = counterDiv.querySelector('.current-queue');
+                        const currentText = queueDisplay.textContent.trim().replace(/\s+/g, '');
+                        const newQueue = item.queue ? item.queue.queue_number : '---';
+                        
+                        if (currentText !== newQueue) {
+                            // Animate queue change
+                            queueDisplay.style.transition = 'all 0.3s ease';
+                            queueDisplay.style.transform = 'scale(1.2)';
+                            queueDisplay.style.color = '#10b981';
+                            
+                            setTimeout(() => {
+                                if (newQueue === '---') {
+                                    queueDisplay.innerHTML = '<span class="opacity-50">---</span>';
+                                } else {
+                                    queueDisplay.textContent = newQueue;
+                                }
+                                
+                                setTimeout(() => {
+                                    queueDisplay.style.transform = 'scale(1)';
+                                    queueDisplay.style.color = '';
+                                }, 150);
+                            }, 150);
+
+                            // Flash border
+                            counterDiv.style.borderColor = '#3b82f6';
+                            setTimeout(() => {
+                                counterDiv.style.borderColor = '';
+                            }, 1000);
+                        }
+                    }
+                });
+
+                // Update marquee if changed
+                if (data.marquee) {
+                    const marqueeElement = document.querySelector('.marquee span');
+                    if (marqueeElement && marqueeElement.textContent.trim() !== data.marquee.text.trim()) {
+                        marqueeElement.textContent = data.marquee.text;
+                        marqueeElement.style.animationDuration = (100 - (data.marquee.speed || 50)) / 2 + 's';
+                    }
+                }
+            })
+            .catch(error => {
+                console.log('Update error:', error);
             });
+    }
+
+    function createCounterElement(item) {
+        const div = document.createElement('div');
+        div.className = 'bg-gradient-to-br from-white to-gray-100 text-gray-900 rounded-2xl p-6 shadow-2xl transform hover:scale-105 transition-all border-4 border-blue-200';
+        div.setAttribute('data-counter-id', item.counter.id);
+        div.style.opacity = '0';
+        div.style.transform = 'scale(0.8)';
+        div.style.transition = 'all 0.5s ease-out';
+        
+        const queueNumber = item.queue ? item.queue.queue_number : '<span class="opacity-50">---</span>';
+        
+        div.innerHTML = `
+            <div class="text-center">
+                <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-4xl font-bold rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-3 shadow-lg">
+                    ${item.counter.counter_number}
+                </div>
+                <div class="text-xl font-bold mb-2 text-gray-800">${item.counter.display_name}</div>
+                <div class="text-sm text-gray-600 mb-4">${item.counter.short_description || ''}</div>
+                <div class="bg-gradient-to-r from-blue-500 to-indigo-600 p-6 rounded-xl shadow-inner">
+                    <div class="text-xs text-blue-100 mb-2 font-semibold">NOW SERVING</div>
+                    <div class="text-5xl font-bold text-white current-queue drop-shadow-lg">
+                        ${queueNumber}
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        return div;
     }
 
     // Update marquee animation speed
