@@ -23,16 +23,35 @@
             overflow: hidden;
             margin: 0;
             padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         body {
             display: flex;
             flex-direction: column;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
         }
         .kiosk-container {
             height: 100vh;
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            position: relative;
+        }
+        /* Animated background pattern */
+        .kiosk-container::before {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+            animation: backgroundMove 20s ease-in-out infinite;
+        }
+        @keyframes backgroundMove {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(-50px, -50px); }
         }
         .kiosk-content {
             flex: 1;
@@ -41,9 +60,20 @@
             justify-content: center;
             padding: 1rem;
             overflow-y: auto;
+            position: relative;
+            z-index: 1;
+        }
+        /* Glassmorphism card effect */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
         }
         .step-indicator {
             position: relative;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .step-indicator::after {
             content: '';
@@ -58,38 +88,91 @@
         .step-active {
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             color: var(--text-color);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+            transform: scale(1.05);
         }
         .step-completed {
             background: linear-gradient(135deg, var(--accent-color), #059669);
             color: white;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
         }
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
+            from { opacity: 0; transform: translateY(30px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
         .animate-fadeIn {
-            animation: fadeIn 0.5s ease-out;
+            animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .bg-brand-gradient {
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
         }
+        /* Counter button hover effect */
+        .counter-btn {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .counter-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s;
+        }
+        .counter-btn:hover::before {
+            left: 100%;
+        }
+        .counter-btn:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            border-color: var(--primary-color);
+        }
         .counters-grid-container {
             max-height: calc(100vh - 28rem);
             overflow-y: auto;
+            padding-right: 4px;
         }
         .counters-grid-container::-webkit-scrollbar {
-            width: 8px;
+            width: 10px;
         }
         .counters-grid-container::-webkit-scrollbar-track {
-            background: #f1f1f1;
+            background: rgba(0, 0, 0, 0.05);
             border-radius: 10px;
         }
         .counters-grid-container::-webkit-scrollbar-thumb {
-            background: #888;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             border-radius: 10px;
         }
         .counters-grid-container::-webkit-scrollbar-thumb:hover {
-            background: #555;
+            background: var(--accent-color);
+        }
+        /* Pulse animation for queue number */
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .pulse-animation {
+            animation: pulse 2s ease-in-out infinite;
+        }
+        /* Button ripple effect */
+        .btn-primary {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+        .btn-primary:active {
+            transform: scale(0.95);
         }
         /* Orientation-specific styles */
         @media (orientation: landscape) and (max-height: 500px) {
@@ -142,30 +225,30 @@
 <body class="bg-brand-gradient">
     <div class="kiosk-container">
         <!-- Settings Button -->
-        <button onclick="showSettings()" class="fixed top-2 right-2 sm:top-4 sm:right-4 bg-white text-gray-700 px-3 py-2 sm:px-6 sm:py-3 rounded-xl shadow-lg hover:shadow-xl transition-all z-50 text-sm sm:text-base">
-            <i class="fas fa-cog mr-1 sm:mr-2"></i> Settings
+        <button onclick="showSettings()" class="fixed top-4 right-4 glass-card text-gray-700 px-4 py-3 sm:px-6 sm:py-3 rounded-2xl shadow-lg hover:shadow-2xl transition-all z-50 text-sm sm:text-base font-semibold hover:scale-105">
+            <i class="fas fa-cog mr-2 animate-spin-slow"></i> Settings
         </button>
 
         <!-- Main Content -->
         <div class="kiosk-content">
-            <div class="w-full max-w-6xl">
+            <div class="w-full max-w-6xl mx-auto px-4">
                 <!-- Step Indicator -->
-                <div class="mb-2 sm:mb-3">
+                <div class="mb-4 sm:mb-6 flex justify-center">
                     <div class="flex justify-center items-center space-x-1 sm:space-x-2 relative">
-                        <div class="flex items-center space-x-1 sm:space-x-2 bg-white px-2 py-1 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl shadow-lg">
-                            <div id="step1Indicator" class="step-indicator flex flex-col items-center step-active px-2 py-1 sm:px-3 sm:py-2 rounded-lg transition-all">
-                                <div class="text-sm sm:text-lg font-bold">1</div>
-                                <div class="text-xs hidden sm:block">Select</div>
+                        <div class="flex items-center space-x-3 sm:space-x-5 glass-card px-4 py-3 sm:px-8 sm:py-4 rounded-2xl sm:rounded-3xl shadow-xl">
+                            <div id="step1Indicator" class="step-indicator flex flex-col items-center step-active px-4 py-3 sm:px-5 sm:py-4 rounded-xl transition-all">
+                                <div class="text-lg sm:text-3xl font-bold mb-1">1</div>
+                                <div class="text-xs sm:text-sm font-semibold">Select</div>
                             </div>
-                            <i class="fas fa-arrow-right text-gray-400 text-xs sm:text-lg"></i>
-                            <div id="step2Indicator" class="step-indicator flex flex-col items-center bg-gray-100 text-gray-600 px-2 py-1 sm:px-3 sm:py-2 rounded-lg transition-all">
-                                <div class="text-sm sm:text-lg font-bold">2</div>
-                                <div class="text-xs hidden sm:block">Generate</div>
+                            <i class="fas fa-arrow-right text-gray-400 text-base sm:text-2xl"></i>
+                            <div id="step2Indicator" class="step-indicator flex flex-col items-center bg-gray-100 text-gray-600 px-4 py-3 sm:px-5 sm:py-4 rounded-xl transition-all">
+                                <div class="text-lg sm:text-3xl font-bold mb-1">2</div>
+                                <div class="text-xs sm:text-sm font-semibold">Process</div>
                             </div>
-                            <i class="fas fa-arrow-right text-gray-400 text-xs sm:text-lg"></i>
-                            <div id="step3Indicator" class="step-indicator flex flex-col items-center bg-gray-100 text-gray-600 px-2 py-1 sm:px-3 sm:py-2 rounded-lg transition-all">
-                                <div class="text-sm sm:text-lg font-bold">3</div>
-                                <div class="text-xs hidden sm:block">Number</div>
+                            <i class="fas fa-arrow-right text-gray-400 text-base sm:text-2xl"></i>
+                            <div id="step3Indicator" class="step-indicator flex flex-col items-center bg-gray-100 text-gray-600 px-4 py-3 sm:px-5 sm:py-4 rounded-xl transition-all">
+                                <div class="text-lg sm:text-3xl font-bold mb-1">3</div>
+                                <div class="text-xs sm:text-sm font-semibold">Done</div>
                             </div>
                         </div>
                     </div>
@@ -173,27 +256,36 @@
 
         <!-- Step 1: Counter Selection -->
         <div id="step1" class="animate-fadeIn">
-            <div class="text-center mb-2 sm:mb-3">
+            <div class="text-center mb-4 sm:mb-8">
                 @if($settings->logo_url)
-                    <img src="{{ $settings->logo_url }}" alt="{{ $settings->company_name }}" class="h-8 sm:h-12 mx-auto mb-1 sm:mb-2">
+                    <div class="mb-4 sm:mb-6">
+                        <img src="{{ $settings->logo_url }}" alt="{{ $settings->company_name }}" class="h-16 sm:h-20 lg:h-24 mx-auto drop-shadow-2xl">
+                    </div>
                 @endif
-                <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold mb-1 drop-shadow-lg" style="color: var(--text-color)">Welcome!</h1>
-                <p class="text-sm sm:text-lg drop-shadow" style="color: var(--text-color)">{{ $settings->company_name }}</p>
-                <p class="text-xs sm:text-sm mt-1 drop-shadow" style="color: var(--text-color); opacity: 0.9;">Select a counter to get your priority number</p>
+                <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-3 sm:mb-4 drop-shadow-2xl" style="color: var(--text-color); text-shadow: 2px 2px 4px rgba(0,0,0,0.1);">Welcome!</h1>
+                <p class="text-xl sm:text-2xl lg:text-3xl font-bold drop-shadow-lg mb-3" style="color: var(--text-color); opacity: 0.95;">{{ $settings->company_name }}</p>
+                <div class="inline-block glass-card px-6 py-3 rounded-2xl">
+                    <p class="text-base sm:text-lg lg:text-xl font-medium" style="color: var(--text-color); opacity: 0.9;">
+                        <i class="fas fa-hand-pointer mr-2 animate-bounce"></i>Select a counter to get started
+                    </p>
+                </div>
             </div>
 
-            <div class="bg-white rounded-xl sm:rounded-2xl shadow-2xl p-3 sm:p-4">
+            <div class="glass-card rounded-2xl sm:rounded-3xl shadow-2xl p-5 sm:p-8 lg:p-10">
+                <h2 class="text-2xl sm:text-3xl lg:text-4xl font-bold mb-6 sm:mb-8 text-center bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    <i class="fas fa-desktop mr-3"></i>Available Service Counters
+                </h2>
                 <div class="counters-grid-container">
-                    <div id="countersGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
+                    <div id="countersGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
                         <!-- counters injected via JS -->
                     </div>
                 </div>
-                <div id="noCounters" class="hidden col-span-full text-center py-4 sm:py-6">
-                    <i class="fas fa-info-circle text-2xl sm:text-4xl text-gray-300 mb-1 sm:mb-2"></i>
-                    <h3 class="text-base sm:text-xl font-bold text-gray-700 mb-1">No Counters Available</h3>
-                    <p class="text-gray-500 text-xs sm:text-sm">Please wait for a counter to come online</p>
-                    <div class="mt-1 sm:mt-2">
-                        <i class="fas fa-spinner fa-spin text-blue-500 text-base sm:text-lg"></i>
+                <div id="noCounters" class="hidden col-span-full text-center py-12 sm:py-16">
+                    <i class="fas fa-info-circle text-5xl sm:text-7xl text-gray-300 mb-4 sm:mb-6"></i>
+                    <h3 class="text-2xl sm:text-3xl font-bold text-gray-700 mb-3">No Counters Available</h3>
+                    <p class="text-gray-500 text-base sm:text-lg">All service counters are currently offline. Please wait a moment.</p>
+                    <div class="mt-4 sm:mt-6">
+                        <i class="fas fa-spinner fa-spin text-blue-500 text-2xl sm:text-3xl"></i>
                     </div>
                 </div>
             </div>
@@ -201,45 +293,60 @@
 
                 <!-- Step 2: Generating -->
                 <div id="step2" class="hidden animate-fadeIn">
-                    <div class="bg-white rounded-xl sm:rounded-2xl shadow-2xl p-6 sm:p-8 text-center">
-                        <div class="mb-4">
-                            <i class="fas fa-spinner fa-spin text-blue-500 text-4xl sm:text-6xl mb-2 sm:mb-3"></i>
-                            <h2 class="text-lg sm:text-2xl lg:text-3xl font-bold text-gray-800 mb-1 sm:mb-2">Generating Your Priority Number</h2>
-                            <p class="text-sm sm:text-base text-gray-600">Please wait a moment...</p>
+                    <div class="glass-card rounded-2xl sm:rounded-3xl shadow-2xl p-10 sm:p-16 text-center max-w-2xl mx-auto">
+                        <div class="mb-8">
+                            <div class="inline-block p-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full mb-6">
+                                <i class="fas fa-spinner fa-spin text-white text-5xl sm:text-7xl"></i>
+                            </div>
+                            <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4 sm:mb-6">Processing Your Request</h2>
+                            <p class="text-lg sm:text-xl text-gray-600">Generating your queue number...</p>
                         </div>
-                        <div class="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full overflow-hidden">
-                            <div class="h-full bg-white animate-pulse" style="width: 100%; animation: progress 2s ease-in-out infinite;"></div>
+                        <div class="relative bg-gray-200 h-4 rounded-full overflow-hidden">
+                            <div class="absolute h-full bg-gradient-to-r from-blue-500 via-purple-600 to-blue-500 animate-pulse" style="width: 100%; animation: progress 2s ease-in-out infinite;"></div>
                         </div>
                     </div>
                 </div>
                 </div>
 
                 <!-- Step 3: Queue Display -->
-                <div id="step3" class="hidden animate-fadeIn">
-                    <div class="bg-white rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-6 text-center" id="queueContent">
-                        <div class="mb-2 sm:mb-3">
-                            <i class="fas fa-check-circle text-green-500 text-2xl sm:text-4xl mb-1"></i>
-                            <h2 class="text-lg sm:text-2xl font-bold mb-1 text-gray-800">Your Priority Number</h2>
-                            <p class="text-xs sm:text-sm text-gray-600">Please keep this number visible</p>
+                <div id="step3" class="hidden animate-fadeIn flex justify-center items-center">
+                    <div class="glass-card rounded-2xl sm:rounded-3xl shadow-2xl p-8 sm:p-12 lg:p-14 text-center max-w-4xl w-full mx-auto" id="queueContent">
+                        <div class="mb-6 sm:mb-8">
+                            <div class="inline-block p-4 bg-green-100 rounded-full mb-4">
+                                <i class="fas fa-check-circle text-green-500 text-5xl sm:text-7xl"></i>
+                            </div>
+                            <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold mb-3 bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">Success!</h2>
+                            <p class="text-base sm:text-lg lg:text-xl text-gray-600 font-medium">Your queue number is ready</p>
                         </div>
                         
-                        <div class="bg-brand-gradient text-white p-4 sm:p-6 rounded-lg sm:rounded-2xl mb-3 sm:mb-4 shadow-2xl">
-                            <div class="text-5xl sm:text-6xl font-bold mb-1 sm:mb-2 tracking-wider" id="queueNumber" style="color: var(--text-color)"></div>
-                            <div class="text-base sm:text-lg font-semibold mb-0.5" id="counterInfo" style="color: var(--text-color)"></div>
-                            <div class="text-xs sm:text-sm opacity-90" id="queueTime" style="color: var(--text-color)"></div>
+                        <div class="relative bg-brand-gradient text-white p-8 sm:p-12 lg:p-16 rounded-2xl sm:rounded-3xl mb-6 sm:mb-8 shadow-2xl overflow-hidden">
+                            <div class="absolute inset-0 bg-white opacity-10" style="background-image: radial-gradient(circle, rgba(255,255,255,0.3) 1px, transparent 1px); background-size: 20px 20px;"></div>
+                            <div class="relative z-10">
+                                <p class="text-sm sm:text-base lg:text-lg font-bold mb-3 opacity-90" style="color: var(--text-color); letter-spacing: 2px;">YOUR QUEUE NUMBER</p>
+                                <div class="text-7xl sm:text-8xl lg:text-9xl font-black mb-4 sm:mb-6 tracking-wider pulse-animation" id="queueNumber" style="color: var(--text-color); text-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+                                <div class="text-xl sm:text-2xl lg:text-3xl font-bold mb-2" id="counterInfo" style="color: var(--text-color);"></div>
+                                <div class="text-base sm:text-lg opacity-90" id="queueTime" style="color: var(--text-color);"></div>
+                            </div>
                         </div>
                         
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2 sm:mb-3">
-                            <button onclick="printQueue()" class="text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold shadow-lg transform hover:scale-105 transition-all" style="background: var(--accent-color)">
-                                <i class="fas fa-print mr-1 sm:mr-2 text-sm sm:text-base"></i>Print
+                        <div class="bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-500 p-5 sm:p-6 mb-6 sm:mb-8 rounded-lg text-left shadow-md">
+                            <p class="text-sm sm:text-base lg:text-lg text-gray-800 font-medium">
+                                <i class="fas fa-info-circle mr-2 text-yellow-600"></i>
+                                <strong>Important:</strong> Please wait for your number to be called on the display monitor.
+                            </p>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 mb-5 sm:mb-6">
+                            <button onclick="printQueue()" class="btn-primary text-white px-6 py-4 sm:px-8 sm:py-5 rounded-xl text-base sm:text-lg font-bold shadow-xl transform hover:scale-105 hover:shadow-2xl transition-all" style="background: linear-gradient(135deg, var(--accent-color), var(--primary-color));">
+                                <i class="fas fa-print mr-3 text-lg sm:text-xl"></i>Print Number
                             </button>
-                            <button onclick="capturePhoto()" class="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold shadow-lg transform hover:scale-105 transition-all" style="background: var(--secondary-color); color: var(--text-color)">
-                                <i class="fas fa-camera mr-1 sm:mr-2 text-sm sm:text-base"></i>Photo
+                            <button onclick="capturePhoto()" class="btn-primary px-6 py-4 sm:px-8 sm:py-5 rounded-xl text-base sm:text-lg font-bold shadow-xl transform hover:scale-105 hover:shadow-2xl transition-all" style="background: linear-gradient(135deg, var(--secondary-color), var(--accent-color)); color: var(--text-color);">
+                                <i class="fas fa-camera mr-3 text-lg sm:text-xl"></i>Take Screenshot
                             </button>
                         </div>
                         
-                        <button onclick="finishAndReset()" class="w-full bg-brand-gradient text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-sm sm:text-base font-bold shadow-lg transform hover:scale-105 transition-all" style="color: var(--text-color)">
-                            <i class="fas fa-check mr-1 sm:mr-2"></i>Done
+                        <button onclick="finishAndReset()" class="w-full btn-primary bg-brand-gradient text-white px-6 py-5 sm:px-8 sm:py-6 rounded-2xl text-lg sm:text-xl font-bold shadow-xl transform hover:scale-105 hover:shadow-2xl transition-all" style="color: var(--text-color);">
+                            <i class="fas fa-redo mr-3"></i>Get Another Number
                         </button>
                     </div>
                 </div>

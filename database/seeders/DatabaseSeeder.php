@@ -14,8 +14,9 @@ class DatabaseSeeder extends Seeder
         // Seed companies first
         $this->call(CompanySeeder::class);
 
-        // Get the default company
-        $company = Company::where('company_code', 'DEFAULT')->first();
+        // Get all companies
+        $companies = Company::all();
+        $defaultCompany = Company::where('company_code', 'DEFAULT')->first();
 
         // Create SuperAdmin (no company_id - supervises all companies)
         User::create([
@@ -26,27 +27,35 @@ class DatabaseSeeder extends Seeder
             'company_id' => null,
         ]);
 
-        // Create Admin
-        User::create([
-            'username' => 'admin',
-            'email' => 'admin@qms.com',
-            'password' => Hash::make('password'),
-            'role' => 'admin',
-            'company_id' => $company->id,
-        ]);
+        // Create Admin for each company
+        foreach ($companies as $company) {
+            User::updateOrCreate(
+                [
+                    'username' => 'admin',
+                    'role' => 'admin',
+                    'company_id' => $company->id
+                ],
+                [
+                    'email' => 'admin@' . strtolower($company->company_code) . '.com',
+                    'password' => Hash::make('password'),
+                ]
+            );
+        }
 
-        // Create sample counters
-        for ($i = 1; $i <= 5; $i++) {
-            User::create([
-                'username' => 'counter' . $i,
-                'password' => Hash::make('password'),
-                'role' => 'counter',
-                'display_name' => 'Counter ' . $i,
-                'counter_number' => $i,
-                'short_description' => 'General Service Counter',
-                'is_online' => false,
-                'company_id' => $company->id,
-            ]);
+        // Create sample counters for default company
+        if ($defaultCompany) {
+            for ($i = 1; $i <= 5; $i++) {
+                User::create([
+                    'username' => 'counter' . $i,
+                    'password' => Hash::make('password'),
+                    'role' => 'counter',
+                    'display_name' => 'Counter ' . $i,
+                    'counter_number' => $i,
+                    'short_description' => 'General Service Counter',
+                    'is_online' => false,
+                    'company_id' => $defaultCompany->id,
+                ]);
+            }
         }
     }
 }
