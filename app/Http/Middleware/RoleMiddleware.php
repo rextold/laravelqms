@@ -14,7 +14,18 @@ class RoleMiddleware
             return redirect('/login');
         }
 
-        if (!in_array($request->user()->role, $roles)) {
+        // Normalize roles to be case-insensitive and allow aliases (e.g., teller == counter)
+        $userRole = strtolower(trim($request->user()->role));
+        if ($userRole === 'teller') {
+            $userRole = 'counter';
+        }
+
+        $allowedRoles = array_map(function ($role) {
+            $normalized = strtolower(trim($role));
+            return $normalized === 'teller' ? 'counter' : $normalized;
+        }, $roles);
+
+        if (!in_array($userRole, $allowedRoles, true)) {
             abort(403, 'Unauthorized action.');
         }
 
