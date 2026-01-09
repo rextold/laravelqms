@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\CompanySetting;
+use App\Models\OrganizationSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -10,50 +10,47 @@ class CompanySettingsController extends Controller
 {
     public function edit()
     {
-        $settings = CompanySetting::getSettings();
-        return view('admin.company-settings', compact('settings'));
+        $settings = OrganizationSetting::getSettings();
+        return view('admin.organization-settings', compact('settings'));
     }
 
     public function update(Request $request)
     {
         $validated = $request->validate([
-            'company_name' => 'required|string|max:255',
+            'organization_name' => 'required|string|max:255',
             'primary_color' => 'required|string|max:7',
             'secondary_color' => 'required|string|max:7',
             'accent_color' => 'required|string|max:7',
             'text_color' => 'required|string|max:7',
-            'company_address' => 'nullable|string',
-            'company_phone' => 'nullable|string|max:50',
-            'company_email' => 'nullable|email|max:255',
             'queue_number_digits' => 'required|integer|min:3|max:6',
-            'company_logo' => 'nullable|image|mimes:jpeg,png,jpg,svg|max:2048',
+            'logo_path' => 'nullable|image|mimes:jpeg,png,jpg,svg|max:2048',
         ]);
 
-        $settings = CompanySetting::getSettings();
+        $settings = OrganizationSetting::getSettings();
 
         // Handle logo upload
-        if ($request->hasFile('company_logo')) {
+        if ($request->hasFile('logo_path')) {
             // Delete old logo
-            if ($settings->company_logo) {
-                Storage::disk('public')->delete($settings->company_logo);
+            if ($settings->logo_path) {
+                Storage::disk('public')->delete($settings->logo_path);
             }
 
-            $logoPath = $request->file('company_logo')->store('logos', 'public');
-            $validated['company_logo'] = $logoPath;
+            $logoPath = $request->file('logo_path')->store('logos', 'public');
+            $validated['logo_path'] = $logoPath;
         }
 
         $settings->update($validated);
 
-        return redirect()->back()->with('success', 'Company settings updated successfully!');
+        return redirect()->back()->with('success', 'Organization settings updated successfully!');
     }
 
     public function removeLogo()
     {
-        $settings = CompanySetting::getSettings();
+        $settings = OrganizationSetting::getSettings();
         
-        if ($settings->company_logo) {
-            Storage::disk('public')->delete($settings->company_logo);
-            $settings->update(['company_logo' => null]);
+        if ($settings->logo_path) {
+            Storage::disk('public')->delete($settings->logo_path);
+            $settings->update(['logo_path' => null]);
         }
 
         return redirect()->back()->with('success', 'Logo removed successfully!');

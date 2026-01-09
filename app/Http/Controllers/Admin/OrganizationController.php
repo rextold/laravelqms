@@ -3,12 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Company;
-use App\Models\CompanySetting;
+use App\Models\Organization;
+use App\Models\OrganizationSetting;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 
-class CompanyController extends Controller
+class OrganizationController extends Controller
 {
     public function index()
     {
@@ -17,8 +16,8 @@ class CompanyController extends Controller
             abort(403);
         }
 
-        $companies = Organization::with('setting')->orderBy('created_at', 'desc')->get();
-        return view('admin.companies.index', compact('companies'));
+        $organizations = Organization::with('setting')->orderBy('created_at', 'desc')->get();
+        return view('admin.companies.index', compact('organizations'));
     }
 
     public function create()
@@ -47,12 +46,12 @@ class CompanyController extends Controller
         $validated['organization_code'] = strtoupper($validated['organization_code']);
         $validated['is_active'] = $request->has('is_active');
 
-        $company = Organization::create($validated);
+        $organization = Organization::create($validated);
 
         // Create default organization settings
         OrganizationSetting::create([
-            'organization_id' => $company->id,
-            'code' => $company->organization_code,
+            'organization_id' => $organization->id,
+            'code' => $organization->organization_code,
             'primary_color' => '#4F46E5',
             'secondary_color' => '#10B981',
             'accent_color' => '#F59E0B',
@@ -62,31 +61,31 @@ class CompanyController extends Controller
         ]);
 
         return redirect()->route('superadmin.organizations.index')
-            ->with('success', 'Company created successfully.');
+            ->with('success', 'Organization created successfully.');
     }
 
-    public function edit($company)
+    public function edit($organization)
     {
         // Only SuperAdmin can access this
         if (!auth()->user()->isSuperAdmin()) {
             abort(403);
         }
 
-        $company = Organization::findOrFail($company);
-        return view('admin.companies.edit', compact('company'));
+        $organization = Organization::findOrFail($organization);
+        return view('admin.companies.edit', compact('organization'));
     }
 
-    public function update(Request $request, $company)
+    public function update(Request $request, $organization)
     {
         // Only SuperAdmin can access this
         if (!auth()->user()->isSuperAdmin()) {
             abort(403);
         }
 
-        $company = Organization::findOrFail($company);
+        $organization = Organization::findOrFail($organization);
 
         $validated = $request->validate([
-            'organization_code' => 'required|string|max:50|alpha_dash|unique:organizations,organization_code,' . $company->id,
+            'organization_code' => 'required|string|max:50|alpha_dash|unique:organizations,organization_code,' . $organization->id,
             'organization_name' => 'required|string|max:255',
             'is_active' => 'boolean',
         ]);
@@ -94,36 +93,36 @@ class CompanyController extends Controller
         $validated['organization_code'] = strtoupper($validated['organization_code']);
         $validated['is_active'] = $request->has('is_active');
 
-        $company->update($validated);
+        $organization->update($validated);
 
         // Update organization settings if exists
-        if ($company->setting) {
-            $company->setting->update([
+        if ($organization->setting) {
+            $organization->setting->update([
                 'code' => $validated['organization_code'],
             ]);
         }
 
         return redirect()->route('superadmin.organizations.index')
-            ->with('success', 'Company updated successfully.');
+            ->with('success', 'Organization updated successfully.');
     }
 
-    public function destroy($company)
+    public function destroy($organization)
     {
         // Only SuperAdmin can access this
         if (!auth()->user()->isSuperAdmin()) {
             abort(403);
         }
 
-        $company = Organization::findOrFail($company);
+        $organization = Organization::findOrFail($organization);
 
-        // Prevent deletion if company has users
-        if ($company->users()->count() > 0) {
+        // Prevent deletion if organization has users
+        if ($organization->users()->count() > 0) {
             return back()->with('error', 'Cannot delete organization with existing users. Please reassign or delete users first.');
         }
 
-        $company->delete();
+        $organization->delete();
 
-        return redirect()->route('superadmin.companies.index')
+        return redirect()->route('superadmin.organizations.index')
             ->with('success', 'Organization deleted successfully.');
     }
 }

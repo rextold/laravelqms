@@ -39,8 +39,9 @@ class CounterController extends Controller
     {
         $counter = auth()->user();
         $stats = $this->queueService->getCounterStats($counter);
-        $settings = \App\Models\CompanySetting::getSettings();
-        return view('counter.call', compact('counter', 'stats', 'settings'));
+        $settings = \App\Models\OrganizationSetting::getSettings();
+        $organization = $counter->organization;
+        return view('counter.call', compact('counter', 'stats', 'settings', 'organization'));
     }
 
     public function getData()

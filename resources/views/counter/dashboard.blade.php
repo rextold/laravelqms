@@ -5,7 +5,7 @@
 @section('content')
 <div class="container mx-auto px-4 py-8">
     <div class="flex justify-end items-center mb-6">
-        <form id="onlineForm" action="{{ route('counter.toggle-online', ['company_code' => request()->route('company_code')]) }}" method="POST">
+        <form id="onlineForm" action="{{ route('counter.toggle-online', ['organization_code' => request()->route('organization_code')]) }}" method="POST">
             @csrf
             <button type="submit" id="onlineBtn" 
                     class="px-4 py-2 rounded {{ $counter->is_online ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700' }} text-white flex items-center">
@@ -131,7 +131,7 @@ function startAutoRefresh() {
 }
 
 function refreshDashboardData() {
-    fetch('{{ route('counter.data', ['company_code' => request()->route('company_code')]) }}', {
+    fetch('{{ route('counter.data', ['organization_code' => request()->route('organization_code')]) }}', {
         credentials: 'same-origin',
         headers: { 'Accept': 'application/json' }
     })
@@ -157,7 +157,7 @@ function toggleOnline() {
     btn.disabled = true;
     spinner.classList.remove('hidden');
 
-    fetch('{{ route('counter.toggle-online', ['company_code' => request()->route('company_code')]) }}', {
+    fetch('{{ route('counter.toggle-online', ['organization_code' => request()->route('organization_code')]) }}', {
         method: 'POST',
         credentials: 'same-origin',
         headers: {

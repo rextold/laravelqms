@@ -17,12 +17,12 @@
             </div>
         @endif
 
-        <form action="{{ route('superadmin.companies.store') }}" method="POST" class="bg-white p-6 rounded-lg shadow">
+        <form action="{{ route('superadmin.organizations.store') }}" method="POST" class="bg-white p-6 rounded-lg shadow">
             @csrf
 
             <div class="mb-4">
-                <label for="company_code" class="block text-gray-700 font-semibold mb-2">Organization Code *</label>
-                <input type="text" id="company_code" name="company_code" value="{{ old('company_code') }}" 
+                <label for="organization_code" class="block text-gray-700 font-semibold mb-2">Organization Code *</label>
+                <input type="text" id="organization_code" name="organization_code" value="{{ old('organization_code') }}" 
                        class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 uppercase"
                        placeholder="e.g., ACME, COMPANY_A"
                        required>
@@ -30,8 +30,8 @@
             </div>
 
             <div class="mb-4">
-                <label for="company_name" class="block text-gray-700 font-semibold mb-2">Organization Name *</label>
-                <input type="text" id="company_name" name="company_name" value="{{ old('company_name') }}" 
+                <label for="organization_name" class="block text-gray-700 font-semibold mb-2">Organization Name *</label>
+                <input type="text" id="organization_name" name="organization_name" value="{{ old('organization_name') }}" 
                        class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
                        placeholder="e.g., Acme Corporation"
                        required>
@@ -46,7 +46,7 @@
             </div>
 
             <div class="flex justify-end space-x-4">
-                <a href="{{ route('superadmin.companies.index') }}" class="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100">
+                <a href="{{ route('superadmin.organizations.index') }}" class="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100">
                     Cancel
                 </a>
                 <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
@@ -58,8 +58,8 @@
 </div>
 
 <script>
-    // Auto-uppercase company code
-    document.getElementById('company_code').addEventListener('input', function(e) {
+    // Auto-uppercase organization code
+    document.getElementById('organization_code').addEventListener('input', function(e) {
         e.target.value = e.target.value.toUpperCase();
     });
 </script>

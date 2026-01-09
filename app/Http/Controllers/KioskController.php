@@ -3,7 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use App\Models\CompanySetting;
+use App\Models\Organization;
+use App\Models\OrganizationSetting;
 use App\Services\QueueService;
 use Illuminate\Http\Request;
 
@@ -18,10 +19,26 @@ class KioskController extends Controller
 
     public function index(Request $request)
     {
-        $companyCode = $request->route('company_code');
+        $organization = Organization::where('organization_code', $request->route('organization_code'))->firstOrFail();
+        $companyCode = $request->route('organization_code');
         $onlineCounters = User::onlineCounters()->get();
-        $settings = CompanySetting::getSettings();
-        return view('kiosk.index', compact('onlineCounters', 'settings', 'companyCode'));
+        $settings = OrganizationSetting::where('organization_id', $organization->id)->first();
+        
+        // Create default settings if none exist
+        if (!$settings) {
+            $settings = OrganizationSetting::create([
+                'organization_id' => $organization->id,
+                'code' => $organization->organization_code,
+                'primary_color' => '#3b82f6',
+                'secondary_color' => '#8b5cf6',
+                'accent_color' => '#10b981',
+                'text_color' => '#ffffff',
+                'queue_number_digits' => 4,
+                'is_active' => true,
+            ]);
+        }
+        
+        return view('kiosk.index', compact('onlineCounters', 'settings', 'companyCode', 'organization'));
     }
 
     public function counters()

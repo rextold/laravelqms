@@ -6,7 +6,8 @@ use App\Models\User;
 use App\Models\Video;
 use App\Models\VideoControl;
 use App\Models\MarqueeSetting;
-use App\Models\CompanySetting;
+use App\Models\Organization;
+use App\Models\OrganizationSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
@@ -14,12 +15,27 @@ class MonitorController extends Controller
 {
     public function index(Request $request)
     {
-        $companyCode = $request->route('company_code');
+        $organization = Organization::where('organization_code', $request->route('organization_code'))->firstOrFail();
+        $companyCode = $request->route('organization_code');
         $onlineCounters = User::onlineCounters()->get();
         $videos = Video::active()->get();
         $videoControl = VideoControl::getCurrent();
         $marquee = MarqueeSetting::getActive();
-        $settings = CompanySetting::getSettings();
+        $settings = OrganizationSetting::where('organization_id', $organization->id)->first();
+        
+        // Create default settings if none exist
+        if (!$settings) {
+            $settings = OrganizationSetting::create([
+                'organization_id' => $organization->id,
+                'code' => $organization->organization_code,
+                'primary_color' => '#3b82f6',
+                'secondary_color' => '#8b5cf6',
+                'accent_color' => '#10b981',
+                'text_color' => '#ffffff',
+                'queue_number_digits' => 4,
+                'is_active' => true,
+            ]);
+        }
 
         // Get current queue for each counter
         $counterQueues = [];
@@ -27,7 +43,7 @@ class MonitorController extends Controller
             $counterQueues[$counter->id] = $counter->getCurrentQueue();
         }
 
-        return view('monitor.index', compact('onlineCounters', 'videos', 'videoControl', 'marquee', 'counterQueues', 'settings', 'companyCode'));
+        return view('monitor.index', compact('onlineCounters', 'videos', 'videoControl', 'marquee', 'counterQueues', 'settings', 'companyCode', 'organization'));
     }
 
     public function getData()

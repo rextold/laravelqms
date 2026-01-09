@@ -4,25 +4,29 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class CompanySetting extends Model
+class OrganizationSetting extends Model
 {
     protected $table = 'organization_settings';
-    
+
     protected $fillable = [
         'organization_id',
         'code',
-        'logo_path',
+        'organization_name',
+        'organization_logo',
         'primary_color',
         'secondary_color',
         'accent_color',
         'text_color',
+        'organization_address',
+        'organization_phone',
+        'organization_email',
         'queue_number_digits',
         'is_active',
     ];
 
     public function organization()
     {
-        return $this->belongsTo(Organization::class);
+        return $this->belongsTo(Organization::class, 'organization_id');
     }
 
     /**
@@ -67,8 +71,8 @@ class CompanySetting extends Model
      */
     public function getLogoUrlAttribute()
     {
-        if ($this->logo_path) {
-            return asset('storage/' . $this->logo_path);
+        if ($this->organization_logo) {
+            return asset('storage/' . $this->organization_logo);
         }
         return null;
     }

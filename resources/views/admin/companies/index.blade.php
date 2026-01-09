@@ -6,7 +6,7 @@
 <div class="container mx-auto px-4 py-8">
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold">Manage Organizations</h1>
-        <a href="{{ route('superadmin.companies.create') }}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+        <a href="{{ route('superadmin.organizations.create') }}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
             <i class="fas fa-plus mr-2"></i>Add Organization
         </a>
     </div>
@@ -36,35 +36,35 @@
                 </tr>
             </thead>
             <tbody>
-                @forelse($companies as $company)
+                @forelse($organizations as $organization)
                 <tr class="border-b hover:bg-gray-50">
                     <td class="py-3 px-4">
-                        <span class="font-semibold text-blue-600">{{ $company->company_code }}</span>
+                        <span class="font-semibold text-blue-600">{{ $organization->organization_code }}</span>
                     </td>
-                    <td class="py-3 px-4">{{ $company->company_name }}</td>
+                    <td class="py-3 px-4">{{ $organization->organization_name }}</td>
                     <td class="py-3 px-4">
                         <span class="px-2 py-1 rounded text-sm bg-gray-100 text-gray-800">
-                            {{ $company->users()->count() }} users
+                            {{ $organization->users()->count() }} users
                         </span>
                     </td>
                     <td class="py-3 px-4">
-                        @if($company->is_active)
+                        @if($organization->is_active)
                             <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">Active</span>
                         @else
                             <span class="bg-red-100 text-red-800 px-2 py-1 rounded text-sm">Inactive</span>
                         @endif
                     </td>
-                    <td class="py-3 px-4">{{ $company->created_at->format('M d, Y') }}</td>
+                    <td class="py-3 px-4">{{ $organization->created_at->format('M d, Y') }}</td>
                     <td class="py-3 px-4">
                         <div class="flex space-x-2">
-                            <a href="{{ route('superadmin.companies.edit', $company->id) }}" class="text-blue-600 hover:text-blue-800">
+                            <a href="{{ route('superadmin.organizations.edit', $organization->id) }}" class="text-blue-600 hover:text-blue-800">
                                 <i class="fas fa-edit"></i>
                             </a>
-                            @if($company->users()->count() == 0)
+                            @if($organization->users()->count() == 0)
                                 <button type="button" 
-                                        data-org-id="{{ $company->id }}"
-                                        data-org-name="{{ $company->company_name }}"
-                                        data-delete-url="{{ route('superadmin.companies.destroy', ['company' => $company->id]) }}"
+                                        data-org-id="{{ $organization->id }}"
+                                        data-org-name="{{ $organization->organization_name }}"
+                                        data-delete-url="{{ route('superadmin.organizations.destroy', ['organization' => $organization->id]) }}"
                                         onclick="openDeleteOrgModal(this)"
                                         class="text-red-600 hover:text-red-800">
                                     <i class="fas fa-trash"></i>

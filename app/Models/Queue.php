@@ -18,7 +18,7 @@ class Queue extends Model
         'notified_at',
         'skipped_at',
         'completed_at',
-        'company_id',
+        'organization_id',
     ];
 
     protected $casts = [
@@ -33,9 +33,9 @@ class Queue extends Model
         return $this->belongsTo(User::class, 'counter_id');
     }
 
-    public function company()
+    public function organization()
     {
-        return $this->belongsTo(Company::class);
+        return $this->belongsTo(Organization::class);
     }
 
     public function transferredCounter()

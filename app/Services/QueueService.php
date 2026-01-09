@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Models\Queue;
 use App\Models\User;
-use App\Models\CompanySetting;
+use App\Models\OrganizationSetting;
 use App\Events\QueueCreated;
 use App\Events\QueueCalled;
 use App\Events\QueueTransferred;
@@ -14,7 +14,7 @@ class QueueService
 {
     public function generateQueueNumber(User $counter): string
     {
-        $settings = CompanySetting::getSettings();
+        $settings = OrganizationSetting::getSettings();
         // Default to 4 digits if setting is missing or invalid to avoid TypeErrors
         $digits = (int) ($settings->queue_number_digits ?? 4);
         if ($digits <= 0) {

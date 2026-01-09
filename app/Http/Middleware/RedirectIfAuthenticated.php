@@ -35,17 +35,17 @@ class RedirectIfAuthenticated
         }
 
         if (method_exists($user, 'isAdmin') && $user->isAdmin()) {
-            $company = $user->company;
-            if ($company) {
-                return redirect()->route('admin.dashboard', ['company_code' => $company->company_code]);
+            $organization = $user->organization;
+            if ($organization) {
+                return redirect()->route('admin.dashboard', ['organization_code' => $organization->organization_code]);
             }
             return redirect('/');
         }
 
         if (method_exists($user, 'isCounter') && $user->isCounter()) {
-            $company = $user->company;
-            if ($company) {
-                return redirect()->route('counter.dashboard', ['company_code' => $company->company_code]);
+            $organization = $user->organization;
+            if ($organization) {
+                return redirect()->route('counter.dashboard', ['organization_code' => $organization->organization_code]);
             }
             return redirect('/');
         }

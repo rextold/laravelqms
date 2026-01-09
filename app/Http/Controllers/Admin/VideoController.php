@@ -102,9 +102,30 @@ class VideoController extends Controller
                 $data['youtube_url'] = $validated['youtube_url'];
             }
 
-            Video::create($data);
+            $video = Video::create($data);
 
-            return redirect()->route('admin.videos.index', ['company_code' => request()->route('company_code')])
+            // If AJAX request, return JSON with video data
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Video added successfully.',
+                    'video' => [
+                        'id' => $video->id,
+                        'title' => $video->title,
+                        'order' => $video->order,
+                        'is_active' => $video->is_active,
+                        'video_type' => $video->video_type,
+                        'is_youtube' => $video->isYoutube(),
+                        'is_file' => $video->isFile(),
+                        'youtube_url' => $video->youtube_url,
+                        'youtube_embed_url' => $video->youtube_embed_url,
+                        'file_path' => $video->file_path ? asset('storage/'.$video->file_path) : null,
+                        'filename' => $video->filename,
+                    ]
+                ]);
+            }
+
+            return redirect()->route('admin.videos.index', ['organization_code' => request()->route('organization_code')])
                 ->with('success', 'Video added successfully.');
         } catch (\Exception $e) {
             \Log::error('Video upload failed', [
@@ -147,7 +168,7 @@ class VideoController extends Controller
         }
         $video->delete();
 
-        return redirect()->route('admin.videos.index', ['company_code' => request()->route('company_code')])
+        return redirect()->route('admin.videos.index', ['organization_code' => request()->route('organization_code')])
             ->with('success', 'Video deleted successfully.');
     }
 
@@ -194,7 +215,7 @@ class VideoController extends Controller
             
             $control->update(['bell_sound_path' => $path]);
 
-            return redirect()->route('admin.videos.index', ['company_code' => request()->route('company_code')])
+            return redirect()->route('admin.videos.index', ['organization_code' => request()->route('organization_code')])
                 ->with('success', 'Bell sound uploaded successfully.');
         } catch (\Exception $e) {
             \Log::error('Bell sound upload failed', [

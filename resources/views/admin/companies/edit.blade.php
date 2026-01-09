@@ -17,21 +17,21 @@
             </div>
         @endif
 
-        <form action="{{ route('superadmin.companies.update', $company->id) }}" method="POST" class="bg-white p-6 rounded-lg shadow">
+        <form action="{{ route('superadmin.organizations.update', $organization->id) }}" method="POST" class="bg-white p-6 rounded-lg shadow">
             @csrf
             @method('PUT')
 
             <div class="mb-4">
-                <label for="company_code" class="block text-gray-700 font-semibold mb-2">Organization Code *</label>
-                <input type="text" id="company_code" name="company_code" value="{{ old('company_code', $company->company_code) }}" 
+                <label for="organization_code" class="block text-gray-700 font-semibold mb-2">Organization Code *</label>
+                <input type="text" id="organization_code" name="organization_code" value="{{ old('organization_code', $organization->organization_code) }}" 
                        class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 uppercase"
                        required>
                 <p class="text-sm text-gray-500 mt-1">Must be unique. Use only letters, numbers, dashes, and underscores.</p>
             </div>
 
             <div class="mb-4">
-                <label for="company_name" class="block text-gray-700 font-semibold mb-2">Organization Name *</label>
-                <input type="text" id="company_name" name="company_name" value="{{ old('company_name', $company->company_name) }}" 
+                <label for="organization_name" class="block text-gray-700 font-semibold mb-2">Organization Name *</label>
+                <input type="text" id="organization_name" name="organization_name" value="{{ old('organization_name', $organization->organization_name) }}" 
                        class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
                        required>
             </div>
@@ -39,24 +39,24 @@
             <div class="mb-4">
                 <div class="bg-gray-50 p-4 rounded">
                     <p class="text-sm text-gray-600">
-                        <strong>Users Count:</strong> {{ $company->users()->count() }}
+                        <strong>Users Count:</strong> {{ $organization->users()->count() }}
                     </p>
                     <p class="text-sm text-gray-600 mt-1">
-                        <strong>Created:</strong> {{ $company->created_at->format('M d, Y h:i A') }}
+                        <strong>Created:</strong> {{ $organization->created_at->format('M d, Y h:i A') }}
                     </p>
                 </div>
             </div>
 
             <div class="mb-6">
                 <label class="flex items-center">
-                    <input type="checkbox" name="is_active" value="1" {{ old('is_active', $company->is_active) ? 'checked' : '' }} class="mr-2">
+                    <input type="checkbox" name="is_active" value="1" {{ old('is_active', $organization->is_active) ? 'checked' : '' }} class="mr-2">
                     <span class="text-gray-700 font-semibold">Active</span>
                 </label>
                 <p class="text-sm text-gray-500 mt-1">Only active companies can be accessed by users.</p>
             </div>
 
             <div class="flex justify-end space-x-4">
-                <a href="{{ route('superadmin.companies.index') }}" class="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100">
+                <a href="{{ route('superadmin.organizations.index') }}" class="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100">
                     Cancel
                 </a>
                 <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
@@ -68,8 +68,8 @@
 </div>
 
 <script>
-    // Auto-uppercase company code
-    document.getElementById('company_code').addEventListener('input', function(e) {
+    // Auto-uppercase organization code
+    document.getElementById('organization_code').addEventListener('input', function(e) {
         e.target.value = e.target.value.toUpperCase();
     });
 </script>

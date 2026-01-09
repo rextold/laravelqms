@@ -1,6 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Marquee Management')
+@section('page-title', 'Marquee Management')
 
 @section('content')
 <div class="container mx-auto px-4 py-8">
@@ -15,7 +16,7 @@
     <!-- Create Marquee -->
     <div class="bg-white rounded-lg shadow p-6 mb-6">
         <h2 class="text-xl font-bold mb-4">Create New Marquee</h2>
-        <form action="{{ route('admin.marquee.store', ['company_code' => request()->route('company_code')]) }}" method="POST">
+        <form action="{{ route('admin.marquee.store', ['organization_code' => request()->route('organization_code')]) }}" method="POST">
             @csrf
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="md:col-span-2">
@@ -55,7 +56,7 @@
                         <button type="button" 
                                 data-marquee-id="{{ $marquee->id }}"
                                 data-marquee-text="{{ addslashes($marquee->text) }}"
-                                data-delete-url="{{ route('admin.marquee.destroy', ['company_code' => request()->route('company_code'), 'marquee' => $marquee->id]) }}"
+                                data-delete-url="{{ route('admin.marquee.destroy', ['organization_code' => request()->route('organization_code'), 'marquee' => $marquee->id]) }}"
                                 onclick="openDeleteMarqueeModal(this)"
                                 class="text-red-600 hover:text-red-800">
                             <i class="fas fa-trash"></i>
@@ -206,8 +207,8 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function toggleActive(marqueeId) {
-    const companyCode = '{{ request()->route("company_code") }}';
-    fetch(`/${companyCode}/admin/marquee/${marqueeId}/toggle`, {
+    const organizationCode = '{{ request()->route("organization_code") }}';
+    fetch(`/${organizationCode}/admin/marquee/${marqueeId}/toggle`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

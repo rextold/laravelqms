@@ -1,160 +1,233 @@
 @extends('layouts.app')
 
-@section('title', 'Admin Dashboard')
+@section('title', auth()->user()->isSuperAdmin() ? 'SuperAdmin Dashboard' : 'Admin Dashboard')
 @section('page-title', auth()->user()->isSuperAdmin() ? 'SuperAdmin Dashboard' : 'Admin Dashboard')
 
 @section('content')
-<div class="p-6 space-y-6">
-    @if(auth()->user()->isSuperAdmin())
+<div class="container mx-auto px-4 py-8">
+    @php
+        $isSuperAdmin = auth()->user()->isSuperAdmin();
+    @endphp
+
+    <!-- Welcome Header -->
+    <div class="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 rounded-2xl shadow-xl p-8 mb-8 text-white">
+        <div class="flex items-center justify-between flex-wrap gap-4">
+            <div>
+                <h1 class="text-4xl font-bold mb-2">
+                    Welcome back, {{ auth()->user()->username }}! 👋
+                </h1>
+                <p class="text-blue-100 text-lg">
+                    @if($isSuperAdmin)
+                        Manage all organizations, admins, and system settings from here.
+                    @else
+                        Manage your organization's counters and monitor queue activity.
+                    @endif
+                </p>
+            </div>
+            <div class="text-right">
+                <p class="text-sm text-blue-100 mb-1">{{ now()->format('l') }}</p>
+                <p class="text-2xl font-bold">{{ now()->format('F j, Y') }}</p>
+                <p class="text-sm text-blue-100">{{ now()->format('g:i A') }}</p>
+            </div>
+        </div>
+    </div>
+
+    @if($isSuperAdmin)
         <!-- SuperAdmin Dashboard -->
         
         <!-- Stats Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div class="bg-gradient-to-br from-indigo-500 to-indigo-600 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
-                <div class="flex items-center justify-between">
-                    <div class="flex-1">
-                        <p class="text-indigo-100 text-xs font-semibold uppercase tracking-wide mb-2">Total</p>
-                        <p class="text-5xl font-bold text-white mb-1">{{ $companiesCount ?? 0 }}</p>
-                        <p class="text-indigo-100 text-sm">Organizations</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Total Organizations -->
+            <div class="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden group">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center transform group-hover:scale-110 transition-transform">
+                            <i class="fas fa-building text-white text-2xl"></i>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-4xl font-bold text-gray-800">{{ $companiesCount }}</p>
+                        </div>
                     </div>
-                    <div class="p-4 bg-white bg-opacity-20 rounded-2xl backdrop-blur-sm">
-                        <i class="fas fa-building text-white text-3xl"></i>
+                    <h3 class="text-gray-600 font-semibold mb-1">Total Organizations</h3>
+                    <div class="flex items-center text-sm text-green-600">
+                        <i class="fas fa-check-circle mr-1"></i>
+                        <span>Active companies</span>
                     </div>
                 </div>
+                <div class="h-1 bg-gradient-to-r from-blue-500 to-blue-600"></div>
             </div>
 
-            <div class="bg-gradient-to-br from-cyan-500 to-cyan-600 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
-                <div class="flex items-center justify-between">
-                    <div class="flex-1">
-                        <p class="text-cyan-100 text-xs font-semibold uppercase tracking-wide mb-2">Total Admins</p>
-                        <p class="text-5xl font-bold text-white mb-1">{{ \App\Models\User::where('role', 'admin')->count() }}</p>
-                        <p class="text-cyan-100 text-sm">Company Admins</p>
+            <!-- Total Admins -->
+            <div class="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden group">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center transform group-hover:scale-110 transition-transform">
+                            <i class="fas fa-user-tie text-white text-2xl"></i>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-4xl font-bold text-gray-800">{{ $adminsCount }}</p>
+                        </div>
                     </div>
-                    <div class="p-4 bg-white bg-opacity-20 rounded-2xl backdrop-blur-sm">
-                        <i class="fas fa-users-cog text-white text-3xl"></i>
+                    <h3 class="text-gray-600 font-semibold mb-1">Organization Admins</h3>
+                    <div class="flex items-center text-sm text-purple-600">
+                        <i class="fas fa-users-cog mr-1"></i>
+                        <span>Company administrators</span>
                     </div>
                 </div>
+                <div class="h-1 bg-gradient-to-r from-purple-500 to-purple-600"></div>
             </div>
 
-            <div class="bg-gradient-to-br from-purple-500 to-purple-600 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
-                <div class="flex items-center justify-between">
-                    <div class="flex-1">
-                        <p class="text-purple-100 text-xs font-semibold uppercase tracking-wide mb-2">Total Counters</p>
-                        <p class="text-5xl font-bold text-white mb-1">{{ \App\Models\User::where('role', 'counter')->count() }}</p>
-                        <p class="text-purple-100 text-sm">All Counters</p>
+            <!-- Total Counters -->
+            <div class="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden group">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-14 h-14 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center transform group-hover:scale-110 transition-transform">
+                            <i class="fas fa-desktop text-white text-2xl"></i>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-4xl font-bold text-gray-800">{{ $countersCount }}</p>
+                        </div>
                     </div>
-                    <div class="p-4 bg-white bg-opacity-20 rounded-2xl backdrop-blur-sm">
-                        <i class="fas fa-users text-white text-3xl"></i>
+                    <h3 class="text-gray-600 font-semibold mb-1">Total Counters</h3>
+                    <div class="flex items-center text-sm text-indigo-600">
+                        <i class="fas fa-users mr-1"></i>
+                        <span>All service counters</span>
                     </div>
                 </div>
+                <div class="h-1 bg-gradient-to-r from-indigo-500 to-indigo-600"></div>
             </div>
 
-            <div class="bg-gradient-to-br from-rose-500 to-rose-600 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
-                <div class="flex items-center justify-between">
-                    <div class="flex-1">
-                        <p class="text-rose-100 text-xs font-semibold uppercase tracking-wide mb-2">Total Users</p>
-                        <p class="text-5xl font-bold text-white mb-1">{{ $usersCount ?? 0 }}</p>
-                        <p class="text-rose-100 text-sm">Admins & Counters</p>
+            <!-- Total Users -->
+            <div class="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden group">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-14 h-14 bg-gradient-to-br from-pink-500 to-pink-600 rounded-xl flex items-center justify-center transform group-hover:scale-110 transition-transform">
+                            <i class="fas fa-users text-white text-2xl"></i>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-4xl font-bold text-gray-800">{{ $usersCount }}</p>
+                        </div>
                     </div>
-                    <div class="p-4 bg-white bg-opacity-20 rounded-2xl backdrop-blur-sm">
-                        <i class="fas fa-globe text-white text-3xl"></i>
+                    <h3 class="text-gray-600 font-semibold mb-1">Total Users</h3>
+                    <div class="flex items-center text-sm text-pink-600">
+                        <i class="fas fa-user-check mr-1"></i>
+                        <span>Admins & Counters</span>
                     </div>
                 </div>
+                <div class="h-1 bg-gradient-to-r from-pink-500 to-pink-600"></div>
             </div>
         </div>
 
-        <!-- Admin Management Section -->
-        <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
-            <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center">
-                            <i class="fas fa-user-tie text-white"></i>
-                        </div>
-                        <div>
-                            <h2 class="text-xl font-bold text-gray-800">Organization Admins</h2>
-                            <p class="text-xs text-gray-500">Manage all organization administrators</p>
-                        </div>
+        <!-- Queue Statistics -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl shadow-md p-6 text-white">
+                <div class="flex items-center justify-between mb-3">
+                    <i class="fas fa-ticket-alt text-4xl opacity-80"></i>
+                    <div class="text-right">
+                        <p class="text-5xl font-bold">{{ $todayQueues }}</p>
                     </div>
-                    <a href="{{ route('superadmin.users.create') }}" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">
-                        <i class="fas fa-plus mr-2"></i>Add Admin
-                    </a>
                 </div>
+                <h3 class="text-emerald-100 text-sm font-semibold uppercase tracking-wide mb-1">Today's Queues</h3>
+                <p class="text-emerald-200 text-xs">Total processed today</p>
             </div>
-            <div class="overflow-x-auto">
-                <table class="min-w-full">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Username</th>
-                            <th class="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Organization</th>
-                            <th class="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Email</th>
-                            <th class="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Counters</th>
-                            <th class="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200">
-                        @php
-                            $admins = \App\Models\User::where('role', 'admin')->with('company')->get();
-                        @endphp
-                        @forelse($admins as $admin)
-                        <tr class="hover:bg-gray-50 transition-colors">
-                            <td class="py-4 px-6">
-                                <div class="flex items-center space-x-3">
-                                    <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                                        {{ strtoupper(substr($admin->username, 0, 1)) }}
-                                    </div>
-                                    <p class="text-sm font-semibold text-gray-900">{{ $admin->username }}</p>
-                                </div>
-                            </td>
-                            <td class="py-4 px-6">
-                                <span class="inline-block bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded-full">
-                                    {{ $admin->company?->company_name ?? 'No Organization' }}
-                                </span>
-                            </td>
-                            <td class="py-4 px-6">
-                                <p class="text-sm text-gray-600">{{ $admin->email ?? '-' }}</p>
-                            </td>
-                            <td class="py-4 px-6">
-                                <div class="flex items-center space-x-2">
-                                    <span class="text-lg font-bold text-gray-900">{{ \App\Models\User::where('company_id', $admin->company_id)->where('role', 'counter')->count() }}</span>
-                                    <span class="text-xs text-gray-500">counters</span>
-                                </div>
-                            </td>
-                            <td class="py-4 px-6">
-                                <div class="flex items-center space-x-3">
-                                    <a href="{{ route('superadmin.users.edit', $admin->id) }}" class="text-indigo-600 hover:text-indigo-800 font-semibold text-sm transition">
-                                        <i class="fas fa-edit"></i> Edit
-                                    </a>
-                                    <button type="button" 
-                                            data-admin-id="{{ $admin->id }}"
-                                            data-admin-name="{{ $admin->username }}"
-                                            data-delete-url="{{ route('superadmin.users.destroy', ['user' => $admin->id]) }}"
-                                            onclick="openDeleteAdminModal(this)"
-                                            class="text-red-600 hover:text-red-800 font-semibold text-sm transition">
-                                        <i class="fas fa-trash"></i> Delete
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td colspan="5" class="py-8 px-6 text-center">
-                                <p class="text-gray-500">No admins found</p>
-                            </td>
-                        </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+
+            <div class="bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl shadow-md p-6 text-white">
+                <div class="flex items-center justify-between mb-3">
+                    <i class="fas fa-clock text-4xl opacity-80"></i>
+                    <div class="text-right">
+                        <p class="text-5xl font-bold">{{ $waitingQueues }}</p>
+                    </div>
+                </div>
+                <h3 class="text-amber-100 text-sm font-semibold uppercase tracking-wide mb-1">Waiting</h3>
+                <p class="text-amber-200 text-xs">In queue now</p>
+            </div>
+
+            <div class="bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-xl shadow-md p-6 text-white">
+                <div class="flex items-center justify-between mb-3">
+                    <i class="fas fa-user-clock text-4xl opacity-80"></i>
+                    <div class="text-right">
+                        <p class="text-5xl font-bold">{{ $servingNow }}</p>
+                    </div>
+                </div>
+                <h3 class="text-cyan-100 text-sm font-semibold uppercase tracking-wide mb-1">Serving Now</h3>
+                <p class="text-cyan-200 text-xs">Currently being served</p>
+            </div>
+
+            <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-md p-6 text-white">
+                <div class="flex items-center justify-between mb-3">
+                    <i class="fas fa-check-circle text-4xl opacity-80"></i>
+                    <div class="text-right">
+                        <p class="text-5xl font-bold">{{ $completedToday }}</p>
+                    </div>
+                </div>
+                <h3 class="text-green-100 text-sm font-semibold uppercase tracking-wide mb-1">Completed</h3>
+                <p class="text-green-200 text-xs">Finished today</p>
             </div>
         </div>
 
-        <!-- Company Overview Section -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Top Organizations by Counter Count -->
-            <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+        <!-- Organization Admins & Top Organizations -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <!-- Organization Admins List -->
+            <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-user-tie text-white"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-bold text-gray-800">Organization Admins</h2>
+                                <p class="text-xs text-gray-500">{{ $admins->count() }} total administrators</p>
+                            </div>
+                        </div>
+                        <a href="{{ route('superadmin.users.index') }}" 
+                           class="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition font-medium text-sm">
+                            <i class="fas fa-plus mr-2"></i>Add Admin
+                        </a>
+                    </div>
+                </div>
+                <div class="p-6 max-h-96 overflow-y-auto">
+                    @forelse($admins as $admin)
+                        <div class="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg mb-3 transition group">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                                    {{ strtoupper(substr($admin->username, 0, 2)) }}
+                                </div>
+                                <div>
+                                    <p class="font-semibold text-gray-800">{{ $admin->username }}</p>
+                                    <p class="text-xs text-gray-500">
+                                        <i class="fas fa-building mr-1"></i>
+                                        {{ $admin->organization?->organization_name ?? 'No Organization' }}
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <a href="{{ route('superadmin.users.edit', $admin->id) }}" 
+                                   class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button type="button" 
+                                        onclick="confirmDelete('{{ $admin->id }}', '{{ $admin->username }}', '{{ route('superadmin.users.destroy', $admin->id) }}')"
+                                        class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="text-center py-12">
+                            <i class="fas fa-user-slash text-gray-300 text-5xl mb-4"></i>
+                            <p class="text-gray-500 font-medium">No admins found</p>
+                            <p class="text-gray-400 text-sm">Add an administrator to get started</p>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+
+            <!-- Top Organizations -->
+            <div class="bg-white rounded-xl shadow-md overflow-hidden">
                 <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
                     <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center">
+                        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
                             <i class="fas fa-chart-bar text-white"></i>
                         </div>
                         <div>
@@ -163,83 +236,31 @@
                         </div>
                     </div>
                 </div>
-                <div class="p-6 space-y-4">
-                    @php
-                        $companies = \App\Models\Company::with('users')
-                            ->withCount(['users' => function($q) { $q->where('role', 'counter'); }])
-                            ->orderBy('users_count', 'desc')
-                            ->limit(5)
-                            ->get();
-                    @endphp
-                    @forelse($companies as $company)
-                    <div class="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg hover:shadow-md transition">
-                        <div class="flex-1">
-                            <p class="text-sm font-semibold text-gray-900">{{ $company->company_name }}</p>
-                            <p class="text-xs text-gray-500">{{ $company->company_code }}</p>
+                <div class="p-6">
+                    @forelse($topOrganizations as $index => $org)
+                        <div class="flex items-center justify-between p-4 {{ $index === 0 ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200' : 'bg-gray-50' }} rounded-lg mb-3 hover:shadow-md transition">
+                            <div class="flex items-center space-x-4">
+                                <div class="w-10 h-10 {{ $index === 0 ? 'bg-gradient-to-br from-yellow-400 to-yellow-500' : 'bg-gray-200' }} rounded-full flex items-center justify-center font-bold {{ $index === 0 ? 'text-white' : 'text-gray-600' }}">
+                                    {{ $index + 1 }}
+                                </div>
+                                <div>
+                                    <p class="font-semibold text-gray-800">{{ $org->organization_name }}</p>
+                                    <p class="text-xs text-gray-500">
+                                        <i class="fas fa-code mr-1"></i>{{ $org->organization_code }}
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-3xl font-bold text-blue-600">{{ $org->users_count }}</p>
+                                <p class="text-xs text-gray-500">counters</p>
+                            </div>
                         </div>
-                        <div class="text-right">
-                            <p class="text-2xl font-bold text-purple-600">{{ $company->users_count }}</p>
-                            <p class="text-xs text-gray-500">counters</p>
-                        </div>
-                    </div>
                     @empty
-                    <p class="text-center text-gray-500 py-8">No organizations found</p>
+                        <div class="text-center py-12">
+                            <i class="fas fa-building text-gray-300 text-5xl mb-4"></i>
+                            <p class="text-gray-500 font-medium">No organizations found</p>
+                        </div>
                     @endforelse
-                </div>
-            </div>
-
-            <!-- Recent Queue Activity -->
-            <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
-                <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
-                            <i class="fas fa-list-ul text-white"></i>
-                        </div>
-                        <div>
-                            <h2 class="text-xl font-bold text-gray-800">Queue Statistics</h2>
-                            <p class="text-xs text-gray-500">Today's activity</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="p-6 space-y-4">
-                    <div class="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
-                        <div class="flex items-center space-x-3">
-                            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                                <i class="fas fa-list text-blue-600"></i>
-                            </div>
-                            <div>
-                                <p class="text-sm font-semibold text-gray-900">Total Queues</p>
-                                <p class="text-xs text-gray-500">Processed today</p>
-                            </div>
-                        </div>
-                        <p class="text-3xl font-bold text-blue-600">{{ \App\Models\Queue::whereDate('created_at', today())->count() }}</p>
-                    </div>
-                    
-                    <div class="flex items-center justify-between p-4 bg-orange-50 rounded-lg">
-                        <div class="flex items-center space-x-3">
-                            <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                                <i class="fas fa-clock text-orange-600"></i>
-                            </div>
-                            <div>
-                                <p class="text-sm font-semibold text-gray-900">Waiting</p>
-                                <p class="text-xs text-gray-500">In queue now</p>
-                            </div>
-                        </div>
-                        <p class="text-3xl font-bold text-orange-600">{{ \App\Models\Queue::where('status', 'waiting')->count() }}</p>
-                    </div>
-
-                    <div class="flex items-center justify-between p-4 bg-emerald-50 rounded-lg">
-                        <div class="flex items-center space-x-3">
-                            <div class="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
-                                <i class="fas fa-check-circle text-emerald-600"></i>
-                            </div>
-                            <div>
-                                <p class="text-sm font-semibold text-gray-900">Completed</p>
-                                <p class="text-xs text-gray-500">Today</p>
-                            </div>
-                        </div>
-                        <p class="text-3xl font-bold text-emerald-600">{{ \App\Models\Queue::where('status', 'completed')->whereDate('created_at', today())->count() }}</p>
-                    </div>
                 </div>
             </div>
         </div>
@@ -247,276 +268,301 @@
     @else
         <!-- Regular Admin Dashboard -->
         
-        <!-- Stats Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div class="bg-gradient-to-br from-emerald-500 to-emerald-600 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
-                <div class="flex items-center justify-between">
-                    <div class="flex-1">
-                        <div class="flex items-center space-x-2 mb-2">
-                            <div class="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                            <p class="text-emerald-100 text-xs font-semibold uppercase tracking-wide">Online Now</p>
+        <!-- Organization Info Banner -->
+        <div class="bg-white rounded-xl shadow-md p-6 mb-8 border-l-4 border-blue-600">
+            <div class="flex items-center justify-between flex-wrap gap-4">
+                <div class="flex items-center space-x-4">
+                    @if($organization->setting?->logo_url)
+                        <img src="{{ $organization->setting->logo_url }}" alt="Logo" class="h-16 w-16 object-contain">
+                    @else
+                        <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-building text-white text-2xl"></i>
                         </div>
-                        <p class="text-5xl font-bold text-white mb-1">{{ $onlineCounters->count() }}</p>
-                        <p class="text-emerald-100 text-sm">Active Counters</p>
+                    @endif
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">{{ $organization->organization_name }}</h2>
+                        <p class="text-gray-600">{{ $organization->organization_code }}</p>
+                        @if($organization->setting)
+                            <div class="flex items-center space-x-4 mt-2 text-sm text-gray-500">
+                                @if($organization->setting->organization_phone)
+                                    <span><i class="fas fa-phone mr-1"></i>{{ $organization->setting->organization_phone }}</span>
+                                @endif
+                                @if($organization->setting->organization_email)
+                                    <span><i class="fas fa-envelope mr-1"></i>{{ $organization->setting->organization_email }}</span>
+                                @endif
+                            </div>
+                        @endif
                     </div>
-                    <div class="p-4 bg-white bg-opacity-20 rounded-2xl backdrop-blur-sm">
-                        <i class="fas fa-users text-white text-3xl"></i>
+                </div>
+                <a href="{{ route('admin.organization-settings.edit', ['organization_code' => $organization->organization_code]) }}" 
+                   class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition font-medium">
+                    <i class="fas fa-cog mr-2"></i>Organization Settings
+                </a>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Online Counters -->
+            <div class="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden group">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center transform group-hover:scale-110 transition-transform relative">
+                            <i class="fas fa-users text-white text-2xl"></i>
+                            <span class="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-ping"></span>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-4xl font-bold text-gray-800">{{ $onlineCounters->count() }}</p>
+                        </div>
                     </div>
+                    <h3 class="text-gray-600 font-semibold mb-1">Online Now</h3>
+                    <div class="flex items-center text-sm text-green-600">
+                        <i class="fas fa-circle mr-1 text-xs animate-pulse"></i>
+                        <span>Active counters</span>
+                    </div>
+                </div>
+                <div class="h-1 bg-gradient-to-r from-green-500 to-green-600"></div>
+            </div>
+
+            <!-- Total Counters -->
+            <div class="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden group">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center transform group-hover:scale-110 transition-transform">
+                            <i class="fas fa-desktop text-white text-2xl"></i>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-4xl font-bold text-gray-800">{{ $counters->count() }}</p>
+                        </div>
+                    </div>
+                    <h3 class="text-gray-600 font-semibold mb-1">Total Counters</h3>
+                    <div class="flex items-center text-sm text-blue-600">
+                        <i class="fas fa-users mr-1"></i>
+                        <span>All service points</span>
+                    </div>
+                </div>
+                <div class="h-1 bg-gradient-to-r from-blue-500 to-blue-600"></div>
+            </div>
+
+            <!-- Today's Queues -->
+            <div class="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden group">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center transform group-hover:scale-110 transition-transform">
+                            <i class="fas fa-ticket-alt text-white text-2xl"></i>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-4xl font-bold text-gray-800">{{ $todayQueues }}</p>
+                        </div>
+                    </div>
+                    <h3 class="text-gray-600 font-semibold mb-1">Today's Queues</h3>
+                    <div class="flex items-center text-sm text-purple-600">
+                        <i class="fas fa-calendar-day mr-1"></i>
+                        <span>Processed today</span>
+                    </div>
+                </div>
+                <div class="h-1 bg-gradient-to-r from-purple-500 to-purple-600"></div>
+            </div>
+
+            <!-- Waiting -->
+            <div class="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden group">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-14 h-14 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl flex items-center justify-center transform group-hover:scale-110 transition-transform">
+                            <i class="fas fa-clock text-white text-2xl"></i>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-4xl font-bold text-gray-800">{{ $waitingQueues }}</p>
+                        </div>
+                    </div>
+                    <h3 class="text-gray-600 font-semibold mb-1">Waiting</h3>
+                    <div class="flex items-center text-sm text-amber-600">
+                        <i class="fas fa-hourglass-half mr-1"></i>
+                        <span>In queue now</span>
+                    </div>
+                </div>
+                <div class="h-1 bg-gradient-to-r from-amber-500 to-amber-600"></div>
+            </div>
+        </div>
+
+        <!-- Additional Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <!-- Serving Now -->
+            <div class="bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-xl shadow-md p-8 text-white">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-cyan-100 text-sm font-semibold uppercase tracking-wide mb-2">Currently Serving</p>
+                        <p class="text-6xl font-bold mb-2">{{ $servingNow }}</p>
+                        <p class="text-cyan-100">Active service sessions</p>
+                    </div>
+                    <i class="fas fa-user-clock text-cyan-200 text-7xl opacity-20"></i>
                 </div>
             </div>
 
-            <div class="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
+            <!-- Completed Today -->
+            <div class="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl shadow-md p-8 text-white">
                 <div class="flex items-center justify-between">
-                    <div class="flex-1">
-                        <p class="text-blue-100 text-xs font-semibold uppercase tracking-wide mb-2">Total</p>
-                        <p class="text-5xl font-bold text-white mb-1">{{ $counters->count() }}</p>
-                        <p class="text-blue-100 text-sm">All Counters</p>
+                    <div>
+                        <p class="text-emerald-100 text-sm font-semibold uppercase tracking-wide mb-2">Completed Today</p>
+                        <p class="text-6xl font-bold mb-2">{{ $completedToday }}</p>
+                        <p class="text-emerald-100">Successfully processed</p>
                     </div>
-                    <div class="p-4 bg-white bg-opacity-20 rounded-2xl backdrop-blur-sm">
-                        <i class="fas fa-desktop text-white text-3xl"></i>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-gradient-to-br from-purple-500 to-purple-600 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
-                <div class="flex items-center justify-between">
-                    <div class="flex-1">
-                        <p class="text-purple-100 text-xs font-semibold uppercase tracking-wide mb-2">Today</p>
-                        <p class="text-5xl font-bold text-white mb-1">{{ \App\Models\Queue::whereDate('created_at', today())->count() }}</p>
-                        <p class="text-purple-100 text-sm">Queues Processed</p>
-                    </div>
-                    <div class="p-4 bg-white bg-opacity-20 rounded-2xl backdrop-blur-sm">
-                        <i class="fas fa-list text-white text-3xl"></i>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-gradient-to-br from-orange-500 to-orange-600 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
-                <div class="flex items-center justify-between">
-                    <div class="flex-1">
-                        <p class="text-orange-100 text-xs font-semibold uppercase tracking-wide mb-2">Waiting</p>
-                        <p class="text-5xl font-bold text-white mb-1">{{ \App\Models\Queue::where('status', 'waiting')->count() }}</p>
-                        <p class="text-orange-100 text-sm">In Queue</p>
-                    </div>
-                    <div class="p-4 bg-white bg-opacity-20 rounded-2xl backdrop-blur-sm">
-                        <i class="fas fa-clock text-white text-3xl"></i>
-                    </div>
+                    <i class="fas fa-check-circle text-emerald-200 text-7xl opacity-20"></i>
                 </div>
             </div>
         </div>
 
-        <!-- Counter Status Table -->
-        <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+        <!-- Counters Overview -->
+        <div class="bg-white rounded-xl shadow-md overflow-hidden">
             <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
-                            <i class="fas fa-list-ul text-white"></i>
+                        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-desktop text-white"></i>
                         </div>
                         <div>
                             <h2 class="text-xl font-bold text-gray-800">Counter Status</h2>
-                            <p class="text-xs text-gray-500">Real-time monitoring</p>
+                            <p class="text-xs text-gray-500">{{ $counters->count() }} total counters</p>
                         </div>
                     </div>
-                    <div class="flex items-center space-x-2 text-sm text-gray-500">
-                        <i class="fas fa-circle text-green-500 animate-pulse"></i>
-                        <span>Live</span>
-                    </div>
+                    <a href="{{ route('admin.users.index', ['organization_code' => $organization->organization_code]) }}" 
+                       class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition font-medium text-sm">
+                        <i class="fas fa-plus mr-2"></i>Add Counter
+                    </a>
                 </div>
             </div>
-            <div class="overflow-x-auto">
-                <table class="min-w-full">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Counter</th>
-                            <th class="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Display Name</th>
-                            <th class="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Description</th>
-                            <th class="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
-                            <th class="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Queues Today</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200">
+            <div class="p-6">
+                @if($counters->count() > 0)
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         @foreach($counters as $counter)
-                        <tr class="hover:bg-gray-50 transition-colors">
-                            <td class="py-4 px-6">
-                                <div class="flex items-center space-x-3">
-                                    <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold">
-                                        {{ $counter->counter_number }}
+                            <div class="p-4 border-2 {{ $onlineCounters->contains('id', $counter->id) ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-gray-50' }} rounded-lg hover:shadow-md transition">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
+                                            {{ $counter->counter_number }}
+                                        </div>
+                                        <div>
+                                            <p class="font-semibold text-gray-800">{{ $counter->display_name }}</p>
+                                            <p class="text-xs text-gray-500">{{ $counter->username }}</p>
+                                        </div>
                                     </div>
+                                    @if($onlineCounters->contains('id', $counter->id))
+                                        <span class="px-2 py-1 bg-green-500 text-white text-xs font-semibold rounded-full flex items-center">
+                                            <span class="w-2 h-2 bg-white rounded-full mr-1 animate-pulse"></span>
+                                            Online
+                                        </span>
+                                    @else
+                                        <span class="px-2 py-1 bg-gray-400 text-white text-xs font-semibold rounded-full">Offline</span>
+                                    @endif
                                 </div>
-                            </td>
-                            <td class="py-4 px-6">
-                                <p class="text-sm font-semibold text-gray-900">{{ $counter->display_name }}</p>
-                            </td>
-                            <td class="py-4 px-6">
-                                <p class="text-sm text-gray-600">{{ $counter->short_description }}</p>
-                            </td>
-                            <td class="py-4 px-6">
-                                @if($counter->is_online)
-                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-                                        <i class="fas fa-circle text-xs mr-1.5"></i> Online
-                                    </span>
-                                @else
-                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800">
-                                        <i class="far fa-circle text-xs mr-1.5"></i> Offline
-                                    </span>
+                                @if($counter->short_description)
+                                    <p class="text-sm text-gray-600">{{ $counter->short_description }}</p>
                                 @endif
-                            </td>
-                            <td class="py-4 px-6">
-                                <div class="flex items-center space-x-2">
-                                    <span class="text-2xl font-bold text-gray-900">{{ $counter->queues()->whereDate('created_at', today())->count() }}</span>
-                                    <span class="text-xs text-gray-500">queues</span>
-                                </div>
-                            </td>
-                        </tr>
+                            </div>
                         @endforeach
-                    </tbody>
-                </table>
+                    </div>
+                @else
+                    <div class="text-center py-12">
+                        <i class="fas fa-desktop text-gray-300 text-5xl mb-4"></i>
+                        <p class="text-gray-500 font-medium mb-2">No counters found</p>
+                        <p class="text-gray-400 text-sm mb-4">Add counters to start managing your queue system</p>
+                        <a href="{{ route('admin.users.create', ['organization_code' => $organization->organization_code]) }}" 
+                           class="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition font-medium">
+                            <i class="fas fa-plus mr-2"></i>Add Your First Counter
+                        </a>
+                    </div>
+                @endif
             </div>
         </div>
     @endif
 </div>
 
+@if($isSuperAdmin)
 <!-- Delete Confirmation Modal -->
-<div id="delete-admin-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 transform transition-all duration-300 scale-95 opacity-0" id="delete-admin-modal-content">
-        <!-- Header -->
-        <div class="bg-gradient-to-r from-red-500 to-red-600 px-6 py-4 rounded-t-2xl">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-3">
-                    <i class="fas fa-exclamation-triangle text-white text-xl"></i>
-                    <h3 class="text-xl font-bold text-white">Delete Admin</h3>
-                </div>
-                <button onclick="closeModal('delete-admin-modal')" class="text-white hover:text-gray-200 text-2xl leading-none">
-                    &times;
-                </button>
-            </div>
+<div id="deleteModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 transform transition-all">
+        <div class="bg-gradient-to-r from-red-600 to-red-700 px-6 py-4 rounded-t-xl">
+            <h3 class="text-xl font-bold text-white flex items-center">
+                <i class="fas fa-exclamation-triangle mr-3"></i>Delete Admin
+            </h3>
         </div>
-
-        <!-- Body -->
-        <div class="px-6 py-4">
-            <p class="text-gray-700 mb-2">Are you sure you want to delete this admin?</p>
-            <p class="text-sm text-gray-500 mb-4">Admin: <strong id="delete-admin-name"></strong></p>
-            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                <p class="text-sm text-yellow-800">
-                    <i class="fas fa-info-circle mr-2"></i>
-                    <strong>Warning:</strong> This action cannot be undone. All associated data will be preserved.
+        <div class="p-6">
+            <p class="text-gray-700 mb-4">Are you sure you want to delete this admin?</p>
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                <p class="text-sm text-gray-700">
+                    <strong>Admin:</strong> <span id="deleteUsername" class="font-semibold"></span>
+                </p>
+                <p class="text-xs text-gray-600 mt-2">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    This action cannot be undone.
                 </p>
             </div>
         </div>
-
-        <!-- Footer -->
-        <div class="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3 border-t border-gray-200">
-            <button onclick="closeModal('delete-admin-modal')" class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold transition">
-                Cancel
+        <div class="bg-gray-50 px-6 py-4 rounded-b-xl flex justify-end space-x-3">
+            <button type="button" 
+                    onclick="closeDeleteModal()" 
+                    class="px-5 py-2.5 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition font-medium">
+                <i class="fas fa-times mr-2"></i>Cancel
             </button>
-            <button type="button" onclick="confirmDeleteAdmin()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition">
+            <button type="button" 
+                    onclick="submitDelete()" 
+                    class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition font-medium">
                 <i class="fas fa-trash mr-2"></i>Delete Admin
             </button>
         </div>
     </div>
 </div>
 
+<!-- Hidden delete form -->
+<form id="deleteForm" method="POST" style="display: none;">
+    @csrf
+    @method('DELETE')
+</form>
+
 @push('scripts')
 <script>
-function openModal(modalId) {
-    const modal = document.getElementById(modalId);
-    const content = document.getElementById(modalId + '-content');
-    
-    if (modal) {
-        modal.classList.remove('hidden');
-        setTimeout(() => {
-            modal.classList.add('opacity-100');
-            content.classList.remove('scale-95', 'opacity-0');
-            content.classList.add('scale-100', 'opacity-100');
-        }, 10);
-    }
+let currentDeleteUrl = '';
+
+function confirmDelete(id, username, deleteUrl) {
+    currentDeleteUrl = deleteUrl;
+    document.getElementById('deleteUsername').textContent = username;
+    document.getElementById('deleteModal').classList.remove('hidden');
+    document.getElementById('deleteModal').classList.add('flex');
+    document.body.style.overflow = 'hidden';
 }
 
-function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    const content = document.getElementById(modalId + '-content');
-    
-    if (modal) {
-        content.classList.remove('scale-100', 'opacity-100');
-        content.classList.add('scale-95', 'opacity-0');
-        setTimeout(() => {
-            modal.classList.add('hidden');
-        }, 300);
-    }
+function closeDeleteModal() {
+    document.getElementById('deleteModal').classList.add('hidden');
+    document.getElementById('deleteModal').classList.remove('flex');
+    document.body.style.overflow = '';
+    currentDeleteUrl = '';
 }
 
-function openDeleteAdminModal(button) {
-    const adminId = button.dataset.adminId;
-    const adminName = button.dataset.adminName;
-    const deleteUrl = button.dataset.deleteUrl;
-    
-    console.log('Opening delete modal with:', { adminId, adminName, deleteUrl });
-    
-    document.getElementById('delete-admin-name').textContent = adminName;
-    window.currentDeleteUrl = deleteUrl;
-    window.currentDeleteId = adminId;
-    openModal('delete-admin-modal');
-}
-
-function confirmDeleteAdmin() {
-    const url = window.currentDeleteUrl;
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-    
-    if (!csrfToken) {
-        alert('Security token not found. Please refresh the page.');
-        console.error('CSRF token not found');
+function submitDelete() {
+    if (!currentDeleteUrl) {
+        alert('Error: No delete URL specified.');
         return;
     }
     
-    if (!url) {
-        alert('Delete URL not found. Please refresh the page.');
-        console.error('Delete URL not set');
-        return;
-    }
-    
-    console.log('Deleting admin from URL:', url);
-    
-    fetch(url, {
-        method: 'DELETE',
-        headers: {
-            'X-CSRF-TOKEN': csrfToken,
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-        }
-    })
-    .then(response => {
-        console.log('Response status:', response.status);
-        if (!response.ok && response.status !== 204) {
-            return response.text().then(text => {
-                console.error('Server response:', text);
-                throw new Error('Server returned ' + response.status);
-            });
-        }
-        return response;
-    })
-    .then(response => {
-        closeModal('delete-admin-modal');
-        alert('Admin deleted successfully');
-        window.location.reload();
-    })
-    .catch(error => {
-        console.error('Delete error:', error);
-        alert('Error deleting admin: ' + error.message);
-    });
+    const form = document.getElementById('deleteForm');
+    form.action = currentDeleteUrl;
+    form.submit();
 }
 
-// Close modal on outside click
-document.addEventListener('DOMContentLoaded', function() {
-    const modal = document.getElementById('delete-admin-modal');
-    if (modal) {
-        modal.addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeModal('delete-admin-modal');
-            }
-        });
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeDeleteModal();
+    }
+});
+
+// Close modal on backdrop click
+document.getElementById('deleteModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeDeleteModal();
     }
 });
 </script>
 @endpush
+@endif
 @endsection

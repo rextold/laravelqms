@@ -3,8 +3,8 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 use App\Models\User;
-use App\Models\Company;
 
 return new class extends Migration
 {
@@ -16,39 +16,43 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Get all counters without a company_id
-        $countersWithoutCompany = User::where('role', 'counter')
-            ->whereNull('company_id')
-            ->get();
-
-        if ($countersWithoutCompany->count() > 0) {
-            // Get or create a default company for orphaned counters
-            $defaultCompany = Company::where('company_code', 'DEFAULT')->first();
-            
-            if (!$defaultCompany) {
-                $defaultCompany = Company::create([
-                    'company_code' => 'DEFAULT',
-                    'company_name' => 'Default Company',
-                    'is_active' => true,
-                ]);
-            }
-
-            // Assign all orphaned counters to the default company
-            User::where('role', 'counter')
-                ->whereNull('company_id')
-                ->update(['company_id' => $defaultCompany->id]);
+        // Skip if organizations table doesn't exist yet
+        if (!Schema::hasTable('organizations')) {
+            return;
         }
 
-        // Also ensure all counters have a company_id set
-        // If a counter has company_id but it references a deleted company, reassign to default
-        $defaultCompany = Company::where('company_code', 'DEFAULT')->first() ?? 
-                         Company::first();
+        // Get all counters without an organization_id
+        $countersWithoutOrganization = User::where('role', 'counter')
+            ->whereNull('organization_id')
+            ->get();
 
-        if ($defaultCompany) {
+        if ($countersWithoutOrganization->count() > 0) {
+            // For fresh migrations, organizations table won't have entries yet
+            // Just skip this step if there are no companies
+            DB::table('companies')->count() > 0 ? true : false;
+            
+            $defaultCompanyId = DB::table('companies')
+                ->where('organization_code', 'DEFAULT')
+                ->value('id');
+            
+            if ($defaultCompanyId) {
+                // Assign all orphaned counters to the default company
+                User::where('role', 'counter')
+                    ->whereNull('company_id')
+                    ->update(['company_id' => $defaultCompanyId]);
+            }
+        }
+
+        // Also ensure all counters have an organization_id set
+        $defaultOrganizationId = DB::table('organizations')
+            ->where('organization_code', 'DEFAULT')
+            ->value('id');
+        
+        if ($defaultOrganizationId) {
             User::where('role', 'counter')
-                ->whereNotNull('company_id')
-                ->whereNotIn('company_id', Company::pluck('id'))
-                ->update(['company_id' => $defaultCompany->id]);
+                ->whereNotNull('organization_id')
+                ->whereNotIn('organization_id', DB::table('organizations')->pluck('id'))
+                ->update(['organization_id' => $defaultOrganizationId]);
         }
     }
 
@@ -57,7 +61,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // Remove default company if it was created by this migration
-        Company::where('company_code', 'DEFAULT')->delete();
+        // This migration doesn't delete data on rollback
     }
 };
+

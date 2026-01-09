@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>@yield('title', 'Queue Management System')</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -21,6 +24,41 @@
         }
         .gradient-bg {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        .sidebar nav::-webkit-scrollbar {
+            display: none;
+        }
+        /* Hide scrollbar for IE, Edge and Firefox */
+        .sidebar nav {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+        /* Collapsed sidebar styles */
+        .sidebar {
+            transition: width 0.3s ease;
+        }
+        .sidebar.collapsed {
+            width: 5rem;
+        }
+        .sidebar.collapsed .sidebar-text {
+            opacity: 0;
+            width: 0;
+            overflow: hidden;
+        }
+        .sidebar.collapsed .logo-text {
+            display: none;
+        }
+        .sidebar.collapsed .user-info-text {
+            display: none;
+        }
+        .sidebar.collapsed .sidebar-link {
+            justify-content: center;
+            padding-left: 1.5rem;
+            padding-right: 1.5rem;
+        }
+        .sidebar.collapsed .external-label {
+            display: none;
         }
         @media (max-width: 768px) {
             .sidebar {
@@ -40,16 +78,29 @@
         <!-- Sidebar -->
         <aside id="sidebar" class="sidebar w-64 gradient-bg text-white flex-shrink-0 fixed h-full z-50 md:relative">
             <div class="h-full flex flex-col">
+                @php
+                    // Get organization code from URL or from user's organization
+                    $orgCode = request()->route('organization_code');
+                    if (!$orgCode && auth()->user() && auth()->user()->organization) {
+                        $orgCode = auth()->user()->organization->organization_code;
+                    }
+                @endphp
+            <div class="h-full flex flex-col">
                 <!-- Logo/Brand -->
                 <div class="p-6 border-b border-white border-opacity-20">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-calendar-check text-2xl"></i>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-calendar-check text-2xl"></i>
+                            </div>
+                            <div class="logo-text">
+                                <h1 class="text-xl font-bold">QMS Admin</h1>
+                                <p class="text-xs opacity-75">Management System</p>
+                            </div>
                         </div>
-                        <div>
-                            <h1 class="text-xl font-bold">QMS Admin</h1>
-                            <p class="text-xs opacity-75">Management System</p>
-                        </div>
+                        <button id="sidebarToggle" class="text-white hover:bg-white hover:bg-opacity-10 p-2 rounded transition-all">
+                            <i class="fas fa-bars"></i>
+                        </button>
                     </div>
                 </div>
 
@@ -59,7 +110,7 @@
                         <div class="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
                             <i class="fas fa-user"></i>
                         </div>
-                        <div class="flex-1 min-w-0">
+                        <div class="flex-1 min-w-0 user-info-text">
                             <p class="text-sm font-semibold truncate">{{ auth()->user()->display_name ?? auth()->user()->username }}</p>
                             <p class="text-xs opacity-75 capitalize">{{ auth()->user()->role }}</p>
                         </div>
@@ -73,60 +124,60 @@
                             <!-- SuperAdmin Menu: Only Users and Organizations -->
                             <a href="{{ route('superadmin.dashboard') }}" class="sidebar-link flex items-center px-6 py-3 {{ request()->routeIs('superadmin.dashboard') ? 'active' : '' }}">
                                 <i class="fas fa-home w-5"></i>
-                                <span class="ml-3">Dashboard</span>
+                                <span class="ml-3 sidebar-text">Dashboard</span>
                             </a>
-                            <a href="{{ route('superadmin.companies.index') }}" class="sidebar-link flex items-center px-6 py-3 {{ request()->routeIs('superadmin.companies.*') ? 'active' : '' }}">
+                            <a href="{{ route('superadmin.organizations.index') }}" class="sidebar-link flex items-center px-6 py-3 {{ request()->routeIs('superadmin.organizations.*') ? 'active' : '' }}">
                                 <i class="fas fa-building w-5"></i>
-                                <span class="ml-3">Organizations</span>
+                                <span class="ml-3 sidebar-text">Organizations</span>
                             </a>
                             <a href="{{ route('superadmin.users.index') }}" class="sidebar-link flex items-center px-6 py-3 {{ request()->routeIs('superadmin.users.*') ? 'active' : '' }}">
                                 <i class="fas fa-users w-5"></i>
-                                <span class="ml-3">Users</span>
+                                <span class="ml-3 sidebar-text">Users</span>
                             </a>
                         @elseif(auth()->user()->isAdmin())
                             <!-- Admin Menu: Full organization management -->
-                            <a href="{{ route('admin.dashboard', ['company_code' => request()->route('company_code')]) }}" class="sidebar-link flex items-center px-6 py-3 {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
+                            <a href="{{ route('admin.dashboard', ['organization_code' => $orgCode]) }}" class="sidebar-link flex items-center px-6 py-3 {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
                                 <i class="fas fa-home w-5"></i>
-                                <span class="ml-3">Dashboard</span>
+                                <span class="ml-3 sidebar-text">Dashboard</span>
                             </a>
-                            <a href="{{ route('admin.company-settings.edit', ['company_code' => request()->route('company_code')]) }}" class="sidebar-link flex items-center px-6 py-3 {{ request()->routeIs('admin.company-settings.*') ? 'active' : '' }}">
+                            <a href="{{ route('admin.organization-settings.edit', ['organization_code' => $orgCode]) }}" class="sidebar-link flex items-center px-6 py-3 {{ request()->routeIs('admin.organization-settings.*') ? 'active' : '' }}">
                                 <i class="fas fa-building w-5"></i>
-                                <span class="ml-3">Organization Settings</span>
+                                <span class="ml-3 sidebar-text">Organization Settings</span>
                             </a>
-                            <a href="{{ route('admin.users.index', ['company_code' => request()->route('company_code')]) }}" class="sidebar-link flex items-center px-6 py-3 {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
+                            <a href="{{ route('admin.users.index', ['organization_code' => $orgCode]) }}" class="sidebar-link flex items-center px-6 py-3 {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
                                 <i class="fas fa-users w-5"></i>
-                                <span class="ml-3">Users</span>
+                                <span class="ml-3 sidebar-text">Manage Counters/Teller</span>
                             </a>
-                            <a href="{{ route('admin.videos.index', ['company_code' => request()->route('company_code')]) }}" class="sidebar-link flex items-center px-6 py-3 {{ request()->routeIs('admin.videos.*') ? 'active' : '' }}">
+                            <a href="{{ route('admin.videos.index', ['organization_code' => $orgCode]) }}" class="sidebar-link flex items-center px-6 py-3 {{ request()->routeIs('admin.videos.*') ? 'active' : '' }}">
                                 <i class="fas fa-video w-5"></i>
-                                <span class="ml-3">Videos & Display</span>
+                                <span class="ml-3 sidebar-text">Videos & Display</span>
                             </a>
-                            <a href="{{ route('admin.marquee.index', ['company_code' => request()->route('company_code')]) }}" class="sidebar-link flex items-center px-6 py-3 {{ request()->routeIs('admin.marquee.*') ? 'active' : '' }}">
+                            <a href="{{ route('admin.marquee.index', ['organization_code' => $orgCode]) }}" class="sidebar-link flex items-center px-6 py-3 {{ request()->routeIs('admin.marquee.*') ? 'active' : '' }}">
                                 <i class="fas fa-scroll w-5"></i>
-                                <span class="ml-3">Marquee</span>
+                                <span class="ml-3 sidebar-text">Marquee</span>
                             </a>
-                            <div class="px-6 py-2 mt-4">
+                            <div class="px-6 py-2 mt-4 external-label">
                                 <p class="text-xs opacity-50 uppercase tracking-wider">External</p>
                             </div>
-                            <a href="{{ route('monitor.index', ['company_code' => request()->route('company_code')]) }}" target="_blank" class="sidebar-link flex items-center px-6 py-3">
+                            <a href="{{ route('monitor.index', ['organization_code' => $orgCode]) }}" target="_blank" class="sidebar-link flex items-center px-6 py-3">
                                 <i class="fas fa-tv w-5"></i>
-                                <span class="ml-3">Monitor Display</span>
-                                <i class="fas fa-external-link-alt ml-auto text-xs"></i>
+                                <span class="ml-3 sidebar-text">Monitor Display</span>
+                                <i class="fas fa-external-link-alt ml-auto text-xs external-label"></i>
                             </a>
-                            <a href="{{ route('kiosk.index', ['company_code' => request()->route('company_code')]) }}" target="_blank" class="sidebar-link flex items-center px-6 py-3">
+                            <a href="{{ route('kiosk.index', ['organization_code' => $orgCode]) }}" target="_blank" class="sidebar-link flex items-center px-6 py-3">
                                 <i class="fas fa-tablet-alt w-5"></i>
-                                <span class="ml-3">Kiosk</span>
-                                <i class="fas fa-external-link-alt ml-auto text-xs"></i>
+                                <span class="ml-3 sidebar-text">Kiosk</span>
+                                <i class="fas fa-external-link-alt ml-auto text-xs external-label"></i>
                             </a>
                         @elseif(auth()->user()->isCounter())
-                            <a href="{{ route('counter.dashboard', ['company_code' => request()->route('company_code')]) }}" class="sidebar-link flex items-center px-6 py-3 {{ request()->routeIs('counter.dashboard') ? 'active' : '' }}">
+                            <a href="{{ route('counter.dashboard', ['organization_code' => $orgCode]) }}" class="sidebar-link flex items-center px-6 py-3 {{ request()->routeIs('counter.dashboard') ? 'active' : '' }}">
                                 <i class="fas fa-chart-line w-5"></i>
-                                <span class="ml-3">Dashboard</span>
+                                <span class="ml-3 sidebar-text">Dashboard</span>
                             </a>
-                            <a href="{{ route('counter.panel', ['company_code' => request()->route('company_code')]) }}" target="_blank" class="sidebar-link flex items-center px-6 py-3">
+                            <a href="{{ route('counter.panel', ['organization_code' => $orgCode]) }}" target="_blank" class="sidebar-link flex items-center px-6 py-3">
                                 <i class="fas fa-phone w-5"></i>
-                                <span class="ml-3">Service Station</span>
-                                <i class="fas fa-external-link-alt ml-auto text-xs"></i>
+                                <span class="ml-3 sidebar-text">Service Station</span>
+                                <i class="fas fa-external-link-alt ml-auto text-xs external-label"></i>
                             </a>
                         @endif
                     @endauth
@@ -134,11 +185,15 @@
 
                 <!-- Logout -->
                 <div class="p-4 border-t border-white border-opacity-20">
+                    <a href="{{ route('account.settings', ['organization_code' => $orgCode]) }}" class="sidebar-link flex items-center w-full px-4 py-3 rounded-lg mb-2 {{ request()->routeIs('account.settings') ? 'active' : '' }}">
+                        <i class="fas fa-user-cog w-5"></i>
+                        <span class="ml-3 sidebar-text">Account Settings</span>
+                    </a>
                     <form action="{{ route('logout') }}" method="POST">
                         @csrf
                         <button type="submit" class="sidebar-link flex items-center w-full px-4 py-3 rounded-lg hover:bg-red-500 hover:bg-opacity-20">
                             <i class="fas fa-sign-out-alt w-5"></i>
-                            <span class="ml-3">Logout</span>
+                            <span class="ml-3 sidebar-text">Logout</span>
                         </button>
                     </form>
                 </div>
@@ -172,6 +227,65 @@
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('mobile-open');
         }
+
+        // Auto-refresh CSRF token every 30 minutes to prevent page expiration
+        function refreshCSRFToken() {
+            fetch('/refresh-csrf', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.token) {
+                    // Update meta tag
+                    document.querySelector('meta[name="csrf-token"]').setAttribute('content', data.token);
+                    // Update all forms with CSRF token
+                    document.querySelectorAll('input[name="_token"]').forEach(input => {
+                        input.value = data.token;
+                    });
+                    console.log('CSRF token refreshed');
+                }
+            })
+            .catch(error => console.error('Failed to refresh CSRF token:', error));
+        }
+
+        // Refresh token every 30 minutes (1800000 ms)
+        setInterval(refreshCSRFToken, 1800000);
+
+        // Also refresh on user activity after 25 minutes of inactivity
+        let inactivityTimer;
+        function resetInactivityTimer() {
+            clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(refreshCSRFToken, 1500000); // 25 minutes
+        }
+        
+        ['click', 'keypress', 'scroll', 'mousemove'].forEach(event => {
+            document.addEventListener(event, resetInactivityTimer, { passive: true });
+        });
+        
+        resetInactivityTimer();
+
+        // Sidebar collapse/expand functionality
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        
+        // Load saved state from localStorage
+        const sidebarState = localStorage.getItem('sidebarCollapsed');
+        if (sidebarState === 'true') {
+            sidebar.classList.add('collapsed');
+        }
+        
+        // Toggle sidebar on button click
+        sidebarToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            sidebar.classList.toggle('collapsed');
+            
+            // Save state to localStorage
+            const isCollapsed = sidebar.classList.contains('collapsed');
+            localStorage.setItem('sidebarCollapsed', isCollapsed);
+        });
     </script>
     @else
     <main>

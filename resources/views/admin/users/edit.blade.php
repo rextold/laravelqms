@@ -1,6 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'Edit User')
+@section('title', auth()->user()->isSuperAdmin() ? 'Edit Admin' : 'Edit Counter')
+@section('page-title', auth()->user()->isSuperAdmin() ? 'Edit Admin' : 'Edit Counter')
 
 @section('content')
 @php
@@ -20,7 +21,7 @@
             </div>
         @endif
 
-        <form action="{{ auth()->user()->isSuperAdmin() ? route('superadmin.users.update', $user->id) : route('admin.users.update', [request()->route('company_code'), $user->id]) }}" method="POST" class="bg-white p-6 rounded-lg shadow">
+        <form action="{{ auth()->user()->isSuperAdmin() ? route('superadmin.users.update', $user->id) : route('admin.users.update', ['organization_code' => request()->route('organization_code'), 'user' => $user->id]) }}" method="POST" class="bg-white p-6 rounded-lg shadow">
             @csrf
             @method('PUT')
 
@@ -56,15 +57,15 @@
                 </select>
             </div>
 
-            @if(auth()->user()->isSuperAdmin() && $companies->isNotEmpty())
+            @if(auth()->user()->isSuperAdmin() && $organizations->isNotEmpty())
             <div class="mb-4">
-                <label for="company_id" class="block text-gray-700 font-semibold mb-2">Organization</label>
-                <select id="company_id" name="company_id" 
+                <label for="organization_id" class="block text-gray-700 font-semibold mb-2">Organization</label>
+                <select id="organization_id" name="organization_id" 
                         class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500">
                     <option value="">No Organization</option>
-                    @foreach($companies as $company)
-                        <option value="{{ $company->id }}" {{ old('company_id', $user->company_id) == $company->id ? 'selected' : '' }}>
-                            {{ $company->company_name }} ({{ $company->company_code }})
+                    @foreach($organizations as $organization)
+                        <option value="{{ $organization->id }}" {{ old('organization_id', $user->organization_id) == $organization->id ? 'selected' : '' }}>
+                            {{ $organization->organization_name }} ({{ $organization->organization_code }})
                         </option>
                     @endforeach
                 </select>
@@ -73,34 +74,51 @@
 
             <div id="counter-fields" style="display: {{ old('role', $user->role) === 'counter' ? 'block' : 'none' }}">
                 <div class="mb-4">
-                    <label for="display_name" class="block text-gray-700 font-semibold mb-2">Display Name *</label>
+                    <label for="display_name" class="block text-gray-700 font-semibold mb-2">
+                        Display Name <span class="text-red-500">*</span>
+                    </label>
                     <input type="text" id="display_name" name="display_name" value="{{ old('display_name', $user->display_name) }}" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500">
+                           class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 @error('display_name') border-red-500 @enderror">
+                    @error('display_name')
+                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 <div class="mb-4">
-                    <label for="counter_number" class="block text-gray-700 font-semibold mb-2">Counter Number *</label>
+                    <label for="counter_number" class="block text-gray-700 font-semibold mb-2">
+                        Counter Number <span class="text-red-500">*</span>
+                    </label>
                     <input type="number" id="counter_number" name="counter_number" value="{{ old('counter_number', $user->counter_number) }}" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500">
+                           class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 @error('counter_number') border-red-500 @enderror"
+                           min="1">
+                    @error('counter_number')
+                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 <div class="mb-4">
                     <label for="priority_code" class="block text-gray-700 font-semibold mb-2">Priority Code (Short Code)</label>
                     <input type="text" id="priority_code" name="priority_code" value="{{ old('priority_code', $user->priority_code) }}" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                           class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 @error('priority_code') border-red-500 @enderror"
                            placeholder="e.g., C1">
                     <p class="text-sm text-gray-500 mt-1">Used as the prefix for priority numbers (e.g., C1-1001)</p>
+                    @error('priority_code')
+                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 <div class="mb-4">
                     <label for="short_description" class="block text-gray-700 font-semibold mb-2">Short Description</label>
                     <input type="text" id="short_description" name="short_description" value="{{ old('short_description', $user->short_description) }}" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500">
+                           class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 @error('short_description') border-red-500 @enderror">
+                    @error('short_description')
+                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                    @enderror
                 </div>
             </div>
 
             <div class="flex justify-end space-x-4">
-                <a href="{{ auth()->user()->isSuperAdmin() ? route('superadmin.users.index') : route('admin.users.index', ['company_code' => request()->route('company_code')]) }}" class="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100">
+                <a href="{{ auth()->user()->isSuperAdmin() ? route('superadmin.users.index') : route('admin.users.index', ['organization_code' => request()->route('organization_code')]) }}" class="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100">
                     Cancel
                 </a>
                 <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
@@ -115,17 +133,33 @@
 <script>
 function toggleCounterFields(role) {
     const counterFields = document.getElementById('counter-fields');
+    const displayName = document.getElementById('display_name');
+    const counterNumber = document.getElementById('counter_number');
+    
     if (role === 'counter') {
         counterFields.style.display = 'block';
+        // Make fields required
+        displayName.setAttribute('required', 'required');
+        counterNumber.setAttribute('required', 'required');
     } else {
-        // Clear counter fields when switching to non-counter role
-        document.getElementById('display_name').value = '';
-        document.getElementById('counter_number').value = '';
+        counterFields.style.display = 'none';
+        // Remove required attribute and clear values
+        displayName.removeAttribute('required');
+        counterNumber.removeAttribute('required');
+        displayName.value = '';
+        counterNumber.value = '';
         document.getElementById('priority_code').value = '';
         document.getElementById('short_description').value = '';
-        counterFields.style.display = 'none';
     }
 }
+
+// On page load, ensure proper state
+document.addEventListener('DOMContentLoaded', function() {
+    const roleSelect = document.getElementById('role');
+    if (roleSelect.value === 'counter') {
+        toggleCounterFields('counter');
+    }
+});
 </script>
 @endpush
 @endsection

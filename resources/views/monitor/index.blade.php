@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitor Display - {{ $settings->company_name }}</title>
+    <title>Monitor Display - {{ $organization->organization_name }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -165,10 +165,10 @@
         <div class="header-section" style="position: relative;">
             <div class="flex items-center space-x-3">
                 @if($settings->logo_url)
-                    <img src="{{ $settings->logo_url }}" alt="{{ $settings->company_name }}" class="h-10">
+                    <img src="{{ $settings->logo_url }}" alt="{{ $organization->organization_name }}" class="h-10">
                 @endif
                 <div>
-                    <h1 class="text-2xl font-bold" style="color: var(--text-color)">{{ $settings->company_name }}</h1>
+                    <h1 class="text-2xl font-bold" style="color: var(--text-color)">{{ $organization->organization_name }}</h1>
                     <p class="text-xs opacity-90" style="color: var(--text-color)">Queue Management System</p>
                 </div>
             </div>
@@ -441,23 +441,56 @@
     setInterval(updateDisplay, 2000);
 
     function updateDisplay() {
-        fetch('{{ route('monitor.data', ['company_code' => $companyCode]) }}')
+        fetch('{{ route('monitor.data', ['organization_code' => $companyCode]) }}')
             .then(response => response.json())
             .then(data => {
-                // Update video control (only for HTML5 videos, not YouTube)
-                if (video && !isYouTube && data.video_control) {
+                // Update video control
+                if (data.video_control) {
+                    const newIsPlaying = data.video_control.is_playing;
                     const newVolume = (data.video_control.volume || 50) / 100;
-                    if (Math.abs(video.volume - newVolume) > 0.01) {
-                        video.volume = newVolume;
+                    
+                    // Handle HTML5 video controls
+                    if (video && !isYouTube) {
+                        // Update volume
+                        if (Math.abs(video.volume - newVolume) > 0.01) {
+                            video.volume = newVolume;
+                            console.log('Volume updated to:', Math.round(newVolume * 100) + '%');
+                        }
+                        
+                        // Update play/pause state
+                        if (newIsPlaying && video.paused) {
+                            video.play().then(() => {
+                                console.log('Video resumed playing');
+                            }).catch(error => {
+                                console.log('Error playing video:', error);
+                            });
+                        } else if (!newIsPlaying && !video.paused) {
+                            video.pause();
+                            console.log('Video paused');
+                        }
+                    }
+                    // Handle YouTube iframe controls
+                    else if (video && isYouTube) {
+                        // YouTube iframe API control
+                        // Note: Volume control for YouTube requires the iframe API to be initialized
+                        // For play/pause, we can reload the iframe with autoplay parameter
+                        if (videoControl.is_playing !== newIsPlaying) {
+                            const currentSrc = video.src;
+                            const url = new URL(currentSrc);
+                            
+                            // Update autoplay parameter
+                            url.searchParams.set('autoplay', newIsPlaying ? '1' : '0');
+                            
+                            // Only reload if state actually changed
+                            if (currentSrc !== url.toString()) {
+                                video.src = url.toString();
+                                console.log('YouTube video ' + (newIsPlaying ? 'resumed' : 'paused'));
+                            }
+                        }
                     }
                     
-                    if (data.video_control.is_playing && video.paused) {
-                        video.play().catch(error => {
-                            console.log('Error playing video:', error);
-                        });
-                    } else if (!data.video_control.is_playing && !video.paused) {
-                        video.pause();
-                    }
+                    // Update local video control state
+                    videoControl = data.video_control;
                 }
 
                 // Track currently displayed counter IDs

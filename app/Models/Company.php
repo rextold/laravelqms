@@ -55,7 +55,7 @@ class Company extends Model
 
     public function setting()
     {
-        return $this->hasOne(CompanySetting::class);
+        return $this->hasOne(OrganizationSetting::class, 'organization_id', 'id');
     }
 
     /**

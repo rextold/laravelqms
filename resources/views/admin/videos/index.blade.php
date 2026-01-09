@@ -1,6 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Video Management')
+@section('page-title', 'Video Management')
 
 @section('content')
 <div class="container mx-auto px-4 py-8">
@@ -57,7 +58,7 @@
                     <div id="bellVolumeUpdateStatus" class="text-xs text-green-600 hidden">
                         <i class="fas fa-check-circle"></i> Bell volume updated
                     </div>
-                    <form action="{{ route('admin.videos.upload-bell', ['company_code' => request()->route('company_code')]) }}" method="POST" enctype="multipart/form-data" class="space-y-2">
+                    <form action="{{ route('admin.videos.upload-bell', ['organization_code' => request()->route('organization_code')]) }}" method="POST" enctype="multipart/form-data" class="space-y-2">
                         @csrf
                         <div>
                             <label class="block text-sm text-gray-600 mb-1">
@@ -98,7 +99,7 @@
             </div>
         @endif
 
-        <form action="{{ route('admin.videos.store', ['company_code' => request()->route('company_code')]) }}" method="POST" enctype="multipart/form-data" id="videoForm">
+        <form action="{{ route('admin.videos.store', ['organization_code' => request()->route('organization_code')]) }}" method="POST" enctype="multipart/form-data" id="videoForm">
             @csrf
             <div class="mb-4">
                 <label class="block text-gray-700 font-semibold mb-2">Video Type *</label>
@@ -220,7 +221,7 @@
                                 <button type="button" 
                                         data-video-id="{{ $video->id }}"
                                         data-video-filename="{{ addslashes($video->filename) }}"
-                                        data-delete-url="{{ route('admin.videos.destroy', ['company_code' => request()->route('company_code'), 'video' => $video->id]) }}"
+                                        data-delete-url="{{ route('admin.videos.destroy', ['organization_code' => request()->route('organization_code'), 'video' => $video->id]) }}"
                                         onclick="openDeleteVideoModal(this)"
                                         class="text-red-600 hover:text-red-800">
                                     <i class="fas fa-trash"></i>
@@ -379,13 +380,33 @@ document.getElementById('videoForm')?.addEventListener('submit', function(e) {
         
         // Load event
         xhr.addEventListener('load', function() {
-            if (xhr.status === 200 || xhr.status === 302) {
-                uploadPercent.textContent = '100%';
-                uploadBar.style.width = '100%';
-                uploadStatus.innerHTML = '<span class="text-green-600"><i class="fas fa-check-circle"></i> Upload complete! Processing...</span>';
-                setTimeout(() => {
-                    this.submit();
-                }, 1000);
+            if (xhr.status === 200) {
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    if (response.success && response.video) {
+                        uploadPercent.textContent = '100%';
+                        uploadBar.style.width = '100%';
+                        uploadStatus.innerHTML = '<span class="text-green-600"><i class="fas fa-check-circle"></i> Video added successfully!</span>';
+                        
+                        // Append new video to the table
+                        appendVideoToTable(response.video);
+                        
+                        // Reset form after 1 second
+                        setTimeout(() => {
+                            document.getElementById('videoForm').reset();
+                            progressDiv.classList.add('hidden');
+                            uploadBar.style.width = '0%';
+                            uploadPercent.textContent = '0%';
+                            uploadStatus.innerHTML = '';
+                            submitBtn.disabled = false;
+                        }, 1000);
+                    } else {
+                        throw new Error(response.message || 'Upload failed');
+                    }
+                } catch (error) {
+                    uploadStatus.innerHTML = '<span class="text-red-600"><i class="fas fa-exclamation-circle"></i> Error: ' + error.message + '</span>';
+                    submitBtn.disabled = false;
+                }
             } else {
                 uploadStatus.innerHTML = '<span class="text-red-600"><i class="fas fa-exclamation-circle"></i> Upload failed</span>';
                 submitBtn.disabled = false;
@@ -400,11 +421,119 @@ document.getElementById('videoForm')?.addEventListener('submit', function(e) {
         
         xhr.open('POST', this.action, true);
         xhr.setRequestHeader('X-CSRF-TOKEN', '{{ csrf_token() }}');
+        xhr.setRequestHeader('Accept', 'application/json');
         xhr.send(formData);
     } else {
-        this.submit();
+        // For YouTube, also use AJAX
+        e.preventDefault();
+        const submitBtn = document.getElementById('submitBtn');
+        const uploadStatus = document.getElementById('uploadStatus');
+        
+        submitBtn.disabled = true;
+        uploadStatus.innerHTML = '<span class="text-blue-600"><i class="fas fa-spinner animate-spin"></i> Adding video...</span>';
+        
+        const formData = new FormData(this);
+        
+        fetch(this.action, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.video) {
+                uploadStatus.innerHTML = '<span class="text-green-600"><i class="fas fa-check-circle"></i> Video added successfully!</span>';
+                
+                // Append new video to the table
+                appendVideoToTable(data.video);
+                
+                // Reset form after 1 second
+                setTimeout(() => {
+                    document.getElementById('videoForm').reset();
+                    uploadStatus.innerHTML = '';
+                    submitBtn.disabled = false;
+                }, 1000);
+            } else {
+                throw new Error(data.message || 'Upload failed');
+            }
+        })
+        .catch(error => {
+            uploadStatus.innerHTML = '<span class="text-red-600"><i class="fas fa-times-circle"></i> Error: ' + error.message + '</span>';
+            submitBtn.disabled = false;
+        });
     }
 });
+
+// Function to append video to the table dynamically
+function appendVideoToTable(video) {
+    const tbody = document.getElementById('videos-list');
+    const orgCode = '{{ request()->route("organization_code") }}';
+    
+    // Create new row
+    const tr = document.createElement('tr');
+    tr.className = 'border-b hover:bg-gray-50';
+    tr.dataset.id = video.id;
+    
+    // Build video type badge
+    const typeBadge = video.is_youtube 
+        ? '<span class="bg-red-100 text-red-800 px-2 py-1 rounded text-sm"><i class="fab fa-youtube"></i> YouTube</span>'
+        : '<span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm"><i class="fas fa-file-video"></i> File</span>';
+    
+    // Build title cell
+    const titleCell = video.is_youtube
+        ? video.title + ' <a href="' + video.youtube_url + '" target="_blank" class="text-blue-600 hover:text-blue-800 ml-2"><i class="fab fa-youtube"></i></a>'
+        : video.title;
+    
+    // Escape quotes in filename for JavaScript
+    const escapedFilename = (video.filename || video.title).replace(/'/g, "\\'");
+    
+    tr.innerHTML = `
+        <td class="py-3 px-4">${video.order}</td>
+        <td class="py-3 px-4"><div>${titleCell}</div></td>
+        <td class="py-3 px-4">${typeBadge}</td>
+        <td class="py-3 px-4">
+            <span class="status-badge ${video.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'} px-2 py-1 rounded text-sm">
+                ${video.is_active ? 'Active' : 'Inactive'}
+            </span>
+        </td>
+        <td class="py-3 px-4">
+            <div class="flex space-x-3 items-center">
+                <button type="button" class="text-purple-600 hover:text-purple-800"
+                        onclick="previewVideo(this)"
+                        data-type="${video.is_youtube ? 'youtube' : 'file'}"
+                        data-title="${video.title}"
+                        data-file="${video.is_file ? video.file_path : ''}"
+                        data-youtube="${video.is_youtube ? video.youtube_embed_url : ''}">
+                    <i class="fas fa-play-circle"></i>
+                </button>
+                <button onclick="toggleActive(${video.id})" class="text-blue-600 hover:text-blue-800" title="Toggle Active">
+                    <i class="fas fa-toggle-on"></i>
+                </button>
+                <button type="button" 
+                        data-video-id="${video.id}"
+                        data-video-filename="${escapedFilename}"
+                        data-delete-url="/${orgCode}/admin/videos/${video.id}"
+                        onclick="openDeleteVideoModal(this)"
+                        class="text-red-600 hover:text-red-800">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </td>
+    `;
+    
+    // Append to table body
+    tbody.appendChild(tr);
+    
+    // Add highlight animation
+    tr.style.backgroundColor = '#dcfce7'; // green-200
+    setTimeout(() => {
+        tr.style.transition = 'background-color 1.5s ease';
+        tr.style.backgroundColor = '';
+    }, 100);
+}
 
 function previewVideo(btn) {
     const modal = document.getElementById('previewModal');
@@ -552,7 +681,7 @@ function showUpdateStatus(elementId) {
 }
 
 function updateControl() {
-    fetch('{{ route('admin.videos.control', ['company_code' => request()->route('company_code')]) }}', {
+    fetch('{{ route('admin.videos.control', ['organization_code' => request()->route('organization_code')]) }}', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -580,7 +709,7 @@ function updateControl() {
 
 function resetBellSound() {
     openResetBellModal();
-        fetch('{{ route('admin.videos.reset-bell', ['company_code' => request()->route('company_code')]) }}', {
+        fetch('{{ route('admin.videos.reset-bell', ['organization_code' => request()->route('organization_code')]) }}', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -594,8 +723,8 @@ function resetBellSound() {
 }
 
 function toggleActive(videoId) {
-    const companyCode = '{{ request()->route("company_code") }}';
-    fetch(`/${companyCode}/admin/videos/${videoId}/toggle`, {
+    const organizationCode = '{{ request()->route("organization_code") }}';
+    fetch(`/${organizationCode}/admin/videos/${videoId}/toggle`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -781,7 +910,7 @@ function openResetBellModal() {
 
 function confirmResetBell() {
     closeModalReset('reset-bell-modal');
-    fetch('{{ route('admin.videos.reset-bell', ['company_code' => request()->route('company_code')]) }}', {
+    fetch('{{ route('admin.videos.reset-bell', ['organization_code' => request()->route('organization_code')]) }}', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

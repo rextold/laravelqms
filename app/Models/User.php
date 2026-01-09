@@ -14,17 +14,17 @@ class User extends Authenticatable
     {
         parent::boot();
 
-        // When an admin's company is updated, automatically update all their counters
+        // When an admin's organization is updated, automatically update all their counters
         static::updating(function ($user) {
-            // Check if this is an admin and company_id has changed
-            if ($user->isAdmin() && $user->isDirty('company_id')) {
-                $oldCompanyId = $user->getOriginal('company_id');
-                $newCompanyId = $user->getAttribute('company_id');
+            // Check if this is an admin and organization_id has changed
+            if ($user->isAdmin() && $user->isDirty('organization_id')) {
+                $oldOrganizationId = $user->getOriginal('organization_id');
+                $newOrganizationId = $user->getAttribute('organization_id');
 
-                // Update all counters belonging to this admin's old company to the new company
+                // Update all counters belonging to this admin's old organization to the new organization
                 User::where('role', 'counter')
-                    ->where('company_id', $oldCompanyId)
-                    ->update(['company_id' => $newCompanyId]);
+                    ->where('organization_id', $oldOrganizationId)
+                    ->update(['organization_id' => $newOrganizationId]);
             }
         });
     }
@@ -36,10 +36,12 @@ class User extends Authenticatable
         'role',
         'display_name',
         'counter_number',
+        'counter_code',
         'priority_code',
         'short_description',
         'is_online',
-        'company_id',
+        'is_active',
+        'organization_id',
     ];
 
     protected $hidden = [
@@ -57,9 +59,14 @@ class User extends Authenticatable
         return $this->hasMany(Queue::class, 'counter_id');
     }
 
+    public function organization()
+    {
+        return $this->belongsTo(Organization::class);
+    }
+
     public function company()
     {
-        return $this->belongsTo(Company::class);
+        return $this->organization();
     }
 
     public function transferredQueues()

@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\Company;
+use App\Models\Organization;
 use App\Models\User;
 
 class AuthController extends Controller
@@ -55,7 +55,7 @@ class AuthController extends Controller
     }
 
     /**
-     * Redirect user based on role and company context.
+     * Redirect user based on role and organization context.
      */
     protected function redirectByRole($user, Request $request = null)
     {
@@ -66,29 +66,29 @@ class AuthController extends Controller
         }
 
         if ($user->isAdmin()) {
-            $company = $user->company;
-            if (!$company) {
+            $organization = $user->organization;
+            if (!$organization) {
                 Auth::logout();
                 return back()->withErrors([
-                    'username' => 'User company not assigned. Please contact administrator.',
+                    'username' => 'User organization not assigned. Please contact administrator.',
                 ])->onlyInput('username');
             }
-            $request->session()->put('company', $company);
-            return redirect()->intended(route('admin.dashboard', ['company_code' => $company->company_code]));
+            $request->session()->put('organization', $organization);
+            return redirect()->intended(route('admin.dashboard', ['organization_code' => $organization->organization_code]));
         }
 
         if ($user->isCounter()) {
-            $company = $user->company;
-            if (!$company) {
+            $organization = $user->organization;
+            if (!$organization) {
                 Auth::logout();
                 return back()->withErrors([
-                    'username' => 'User company not assigned. Please contact administrator.',
+                    'username' => 'User organization not assigned. Please contact administrator.',
                 ])->onlyInput('username');
             }
             // Set counter online on login
             $user->update(['is_online' => true]);
-            $request->session()->put('company', $company);
-            return redirect()->intended(route('counter.dashboard', ['company_code' => $company->company_code]));
+            $request->session()->put('organization', $organization);
+            return redirect()->intended(route('counter.dashboard', ['organization_code' => $organization->organization_code]));
         }
 
         // Fallback

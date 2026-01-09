@@ -10,10 +10,10 @@
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-4">
                     @if($settings->logo_url)
-                        <img src="{{ $settings->logo_url }}" alt="{{ $settings->company_name }}" class="h-12 w-auto">
+                        <img src="{{ $settings->logo_url }}" alt="Organization Logo" class="h-12 w-auto">
                     @endif
                     <div>
-                        <h1 class="text-2xl font-bold text-gray-800">{{ $settings->company_name }}</h1>
+                        <h1 class="text-2xl font-bold text-gray-800">{{ $organization->organization_name ?? 'QMS' }}</h1>
                         <p class="text-sm text-gray-600">Counter {{ $counter->counter_number }} - {{ $counter->display_name }}</p>
                     </div>
                 </div>
@@ -264,7 +264,7 @@ function formatDisplayQueue(queueNumber) {
 }
 
 function fetchData() {
-    fetch('{{ route('counter.data', ['company_code' => request()->route('company_code')]) }}')
+    fetch('{{ route('counter.data', ['organization_code' => request()->route('organization_code')]) }}')
         .then(r => r.json())
         .then(d => { if (d.success) renderLists(d); });
 }
@@ -282,23 +282,23 @@ function postJson(url, payload) {
 }
 
 function notifyCustomer() { 
-    postJson('{{ route('counter.notify', ['company_code' => request()->route('company_code')]) }}')
+    postJson('{{ route('counter.notify', ['organization_code' => request()->route('organization_code')]) }}')
         .then(() => {
             playNotificationSound();
             fetchData();
         });
 }
 function skipCurrent() { openSkipModal(); }
-function moveToNext() { postJson('{{ route('counter.move-next', ['company_code' => request()->route('company_code')]) }}').then(() => fetchData()); }
+function moveToNext() { postJson('{{ route('counter.move-next', ['organization_code' => request()->route('organization_code')]) }}').then(() => fetchData()); }
 function callNext() { 
-    postJson('{{ route('counter.call-next', ['company_code' => request()->route('company_code')]) }}')
+    postJson('{{ route('counter.call-next', ['organization_code' => request()->route('organization_code')]) }}')
         .then(() => {
             playNotificationSound();
             fetchData();
         });
 }
 function recallQueue(id) { 
-    postJson('{{ route('counter.recall', ['company_code' => request()->route('company_code')]) }}', { queue_id: id })
+    postJson('{{ route('counter.recall', ['organization_code' => request()->route('organization_code')]) }}', { queue_id: id })
         .then(() => {
             playNotificationSound();
             fetchData();
@@ -328,7 +328,7 @@ function closeSkipModal() {
 
 function confirmSkip() {
     closeSkipModal();
-    postJson('{{ route('counter.skip', ['company_code' => request()->route('company_code')]) }}').then(() => fetchData());
+    postJson('{{ route('counter.skip', ['organization_code' => request()->route('organization_code')]) }}').then(() => fetchData());
 }
 
 function openTransferModal() {
@@ -376,7 +376,7 @@ function confirmTransfer(toCounterId) {
     
     closeTransferModal();
     
-    fetch('{{ route('counter.transfer', ['company_code' => request()->route('company_code')]) }}', {
+    fetch('{{ route('counter.transfer', ['organization_code' => request()->route('organization_code')]) }}', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

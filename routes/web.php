@@ -2,13 +2,14 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Admin\AdminController;
-use App\Http\Controllers\Admin\CompanyController;
+use App\Http\Controllers\Admin\OrganizationController;
 use App\Http\Controllers\Admin\VideoController;
 use App\Http\Controllers\Admin\MarqueeController;
-use App\Http\Controllers\CompanySettingsController;
+use App\Http\Controllers\OrganizationSettingsController;
 use App\Http\Controllers\CounterController;
 use App\Http\Controllers\KioskController;
 use App\Http\Controllers\MonitorController;
+use App\Http\Controllers\AccountController;
 use App\Models\User;
 use App\Models\Video;
 use App\Models\MarqueeSetting;
@@ -18,6 +19,11 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return redirect('/login');
 });
+
+// CSRF Token Refresh Route
+Route::get('/refresh-csrf', function () {
+    return response()->json(['token' => csrf_token()]);
+})->middleware('web');
 
 // Login & Auth (no company code in URL)
 Route::middleware('guest')->group(function () {
@@ -30,13 +36,13 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->n
 Route::middleware(['auth', 'role:superadmin'])->prefix('superadmin')->name('superadmin.')->group(function () {
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     
-    // Company management
-    Route::get('/companies', [CompanyController::class, 'index'])->name('companies.index');
-    Route::get('/companies/create', [CompanyController::class, 'create'])->name('companies.create');
-    Route::post('/companies', [CompanyController::class, 'store'])->name('companies.store');
-    Route::get('/companies/{company}/edit', [CompanyController::class, 'edit'])->name('companies.edit')->whereNumber('company');
-    Route::put('/companies/{company}', [CompanyController::class, 'update'])->name('companies.update')->whereNumber('company');
-    Route::delete('/companies/{company}', [CompanyController::class, 'destroy'])->name('companies.destroy')->whereNumber('company');
+    // Organization management
+    Route::get('/organizations', [OrganizationController::class, 'index'])->name('organizations.index');
+    Route::get('/organizations/create', [OrganizationController::class, 'create'])->name('organizations.create');
+    Route::post('/organizations', [OrganizationController::class, 'store'])->name('organizations.store');
+    Route::get('/organizations/{organization}/edit', [OrganizationController::class, 'edit'])->name('organizations.edit')->whereNumber('organization');
+    Route::put('/organizations/{organization}', [OrganizationController::class, 'update'])->name('organizations.update')->whereNumber('organization');
+    Route::delete('/organizations/{organization}', [OrganizationController::class, 'destroy'])->name('organizations.destroy')->whereNumber('organization');
     
     // User management
     Route::get('/users', [AdminController::class, 'manageUsers'])->name('users.index');
@@ -47,8 +53,8 @@ Route::middleware(['auth', 'role:superadmin'])->prefix('superadmin')->name('supe
     Route::delete('/users/{user}', [AdminController::class, 'deleteUser'])->name('users.destroy')->whereNumber('user');
 });
 
-// Company-based routes (with company_code prefix)
-Route::prefix('{company_code}')->middleware('company.context')->group(function () {
+// Organization-based routes (with organization_code prefix)
+Route::prefix('{organization_code}')->middleware('organization.context')->group(function () {
     
     // Kiosk (public)
     Route::prefix('kiosk')->name('kiosk.')->group(function () {
@@ -66,14 +72,18 @@ Route::prefix('{company_code}')->middleware('company.context')->group(function (
     // Protected routes
     Route::middleware('auth')->group(function () {
         
+        // Account Settings (for admin and counter users)
+        Route::get('/account/settings', [AccountController::class, 'settings'])->name('account.settings');
+        Route::put('/account/password', [AccountController::class, 'updatePassword'])->name('account.update-password');
+        
         // Admin routes
         Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
             Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
             
-            // Company Settings
-            Route::get('/company-settings', [CompanySettingsController::class, 'edit'])->name('company-settings.edit');
-            Route::put('/company-settings', [CompanySettingsController::class, 'update'])->name('company-settings.update');
-            Route::delete('/company-settings/logo', [CompanySettingsController::class, 'removeLogo'])->name('company-settings.remove-logo');
+            // Organization Settings
+            Route::get('/organization-settings', [OrganizationSettingsController::class, 'edit'])->name('organization-settings.edit');
+            Route::put('/organization-settings', [OrganizationSettingsController::class, 'update'])->name('organization-settings.update');
+            Route::delete('/organization-settings/logo', [OrganizationSettingsController::class, 'removeLogo'])->name('organization-settings.remove-logo');
             
             // User management
             Route::get('/users', [AdminController::class, 'manageUsers'])->name('users.index');
@@ -108,7 +118,7 @@ Route::prefix('{company_code}')->middleware('company.context')->group(function (
             Route::get('/panel', [CounterController::class, 'callView'])->name('panel');
             // Backward-compatible redirect from /view to /panel
             Route::get('/view', function () {
-                return redirect()->to(route('counter.panel', ['company_code' => request()->route('company_code')]));
+                return redirect()->to(route('counter.panel', ['organization_code' => request()->route('organization_code')]));
             })->name('view');
             Route::get('/data', [CounterController::class, 'getData'])->name('data');
             Route::post('/toggle-online', [CounterController::class, 'toggleOnline'])->name('toggle-online');
