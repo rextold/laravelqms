@@ -172,12 +172,12 @@ function updateHeaderTime() {
     document.getElementById('headerDate').textContent = dateStr;
 }
 
-// Format queue display as counter-sequence
+// Format queue display as sequence only
 function formatDisplayQueue(queueNumber, counterNum = COUNTER_NUM) {
     if (!queueNumber) return '';
     const parts = queueNumber.split('-');
     const sequence = parts[parts.length - 1];
-    return counterNum + '-' + sequence;
+    return sequence;
 }
 
 // Default notification sound - Train Station Lobby chime
@@ -227,9 +227,9 @@ function renderLists(data) {
     document.getElementById('btnComplete').disabled = !hasCurrentQueue;
     document.getElementById('btnTransfer').disabled = !hasCurrentQueue || onlineCounters.length === 0;
     
-    // Disable Call Next if no waiting queues
+    // Disable Call Next if no waiting queues OR if still serving current queue
     const hasWaitingQueues = data.waiting_queues && data.waiting_queues.length > 0;
-    document.getElementById('btnCallNext').disabled = !hasWaitingQueues;
+    document.getElementById('btnCallNext').disabled = !hasWaitingQueues || hasCurrentQueue;
 
     // Waiting
     const waiting = document.getElementById('waitingList');

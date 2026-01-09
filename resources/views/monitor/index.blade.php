@@ -156,7 +156,7 @@
                 $suffix = $last ?: $queueNumber;
             }
 
-            return $counterNumber . '-' . $suffix;
+            return $suffix;
         };
     @endphp
 
@@ -322,12 +322,12 @@
         previousQueues[counterId] = el.getAttribute('data-queue');
     });
 
-    // Format queue number as {counter_number}-{sequence}, e.g., 2-0001
+    // Format queue number as sequence only, e.g., 0001
     function formatDisplayQueue(queueNumber, counterNumber) {
         if (!queueNumber) return '---';
         const parts = String(queueNumber).split('-');
         const suffix = parts.length ? (parts[parts.length - 1] || queueNumber) : queueNumber;
-        return `${counterNumber}-${suffix}`;
+        return suffix;
     }
 
     // Video Control and Auto-play (only for HTML5 videos, YouTube handles autoplay via embed URL)

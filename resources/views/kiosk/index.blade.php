@@ -468,12 +468,12 @@
             hour12: true 
         });
         
-        // Display format: {counter_number}-{sequence}, e.g., 2-0001
+        // Display format: sequence only, e.g., 0001
         const suffixFromQueue = (qn) => {
             const parts = String(qn).split('-');
             return parts[parts.length - 1];
         };
-        const displayQueueNumber = `${queue.counter.counter_number}-${suffixFromQueue(queue.queue_number)}`;
+        const displayQueueNumber = suffixFromQueue(queue.queue_number);
         
         document.getElementById('queueNumber').textContent = displayQueueNumber;
         document.getElementById('counterInfo').textContent = 
