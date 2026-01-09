@@ -27,7 +27,7 @@ class MarqueeController extends Controller
             'is_active' => true,
         ]);
 
-        return redirect()->route('admin.marquee.index')
+        return redirect()->route('admin.marquee.index', ['company_code' => request()->route('company_code')])
             ->with('success', 'Marquee created successfully.');
     }
 
@@ -40,7 +40,7 @@ class MarqueeController extends Controller
 
         $marquee->update($validated);
 
-        return redirect()->route('admin.marquee.index')
+        return redirect()->route('admin.marquee.index', ['company_code' => request()->route('company_code')])
             ->with('success', 'Marquee updated successfully.');
     }
 
@@ -61,7 +61,7 @@ class MarqueeController extends Controller
     {
         $marquee->delete();
 
-        return redirect()->route('admin.marquee.index')
+        return redirect()->route('admin.marquee.index', ['company_code' => request()->route('company_code')])
             ->with('success', 'Marquee deleted successfully.');
     }
 }

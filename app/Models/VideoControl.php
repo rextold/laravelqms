@@ -12,6 +12,8 @@ class VideoControl extends Model
     protected $fillable = [
         'is_playing',
         'volume',
+        'bell_volume',
+        'bell_sound_path',
         'current_video_id',
     ];
 
@@ -29,6 +31,7 @@ class VideoControl extends Model
         return self::first() ?? self::create([
             'is_playing' => true,
             'volume' => 50,
+            'bell_volume' => 100,
         ]);
     }
 }

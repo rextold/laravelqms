@@ -1,16 +1,19 @@
 @extends('layouts.app')
 
-@section('title', 'Counter Dashboard')
+@section('title', 'Dashboard & Reports')
 
 @section('content')
 <div class="container mx-auto px-4 py-8">
-    <div class="flex justify-between items-center mb-6">
-        <h1 class="text-3xl font-bold">Counter {{ $counter->counter_number }} - {{ $counter->display_name }}</h1>
-        <button onclick="toggleOnline()" id="onlineBtn" 
-                class="px-4 py-2 rounded {{ $counter->is_online ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700' }} text-white">
-            <i class="fas fa-power-off mr-2"></i>
-            <span id="onlineText">{{ $counter->is_online ? 'Go Offline' : 'Go Online' }}</span>
-        </button>
+    <div class="flex justify-end items-center mb-6">
+        <form id="onlineForm" action="{{ route('counter.toggle-online', ['company_code' => request()->route('company_code')]) }}" method="POST">
+            @csrf
+            <button type="submit" id="onlineBtn" 
+                    class="px-4 py-2 rounded {{ $counter->is_online ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700' }} text-white flex items-center">
+                <i class="fas fa-power-off mr-2"></i>
+                <span id="onlineText">{{ $counter->is_online ? 'Go Offline' : 'Go Online' }}</span>
+                <span id="onlineSpinner" class="hidden ml-2"><i class="fas fa-spinner fa-spin"></i></span>
+            </button>
+        </form>
     </div>
 
     <!-- Stats -->
@@ -43,8 +46,16 @@
             <div class="flex items-center justify-between">
                 <div>
                     <div class="text-blue-100 text-sm font-medium mb-1">Current Queue</div>
+                    @php
+                        $formatCounterQueue = function ($queueNumber, $counterNumber) {
+                            if (!$queueNumber) return 'None';
+                            $parts = explode('-', $queueNumber);
+                            $suffix = count($parts) ? end($parts) : $queueNumber;
+                            return $counterNumber . '-' . ($suffix ?: $queueNumber);
+                        };
+                    @endphp
                     <div class="text-3xl font-bold text-white" id="currentQueue">
-                        {{ $stats['current_queue'] ? $stats['current_queue']->queue_number : 'None' }}
+                        {{ $stats['current_queue'] ? $formatCounterQueue($stats['current_queue']->queue_number, $counter->counter_number) : 'None' }}
                     </div>
                     <div class="text-blue-100 text-xs mt-2"><i class="fas fa-user-clock"></i> Serving</div>
                 </div>
@@ -55,167 +66,297 @@
         </div>
     </div>
 
-    <!-- Current Queue -->
-    <div class="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-2xl p-8 mb-6 border-4 border-white">
-        <h2 class="text-2xl font-bold mb-6 text-white flex items-center">
-            <i class="fas fa-tv mr-3"></i> Current Queue
-        </h2>
-        <div id="currentQueueDisplay" class="text-center">
-            @if($stats['current_queue'])
-                <div class="bg-white bg-opacity-20 backdrop-blur-lg rounded-xl p-8 mb-6 animate-pulse">
-                    <p class="text-white text-lg mb-3">NOW SERVING</p>
-                    <div class="text-8xl font-bold text-white mb-4 drop-shadow-2xl">
-                        {{ $stats['current_queue']->queue_number }}
-                    </div>
-                </div>
-                <div class="flex justify-center space-x-4">
-                    <button onclick="moveToNext()" class="bg-green-500 hover:bg-green-600 text-white px-8 py-4 rounded-xl shadow-lg transform hover:scale-105 transition-all font-bold">
-                        <i class="fas fa-check-circle mr-2"></i>Complete & Next
-                    </button>
-                </div>
-            @else
-                <div class="bg-white bg-opacity-10 backdrop-blur-lg rounded-xl p-12">
-                    <i class="fas fa-inbox text-white text-6xl mb-4 opacity-50"></i>
-                    <p class="text-white text-2xl mb-6">No queue being served</p>
-                    <button onclick="callNext()" class="bg-white text-indigo-600 px-8 py-4 rounded-xl hover:bg-gray-100 shadow-lg transform hover:scale-105 transition-all font-bold">
-                        <i class="fas fa-bell mr-2"></i>Call Next Queue
-                    </button>
-                </div>
-            @endif
+    <!-- Reports & Analytics Section -->
+    <div class="mt-12">
+        <h2 class="text-2xl font-bold text-gray-800 mb-6">Reports & Analytics</h2>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Daily Completion Chart -->
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <h3 class="text-lg font-semibold text-gray-700 mb-4">
+                    <i class="fas fa-chart-bar mr-2 text-blue-500"></i>Completions by Hour
+                </h3>
+                <canvas id="hourlyChart" height="100"></canvas>
+            </div>
+
+            <!-- Weekly Trend Chart -->
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <h3 class="text-lg font-semibold text-gray-700 mb-4">
+                    <i class="fas fa-chart-line mr-2 text-green-500"></i>Weekly Trend
+                </h3>
+                <canvas id="weeklyChart" height="100"></canvas>
+            </div>
+
+            <!-- Average Wait Time -->
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <h3 class="text-lg font-semibold text-gray-700 mb-4">
+                    <i class="fas fa-hourglass-end mr-2 text-orange-500"></i>Avg Wait Time (Minutes)
+                </h3>
+                <canvas id="waitTimeChart" height="100"></canvas>
+            </div>
+
+            <!-- Peak Hours -->
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <h3 class="text-lg font-semibold text-gray-700 mb-4">
+                    <i class="fas fa-chart-pie mr-2 text-purple-500"></i>Queue Distribution
+                </h3>
+                <canvas id="peakHoursChart" height="100"></canvas>
+            </div>
         </div>
     </div>
 
-    <!-- Waiting Queues -->
-    <div class="bg-white rounded-lg shadow p-6">
-        <h2 class="text-xl font-bold mb-4">Waiting Queues</h2>
-        <div class="space-y-2" id="waitingQueues">
-            @forelse($waitingQueues as $queue)
-                <div class="flex justify-between items-center p-3 border rounded hover:bg-gray-50" data-queue-id="{{ $queue->id }}">
-                    <span class="font-semibold">{{ $queue->queue_number }}</span>
-                    <div class="space-x-2">
-                        @if($onlineCounters->count() > 0)
-                        <select class="border rounded px-2 py-1" id="transfer-{{ $queue->id }}">
-                            <option value="">Transfer to...</option>
-                            @foreach($onlineCounters as $oc)
-                                <option value="{{ $oc->id }}">Counter {{ $oc->counter_number }} - {{ $oc->display_name }}</option>
-                            @endforeach
-                        </select>
-                        <button onclick="transferQueue({{ $queue->id }})" class="bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700">
-                            <i class="fas fa-exchange-alt"></i>
-                        </button>
-                        @endif
-                    </div>
-                </div>
-            @empty
-                <p class="text-gray-500 text-center">No waiting queues</p>
-            @endforelse
-        </div>
-    </div>
+    <!-- Overview only: no action panels, lists, or large displays -->
 </div>
+
+<!-- No large number styles needed in overview-only dashboard -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
 
 @push('scripts')
 <script>
 let isOnline = {{ $counter->is_online ? 'true' : 'false' }};
+const COUNTER_NUM = {{ $counter->counter_number }};
 
-function toggleOnline() {
-    fetch('{{ route('counter.toggle-online') }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+document.getElementById('onlineForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    toggleOnline();
+});
+
+// Periodically refresh dashboard numbers without manual reload
+const REFRESH_MS = 3000;
+let refreshTimer = null;
+
+function startAutoRefresh() {
+    refreshDashboardData();
+    refreshTimer = setInterval(refreshDashboardData, REFRESH_MS);
+}
+
+function refreshDashboardData() {
+    fetch('{{ route('counter.data', ['company_code' => request()->route('company_code')]) }}', {
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json' }
+    })
+    .then(res => res.ok ? res.json() : Promise.reject(res))
+    .then(data => {
+        if (!data.success) return;
+        document.getElementById('waitingCount').textContent = data.stats.waiting ?? 0;
+        document.getElementById('completedCount').textContent = data.stats.completed_today ?? 0;
+        document.getElementById('currentQueue').textContent = data.current_queue ? formatDisplayQueue(data.current_queue.queue_number) : 'None';
+        if (typeof data.is_online === 'boolean') {
+            isOnline = data.is_online;
+            updateOnlineButton();
         }
     })
-    .then(response => response.json())
+    .catch(() => {
+        // swallow errors to avoid breaking the interval
+    });
+}
+
+function toggleOnline() {
+    const btn = document.getElementById('onlineBtn');
+    const spinner = document.getElementById('onlineSpinner');
+    btn.disabled = true;
+    spinner.classList.remove('hidden');
+
+    fetch('{{ route('counter.toggle-online', ['company_code' => request()->route('company_code')]) }}', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.ok ? response.json() : Promise.reject(response))
     .then(data => {
         if (data.success) {
             isOnline = data.is_online;
             updateOnlineButton();
-            location.reload();
+            // No hard reload needed; update button instantly
+        } else {
+            throw new Error('Toggle failed');
         }
+    })
+    .catch(() => {
+        alert('Could not update status. Please try again.');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        spinner.classList.add('hidden');
     });
+}
+
+function formatDisplayQueue(queueNumber) {
+    if (!queueNumber) return 'None';
+    const parts = String(queueNumber).split('-');
+    const suffix = parts.length ? (parts[parts.length - 1] || queueNumber) : queueNumber;
+    return `${COUNTER_NUM}-${suffix}`;
 }
 
 function updateOnlineButton() {
     const btn = document.getElementById('onlineBtn');
     const text = document.getElementById('onlineText');
+    const base = 'px-4 py-2 rounded text-white flex items-center';
     if (isOnline) {
-        btn.className = 'px-4 py-2 rounded bg-red-600 hover:bg-red-700 text-white';
+        btn.className = `${base} bg-red-600 hover:bg-red-700`;
         text.textContent = 'Go Offline';
     } else {
-        btn.className = 'px-4 py-2 rounded bg-green-600 hover:bg-green-700 text-white';
+        btn.className = `${base} bg-green-600 hover:bg-green-700`;
         text.textContent = 'Go Online';
     }
 }
 
-function callNext() {
-    fetch('{{ route('counter.call-next') }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        } else {
-            alert(data.message || 'No queues available');
-        }
-    });
-}
-
-function moveToNext() {
-    fetch('{{ route('counter.move-next') }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        }
-    });
-}
-
-function transferQueue(queueId) {
-    const select = document.getElementById(`transfer-${queueId}`);
-    const toCounterId = select.value;
-    
-    if (!toCounterId) {
-        alert('Please select a counter');
-        return;
-    }
-
-    fetch('{{ route('counter.transfer') }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+// Initialize Charts
+document.addEventListener('DOMContentLoaded', function() {
+    startAutoRefresh();
+    // Hourly Completions Chart
+    const hourlyCtx = document.getElementById('hourlyChart').getContext('2d');
+    new Chart(hourlyCtx, {
+        type: 'bar',
+        data: {
+            labels: ['12am', '1am', '2am', '3am', '4am', '5am', '6am', '7am', '8am', '9am', '10am', '11am', '12pm', '1pm', '2pm', '3pm', '4pm', '5pm', '6pm', '7pm', '8pm', '9pm', '10pm', '11pm'],
+            datasets: [{
+                label: 'Completions',
+                data: {{ json_encode($analyticsData['hourly']) }},
+                backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                borderColor: 'rgba(59, 130, 246, 1)',
+                borderWidth: 1,
+                borderRadius: 4
+            }]
         },
-        body: JSON.stringify({
-            queue_id: queueId,
-            to_counter_id: toCounterId
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('Queue transferred successfully');
-            location.reload();
-        } else {
-            alert(data.message || 'Transfer failed');
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: '#666' }
+                },
+                x: {
+                    ticks: { color: '#666' }
+                }
+            }
         }
     });
-}
 
-// Auto-refresh every 10 seconds
-setInterval(() => {
-    location.reload();
-}, 10000);
+    // Weekly Trend Chart
+    const weeklyCtx = document.getElementById('weeklyChart').getContext('2d');
+    new Chart(weeklyCtx, {
+        type: 'line',
+        data: {
+            labels: {{ json_encode($analyticsData['weekly_days']) }},
+            datasets: [{
+                label: 'Daily Completions',
+                data: {{ json_encode($analyticsData['weekly']) }},
+                borderColor: 'rgba(34, 197, 94, 1)',
+                backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 4,
+                pointBackgroundColor: 'rgba(34, 197, 94, 1)',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { display: true, labels: { color: '#666' } }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: '#666' }
+                },
+                x: {
+                    ticks: { color: '#666' }
+                }
+            }
+        }
+    });
+
+    // Average Wait Time Chart
+    const waitTimeCtx = document.getElementById('waitTimeChart').getContext('2d');
+    new Chart(waitTimeCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ json_encode($analyticsData['weekly_days']) }},
+            datasets: [{
+                label: 'Average Wait Time (min)',
+                data: {{ json_encode($analyticsData['wait_time']) }},
+                backgroundColor: [
+                    'rgba(251, 146, 60, 0.7)',
+                    'rgba(251, 146, 60, 0.7)',
+                    'rgba(251, 146, 60, 0.7)',
+                    'rgba(251, 146, 60, 0.7)',
+                    'rgba(251, 146, 60, 0.7)',
+                    'rgba(34, 197, 94, 0.7)',
+                    'rgba(34, 197, 94, 0.7)'
+                ],
+                borderColor: 'rgba(251, 146, 60, 1)',
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: '#666' }
+                },
+                x: {
+                    ticks: { color: '#666' }
+                }
+            }
+        }
+    });
+
+    // Queue Distribution Chart
+    const peakHoursCtx = document.getElementById('peakHoursChart').getContext('2d');
+    new Chart(peakHoursCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Peak Hours (9am-5pm)', 'Morning (6am-9am)', 'Evening (5pm-9pm)', 'Night (9pm-6am)'],
+            datasets: [{
+                data: {{ json_encode($analyticsData['peak_hours']) }},
+                backgroundColor: [
+                    'rgba(168, 85, 247, 0.8)',
+                    'rgba(59, 130, 246, 0.8)',
+                    'rgba(251, 146, 60, 0.8)',
+                    'rgba(156, 163, 175, 0.8)'
+                ],
+                borderColor: [
+                    'rgba(168, 85, 247, 1)',
+                    'rgba(59, 130, 246, 1)',
+                    'rgba(251, 146, 60, 1)',
+                    'rgba(156, 163, 175, 1)'
+                ],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'bottom',
+                    labels: { color: '#666', padding: 15 }
+                }
+            }
+        }
+    });
+});
 </script>
 @endpush
 @endsection

@@ -14,8 +14,15 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
+            'company.context' => \App\Http\Middleware\EnsureCompanyContext::class,
+            'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        // Handle TokenMismatchException (Page Expired)
+        $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, $request) {
+            return redirect()->route('login')->withErrors([
+                'message' => 'Your session has expired. Please login again.'
+            ]);
+        });
     })->create();

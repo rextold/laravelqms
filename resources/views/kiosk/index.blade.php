@@ -3,10 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kiosk - Queue System</title>
+    <title>Kiosk - {{ $settings->company_name }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --primary-color: {{ $settings->primary_color }};
+            --secondary-color: {{ $settings->secondary_color }};
+            --accent-color: {{ $settings->accent_color }};
+            --text-color: {{ $settings->text_color }};
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html, body {
+            height: 100vh;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+        .kiosk-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .kiosk-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            overflow-y: auto;
+        }
         .step-indicator {
             position: relative;
         }
@@ -21,11 +56,11 @@
             z-index: -1;
         }
         .step-active {
-            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-            color: white;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: var(--text-color);
         }
         .step-completed {
-            background: linear-gradient(135deg, #10b981, #059669);
+            background: linear-gradient(135deg, var(--accent-color), #059669);
             color: white;
         }
         @keyframes fadeIn {
@@ -35,116 +70,182 @@
         .animate-fadeIn {
             animation: fadeIn 0.5s ease-out;
         }
+        .bg-brand-gradient {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        }
+        .counters-grid-container {
+            max-height: calc(100vh - 28rem);
+            overflow-y: auto;
+        }
+        .counters-grid-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        .counters-grid-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .counters-grid-container::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        .counters-grid-container::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        /* Orientation-specific styles */
+        @media (orientation: landscape) and (max-height: 500px) {
+            .kiosk-content {
+                padding: 0.5rem;
+            }
+            .step-indicator {
+                font-size: 0.875rem;
+                padding: 0.25rem 0.5rem !important;
+            }
+            h1, .text-2xl, .text-3xl, .text-4xl { font-size: 1.25rem !important; }
+            h2, .text-lg { font-size: 1rem !important; }
+            p, .text-sm, .text-base { font-size: 0.8rem !important; }
+            .counter-btn { padding: 0.5rem !important; }
+            #queueNumber { font-size: 3rem !important; }
+            .counters-grid-container { max-height: calc(100vh - 12rem); }
+        }
+        @media (orientation: landscape) and (max-height: 600px) {
+            .mb-2, .mb-3, .mb-4 { margin-bottom: 0.25rem !important; }
+            .mb-1 { margin-bottom: 0.1rem !important; }
+            .p-2, .p-3, .p-4, .p-6 { padding: 0.5rem !important; }
+            .py-1, .py-2, .py-3 { padding-top: 0.25rem !important; padding-bottom: 0.25rem !important; }
+        }
+        @media (orientation: portrait) and (max-height: 600px) {
+            .kiosk-content { padding: 0.5rem; }
+            .counters-grid-container { max-height: calc(100vh - 18rem); }
+            h1 { font-size: 1.5rem !important; }
+            h2 { font-size: 1rem !important; }
+            p { font-size: 0.85rem !important; }
+        }
+        @media (orientation: landscape) and (min-height: 600px) and (max-height: 800px) {
+            h1 { font-size: 2rem !important; }
+            h2 { font-size: 1.25rem !important; }
+            #queueNumber { font-size: 4rem !important; }
+            .bg-brand-gradient { padding: 0.75rem !important; }
+        }
+        @media (min-width: 1024px) and (orientation: landscape) {
+            .counters-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+        }
+        @media (max-height: 700px) {
+            .step-indicator {
+                font-size: 0.875rem;
+                padding: 0.5rem 1rem !important;
+            }
+            .step-indicator .text-2xl { font-size: 1.25rem; }
+            .step-indicator .text-sm { font-size: 0.75rem; }
+        }
     </style>
 </head>
-<body class="bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-600 min-h-screen flex items-center justify-center p-4">
-    <!-- Settings Button -->
-    <button onclick="showSettings()" class="fixed top-4 right-4 bg-white text-gray-700 px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all z-50">
-        <i class="fas fa-cog mr-2"></i> Settings
-    </button>
+<body class="bg-brand-gradient">
+    <div class="kiosk-container">
+        <!-- Settings Button -->
+        <button onclick="showSettings()" class="fixed top-2 right-2 sm:top-4 sm:right-4 bg-white text-gray-700 px-3 py-2 sm:px-6 sm:py-3 rounded-xl shadow-lg hover:shadow-xl transition-all z-50 text-sm sm:text-base">
+            <i class="fas fa-cog mr-1 sm:mr-2"></i> Settings
+        </button>
 
-    <!-- Main Container -->
-    <div class="w-full max-w-6xl">
-        <!-- Step Indicator -->
-        <div class="mb-12">
-            <div class="flex justify-center items-center space-x-4 relative">
-                <div class="flex items-center space-x-4 bg-white px-8 py-4 rounded-2xl shadow-xl">
-                    <div id="step1Indicator" class="step-indicator flex flex-col items-center step-active px-6 py-3 rounded-xl transition-all">
-                        <div class="text-2xl font-bold mb-1">1</div>
-                        <div class="text-sm font-medium">Select Counter</div>
-                    </div>
-                    <i class="fas fa-arrow-right text-gray-400 text-2xl"></i>
-                    <div id="step2Indicator" class="step-indicator flex flex-col items-center bg-gray-100 text-gray-600 px-6 py-3 rounded-xl transition-all">
-                        <div class="text-2xl font-bold mb-1">2</div>
-                        <div class="text-sm font-medium">Generating</div>
-                    </div>
-                    <i class="fas fa-arrow-right text-gray-400 text-2xl"></i>
-                    <div id="step3Indicator" class="step-indicator flex flex-col items-center bg-gray-100 text-gray-600 px-6 py-3 rounded-xl transition-all">
-                        <div class="text-2xl font-bold mb-1">3</div>
-                        <div class="text-sm font-medium">Your Number</div>
+        <!-- Main Content -->
+        <div class="kiosk-content">
+            <div class="w-full max-w-6xl">
+                <!-- Step Indicator -->
+                <div class="mb-2 sm:mb-3">
+                    <div class="flex justify-center items-center space-x-1 sm:space-x-2 relative">
+                        <div class="flex items-center space-x-1 sm:space-x-2 bg-white px-2 py-1 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl shadow-lg">
+                            <div id="step1Indicator" class="step-indicator flex flex-col items-center step-active px-2 py-1 sm:px-3 sm:py-2 rounded-lg transition-all">
+                                <div class="text-sm sm:text-lg font-bold">1</div>
+                                <div class="text-xs hidden sm:block">Select</div>
+                            </div>
+                            <i class="fas fa-arrow-right text-gray-400 text-xs sm:text-lg"></i>
+                            <div id="step2Indicator" class="step-indicator flex flex-col items-center bg-gray-100 text-gray-600 px-2 py-1 sm:px-3 sm:py-2 rounded-lg transition-all">
+                                <div class="text-sm sm:text-lg font-bold">2</div>
+                                <div class="text-xs hidden sm:block">Generate</div>
+                            </div>
+                            <i class="fas fa-arrow-right text-gray-400 text-xs sm:text-lg"></i>
+                            <div id="step3Indicator" class="step-indicator flex flex-col items-center bg-gray-100 text-gray-600 px-2 py-1 sm:px-3 sm:py-2 rounded-lg transition-all">
+                                <div class="text-sm sm:text-lg font-bold">3</div>
+                                <div class="text-xs hidden sm:block">Number</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
 
         <!-- Step 1: Counter Selection -->
         <div id="step1" class="animate-fadeIn">
-            <div class="text-center mb-8">
-                <h1 class="text-6xl font-bold text-white mb-4 drop-shadow-lg">Welcome!</h1>
-                <p class="text-2xl text-white drop-shadow">Please select a counter to get your priority number</p>
+            <div class="text-center mb-2 sm:mb-3">
+                @if($settings->logo_url)
+                    <img src="{{ $settings->logo_url }}" alt="{{ $settings->company_name }}" class="h-8 sm:h-12 mx-auto mb-1 sm:mb-2">
+                @endif
+                <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold mb-1 drop-shadow-lg" style="color: var(--text-color)">Welcome!</h1>
+                <p class="text-sm sm:text-lg drop-shadow" style="color: var(--text-color)">{{ $settings->company_name }}</p>
+                <p class="text-xs sm:text-sm mt-1 drop-shadow" style="color: var(--text-color); opacity: 0.9;">Select a counter to get your priority number</p>
             </div>
 
-            <div class="bg-white rounded-3xl shadow-2xl p-8">
-                <div id="counterSelection" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    @forelse($onlineCounters as $counter)
-                        <button onclick="selectCounter({{ $counter->id }}, '{{ $counter->counter_number }}', '{{ addslashes($counter->display_name) }}')" 
-                                class="counter-btn bg-gradient-to-br from-blue-50 to-purple-50 p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all transform hover:scale-105 border-2 border-transparent hover:border-blue-400">
-                            <div class="text-center">
-                                <div class="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-6xl font-bold mb-4 w-28 h-28 rounded-full flex items-center justify-center mx-auto shadow-xl">
-                                    {{ $counter->counter_number }}
-                                </div>
-                                <h3 class="text-2xl font-bold mb-2 text-gray-800">{{ $counter->display_name }}</h3>
-                                <p class="text-gray-600 mb-3">{{ $counter->short_description }}</p>
-                                <span class="inline-block bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-semibold">
-                                    <i class="fas fa-circle text-green-600 animate-pulse"></i> Available
-                                </span>
-                            </div>
-                        </button>
-                    @empty
-                        <div class="col-span-full text-center py-12">
-                            <i class="fas fa-info-circle text-6xl text-gray-300 mb-4"></i>
-                            <h3 class="text-3xl font-bold text-gray-700 mb-2">No Counters Available</h3>
-                            <p class="text-gray-500 text-lg">Please wait for a counter to come online</p>
-                            <div class="mt-4">
-                                <i class="fas fa-spinner fa-spin text-blue-500 text-2xl"></i>
-                            </div>
+            <div class="bg-white rounded-xl sm:rounded-2xl shadow-2xl p-3 sm:p-4">
+                <div class="counters-grid-container">
+                    <div id="countersGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
+                        <!-- counters injected via JS -->
+                    </div>
+                </div>
+                <div id="noCounters" class="hidden col-span-full text-center py-4 sm:py-6">
+                    <i class="fas fa-info-circle text-2xl sm:text-4xl text-gray-300 mb-1 sm:mb-2"></i>
+                    <h3 class="text-base sm:text-xl font-bold text-gray-700 mb-1">No Counters Available</h3>
+                    <p class="text-gray-500 text-xs sm:text-sm">Please wait for a counter to come online</p>
+                    <div class="mt-1 sm:mt-2">
+                        <i class="fas fa-spinner fa-spin text-blue-500 text-base sm:text-lg"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+                <!-- Step 2: Generating -->
+                <div id="step2" class="hidden animate-fadeIn">
+                    <div class="bg-white rounded-xl sm:rounded-2xl shadow-2xl p-6 sm:p-8 text-center">
+                        <div class="mb-4">
+                            <i class="fas fa-spinner fa-spin text-blue-500 text-4xl sm:text-6xl mb-2 sm:mb-3"></i>
+                            <h2 class="text-lg sm:text-2xl lg:text-3xl font-bold text-gray-800 mb-1 sm:mb-2">Generating Your Priority Number</h2>
+                            <p class="text-sm sm:text-base text-gray-600">Please wait a moment...</p>
                         </div>
-                    @endforelse
+                        <div class="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full overflow-hidden">
+                            <div class="h-full bg-white animate-pulse" style="width: 100%; animation: progress 2s ease-in-out infinite;"></div>
+                        </div>
+                    </div>
+                </div>
+                </div>
+
+                <!-- Step 3: Queue Display -->
+                <div id="step3" class="hidden animate-fadeIn">
+                    <div class="bg-white rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-6 text-center" id="queueContent">
+                        <div class="mb-2 sm:mb-3">
+                            <i class="fas fa-check-circle text-green-500 text-2xl sm:text-4xl mb-1"></i>
+                            <h2 class="text-lg sm:text-2xl font-bold mb-1 text-gray-800">Your Priority Number</h2>
+                            <p class="text-xs sm:text-sm text-gray-600">Please keep this number visible</p>
+                        </div>
+                        
+                        <div class="bg-brand-gradient text-white p-4 sm:p-6 rounded-lg sm:rounded-2xl mb-3 sm:mb-4 shadow-2xl">
+                            <div class="text-5xl sm:text-6xl font-bold mb-1 sm:mb-2 tracking-wider" id="queueNumber" style="color: var(--text-color)"></div>
+                            <div class="text-base sm:text-lg font-semibold mb-0.5" id="counterInfo" style="color: var(--text-color)"></div>
+                            <div class="text-xs sm:text-sm opacity-90" id="queueTime" style="color: var(--text-color)"></div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2 sm:mb-3">
+                            <button onclick="printQueue()" class="text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold shadow-lg transform hover:scale-105 transition-all" style="background: var(--accent-color)">
+                                <i class="fas fa-print mr-1 sm:mr-2 text-sm sm:text-base"></i>Print
+                            </button>
+                            <button onclick="capturePhoto()" class="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold shadow-lg transform hover:scale-105 transition-all" style="background: var(--secondary-color); color: var(--text-color)">
+                                <i class="fas fa-camera mr-1 sm:mr-2 text-sm sm:text-base"></i>Photo
+                            </button>
+                        </div>
+                        
+                        <button onclick="finishAndReset()" class="w-full bg-brand-gradient text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-sm sm:text-base font-bold shadow-lg transform hover:scale-105 transition-all" style="color: var(--text-color)">
+                            <i class="fas fa-check mr-1 sm:mr-2"></i>Done
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
-
-        <!-- Step 2: Generating -->
-        <div id="step2" class="hidden animate-fadeIn">
-            <div class="bg-white rounded-3xl shadow-2xl p-16 text-center">
-                <div class="mb-8">
-                    <i class="fas fa-spinner fa-spin text-blue-500 text-8xl mb-6"></i>
-                    <h2 class="text-5xl font-bold text-gray-800 mb-4">Generating Your Priority Number</h2>
-                    <p class="text-2xl text-gray-600">Please wait a moment...</p>
-                </div>
-                <div class="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full overflow-hidden">
-                    <div class="h-full bg-white animate-pulse" style="width: 100%; animation: progress 2s ease-in-out infinite;"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Step 3: Queue Display -->
-        <div id="step3" class="hidden animate-fadeIn">
-            <div class="bg-white rounded-3xl shadow-2xl p-12 text-center" id="queueContent">
-                <div class="mb-8">
-                    <i class="fas fa-check-circle text-green-500 text-7xl mb-4"></i>
-                    <h2 class="text-5xl font-bold mb-3 text-gray-800">Your Priority Number</h2>
-                    <p class="text-xl text-gray-600">Please keep this number visible</p>
-                </div>
-                
-                <div class="bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-600 text-white p-16 rounded-3xl mb-8 shadow-2xl">
-                    <div class="text-9xl font-bold mb-6 tracking-wider" id="queueNumber"></div>
-                    <div class="text-4xl font-semibold mb-2" id="counterInfo"></div>
-                    <div class="text-2xl opacity-90" id="queueTime"></div>
-                </div>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <button onclick="printQueue()" class="bg-green-600 text-white px-8 py-6 rounded-2xl hover:bg-green-700 text-xl font-semibold shadow-lg transform hover:scale-105 transition-all">
-                        <i class="fas fa-print mr-3 text-2xl"></i>Print Number
-                    </button>
-                    <button onclick="capturePhoto()" class="bg-purple-600 text-white px-8 py-6 rounded-2xl hover:bg-purple-700 text-xl font-semibold shadow-lg transform hover:scale-105 transition-all">
-                        <i class="fas fa-camera mr-3 text-2xl"></i>Capture Photo
-                    </button>
-                </div>
-                
-                <button onclick="finishAndReset()" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-6 rounded-2xl hover:from-blue-700 hover:to-purple-700 text-2xl font-bold shadow-lg transform hover:scale-105 transition-all">
-                    <i class="fas fa-check mr-3"></i>Done - Get Another Number
-                </button>
+    </div>
             </div>
         </div>
     </div>
@@ -221,6 +322,10 @@
         type: 'thermal', // thermal, browser, none
         vendorId: '0x0fe6'
     };
+    const countersGrid = document.getElementById('countersGrid');
+    const noCounters = document.getElementById('noCounters');
+    const countersEndpoint = '{{ route('kiosk.counters', ['company_code' => $companyCode]) }}';
+    const initialCounters = @json($onlineCounters);
 
     // Load settings from localStorage
     function loadSettings() {
@@ -230,8 +335,55 @@
         }
     }
 
+    function renderCounters(counters) {
+        countersGrid.innerHTML = '';
+
+        if (!counters || counters.length === 0) {
+            noCounters.classList.remove('hidden');
+            return;
+        }
+
+        noCounters.classList.add('hidden');
+
+        counters.forEach(counter => {
+            const button = document.createElement('button');
+            button.className = 'counter-btn w-full bg-white border-2 border-gray-100 rounded-lg sm:rounded-xl p-2 sm:p-3 text-left shadow hover:shadow-lg transition transform hover:-translate-y-1';
+            button.onclick = () => selectCounter(counter.id, counter.counter_number, counter.display_name);
+            button.innerHTML = `
+                <div class="flex items-center justify-between mb-1 sm:mb-2">
+                    <div class="flex items-center space-x-1 sm:space-x-2">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-blue-50 flex items-center justify-center text-sm sm:text-lg font-bold text-blue-600">#${counter.counter_number}</div>
+                        <div>
+                            <div class="text-sm sm:text-base font-bold text-gray-800">${counter.display_name}</div>
+                            <div class="text-xs text-gray-500">${counter.short_description || 'Ready to serve'}</div>
+                        </div>
+                    </div>
+                    <span class="inline-flex items-center px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">Available</span>
+                </div>
+                <div class="text-gray-600 flex items-center space-x-1 text-xs sm:text-sm">
+                    <i class="fas fa-bell text-blue-500"></i>
+                    <span>Tap</span>
+                </div>
+            `;
+
+            countersGrid.appendChild(button);
+        });
+    }
+
+    function refreshCounters() {
+        // Only refresh while on selection screen
+        if (document.getElementById('step1').classList.contains('hidden')) return;
+
+        fetch(countersEndpoint)
+            .then(response => response.ok ? response.json() : Promise.reject('Failed to load counters'))
+            .then(data => renderCounters(data.counters || []))
+            .catch(error => console.error('Counters refresh failed:', error));
+    }
+
     // Initialize on page load
     loadSettings();
+    renderCounters(initialCounters);
+    setInterval(refreshCounters, 5000);
 
     function selectCounter(counterId, counterNumber, counterName) {
         // Move to step 2
@@ -240,7 +392,7 @@
         // Disable all counter buttons
         document.querySelectorAll('.counter-btn').forEach(btn => btn.disabled = true);
 
-        fetch('{{ route('kiosk.generate') }}', {
+        fetch('{{ route('kiosk.generate', ['company_code' => $companyCode]) }}', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -248,16 +400,26 @@
             },
             body: JSON.stringify({ counter_id: counterId })
         })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
+        .then(async response => {
+            const status = response.status;
+            let data;
+            try {
+                data = await response.json();
+            } catch (e) {
+                // Non-JSON response (e.g., HTML error page)
+                data = { success: false, message: `Server error (status ${status})` };
             }
-            return response.json();
+
+            if (!response.ok) {
+                const msg = (data && data.message) ? data.message : `Request failed with status ${status}`;
+                throw new Error(msg);
+            }
+
+            return data;
         })
         .then(data => {
             if (data.success && data.queue) {
                 currentQueue = data.queue;
-                // Add a small delay for better UX
                 setTimeout(() => {
                     showQueueDisplay(data.queue);
                 }, 1500);
@@ -266,8 +428,8 @@
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            showError('Error generating priority number. Please try again.');
+            console.error('Generate queue failed:', error);
+            showError(error.message || 'Error generating priority number. Please try again.');
         });
     }
 
@@ -306,7 +468,14 @@
             hour12: true 
         });
         
-        document.getElementById('queueNumber').textContent = queue.queue_number;
+        // Display format: {counter_number}-{sequence}, e.g., 2-0001
+        const suffixFromQueue = (qn) => {
+            const parts = String(qn).split('-');
+            return parts[parts.length - 1];
+        };
+        const displayQueueNumber = `${queue.counter.counter_number}-${suffixFromQueue(queue.queue_number)}`;
+        
+        document.getElementById('queueNumber').textContent = displayQueueNumber;
         document.getElementById('counterInfo').textContent = 
             `Counter ${queue.counter.counter_number} - ${queue.counter.display_name}`;
         document.getElementById('queueTime').textContent = `Generated at ${timeString}`;
@@ -319,13 +488,6 @@
         // Reset to step 1
         document.querySelectorAll('.counter-btn').forEach(btn => btn.disabled = false);
         moveToStep(1);
-    }
-
-    function finishAndReset() {
-        currentQueue = null;
-        moveToStep(1);
-        // Re-enable counter buttons
-        document.querySelectorAll('.counter-btn').forEach(btn => btn.disabled = false);
     }
 
     function finishAndReset() {
@@ -450,11 +612,14 @@
             hour12: true 
         });
         
+        // Extract last 4 digits for display
+        const displayQueueNumber = currentQueue.queue_number;
+        
         printWindow.document.write(`
             <!DOCTYPE html>
             <html>
             <head>
-                <title>Priority Number - ${currentQueue.queue_number}</title>
+                <title>Priority Number - ${displayQueueNumber}</title>
                 <style>
                     @media print {
                         @page { 
@@ -476,6 +641,11 @@
                         margin-bottom: 20px;
                         padding-bottom: 15px;
                         border-bottom: 3px double #000;
+                    }
+                    .company-name {
+                        font-size: 18px;
+                        margin-bottom: 10px;
+                        color: #333;
                     }
                     .title {
                         font-size: 18px;
@@ -538,9 +708,10 @@
                 </style>
             </head>
             <body>
+                <div class="company-name">{{ $settings->company_name }}</div>
                 <div class="header">QUEUE MANAGEMENT SYSTEM</div>
                 <div class="title">Priority Number</div>
-                <div class="queue-number">${currentQueue.queue_number}</div>
+                <div class="queue-number">${displayQueueNumber}</div>
                 <div class="barcode">*${currentQueue.queue_number}*</div>
                 <div class="counter-info">Counter ${currentQueue.counter.counter_number}</div>
                 <div class="counter-name">${currentQueue.counter.display_name}</div>
@@ -621,13 +792,6 @@
         });
     }
 
-    // Auto-refresh counters every 30 seconds (only on step 1)
-    setInterval(() => {
-        const step1 = document.getElementById('step1');
-        if (!step1.classList.contains('hidden')) {
-            location.reload();
-        }
-    }, 30000);
     </script>
 </body>
 </html>

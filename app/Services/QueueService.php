@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Queue;
 use App\Models\User;
+use App\Models\CompanySetting;
 use App\Events\QueueCreated;
 use App\Events\QueueCalled;
 use App\Events\QueueTransferred;
@@ -13,6 +14,35 @@ class QueueService
 {
     public function generateQueueNumber(User $counter): string
     {
+        $settings = CompanySetting::getSettings();
+        // Default to 4 digits if setting is missing or invalid to avoid TypeErrors
+        $digits = (int) ($settings->queue_number_digits ?? 4);
+        if ($digits <= 0) {
+            $digits = 4;
+        }
+
+        // If a priority code exists on the counter, use it as the prefix (e.g., C1-1001)
+        $priorityCode = trim((string) ($counter->priority_code ?? ''));
+        if ($priorityCode !== '') {
+            $prefix = $priorityCode;
+            $lastQueue = Queue::where('queue_number', 'like', "{$prefix}-%")
+                ->orderBy('queue_number', 'desc')
+                ->first();
+
+            $base = 1; // start from 0001 for priority codes
+            if ($lastQueue) {
+                $lastNumber = (int) substr($lastQueue->queue_number, -$digits);
+                $nextNumber = $lastNumber + 1;
+            } else {
+                $nextNumber = $base;
+            }
+
+            $newNumber = str_pad($nextNumber, $digits, '0', STR_PAD_LEFT);
+
+            return "{$prefix}-{$newNumber}";
+        }
+
+        // Fallback: original date + counter number format
         $date = Carbon::now()->format('Ymd');
         $counterPrefix = str_pad($counter->counter_number, 2, '0', STR_PAD_LEFT);
         
@@ -21,10 +51,10 @@ class QueueService
             ->first();
 
         if ($lastQueue) {
-            $lastNumber = (int) substr($lastQueue->queue_number, -4);
-            $newNumber = str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
+            $lastNumber = (int) substr($lastQueue->queue_number, -$digits);
+            $newNumber = str_pad($lastNumber + 1, $digits, '0', STR_PAD_LEFT);
         } else {
-            $newNumber = '0001';
+            $newNumber = str_pad(1, $digits, '0', STR_PAD_LEFT);
         }
 
         return "{$date}-{$counterPrefix}-{$newNumber}";
@@ -56,10 +86,10 @@ class QueueService
             ]);
         }
 
-        // Get next waiting queue
+        // Get next waiting queue ordered by updated_at
         $nextQueue = $counter->queues()
             ->where('status', 'waiting')
-            ->orderBy('created_at')
+            ->orderBy('updated_at')
             ->first();
 
         if ($nextQueue) {
@@ -90,22 +120,18 @@ class QueueService
 
     public function transferQueue(Queue $queue, User $toCounter): Queue
     {
+        // Transfer the queue to the new counter while retaining the same number
+        // Set status back to waiting so the new counter must call it explicitly
         $queue->update([
+            'counter_id' => $toCounter->id,
             'transferred_to' => $toCounter->id,
-            'counter_id' => $toCounter->id,
-            'status' => 'transferred',
-        ]);
-
-        // Create new queue entry for the target counter
-        $newQueue = Queue::create([
-            'queue_number' => $queue->queue_number,
-            'counter_id' => $toCounter->id,
             'status' => 'waiting',
+            'called_at' => null,
         ]);
 
-        broadcast(new QueueTransferred($newQueue, $toCounter))->toOthers();
+        broadcast(new QueueTransferred($queue, $toCounter))->toOthers();
 
-        return $newQueue;
+        return $queue;
     }
 
     public function getCounterStats(User $counter): array

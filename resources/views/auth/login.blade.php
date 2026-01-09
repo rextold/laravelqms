@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.guest')
 
 @section('title', 'Login')
 
@@ -52,15 +52,6 @@
                 <i class="fas fa-sign-in-alt mr-2"></i>Login
             </button>
         </form>
-
-        <div class="mt-8 text-center">
-            <div class="border-t pt-6">
-                <p class="text-gray-600 text-sm mb-3">Need a queue number?</p>
-                <a href="{{ route('kiosk.index') }}" class="inline-flex items-center text-blue-600 hover:text-blue-800 font-semibold transition-colors">
-                    <i class="fas fa-desktop mr-2"></i> Go to Kiosk
-                </a>
-            </div>
-        </div>
     </div>
 </div>
 @endsection

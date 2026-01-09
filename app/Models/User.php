@@ -10,6 +10,25 @@ class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
+    protected static function boot()
+    {
+        parent::boot();
+
+        // When an admin's company is updated, automatically update all their counters
+        static::updating(function ($user) {
+            // Check if this is an admin and company_id has changed
+            if ($user->isAdmin() && $user->isDirty('company_id')) {
+                $oldCompanyId = $user->getOriginal('company_id');
+                $newCompanyId = $user->getAttribute('company_id');
+
+                // Update all counters belonging to this admin's old company to the new company
+                User::where('role', 'counter')
+                    ->where('company_id', $oldCompanyId)
+                    ->update(['company_id' => $newCompanyId]);
+            }
+        });
+    }
+
     protected $fillable = [
         'username',
         'email',
@@ -17,8 +36,10 @@ class User extends Authenticatable
         'role',
         'display_name',
         'counter_number',
+        'priority_code',
         'short_description',
         'is_online',
+        'company_id',
     ];
 
     protected $hidden = [
@@ -34,6 +55,11 @@ class User extends Authenticatable
     public function queues()
     {
         return $this->hasMany(Queue::class, 'counter_id');
+    }
+
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
     }
 
     public function transferredQueues()
@@ -81,7 +107,15 @@ class User extends Authenticatable
     {
         return $this->queues()
             ->where('status', 'waiting')
-            ->orderBy('created_at')
+            ->orderBy('updated_at')
+            ->get();
+    }
+
+    public function getSkippedQueues()
+    {
+        return $this->queues()
+            ->where('status', 'skipped')
+            ->orderBy('updated_at')
             ->get();
     }
 }
