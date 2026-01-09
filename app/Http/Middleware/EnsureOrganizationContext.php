@@ -19,6 +19,19 @@ class EnsureOrganizationContext
             return response('Organization not found', 404);
         }
 
+        $normalizedCode = strtolower($organizationCode);
+        if ($normalizedCode !== $organizationCode) {
+            $segments = $request->segments();
+            $segments[0] = $normalizedCode;
+            $redirectPath = '/' . implode('/', $segments);
+            $queryString = $request->getQueryString();
+            if ($queryString) {
+                $redirectPath .= '?' . $queryString;
+            }
+
+            return redirect()->to($redirectPath, 301);
+        }
+
         $organization = Organization::findByCode($organizationCode);
 
         if (!$organization) {
