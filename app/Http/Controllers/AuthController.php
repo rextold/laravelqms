@@ -62,7 +62,8 @@ class AuthController extends Controller
         $request = $request ?? request();
 
         if ($user->isSuperAdmin()) {
-            return redirect()->intended(route('superadmin.dashboard'));
+            // Force superadmins to their home; avoid stale intended URLs
+            return redirect()->to(route('superadmin.dashboard'));
         }
 
         if ($user->isAdmin()) {
@@ -74,7 +75,8 @@ class AuthController extends Controller
                 ])->onlyInput('username');
             }
             $request->session()->put('organization', $organization);
-            return redirect()->intended(route('admin.dashboard', ['organization_code' => $organization->organization_code]));
+            // Always send admins to their dashboard to prevent cross-role redirect loops
+            return redirect()->to(route('admin.dashboard', ['organization_code' => $organization->organization_code]));
         }
 
         if ($user->isCounter()) {
@@ -88,7 +90,8 @@ class AuthController extends Controller
             // Set counter online on login
             $user->update(['is_online' => true]);
             $request->session()->put('organization', $organization);
-            return redirect()->intended(route('counter.dashboard', ['organization_code' => $organization->organization_code]));
+            // Counters go straight to their dashboard; skip intended URLs to avoid role-mismatch 403s
+            return redirect()->to(route('counter.dashboard', ['organization_code' => $organization->organization_code]));
         }
 
         // Fallback
