@@ -34,9 +34,9 @@ class OrganizationSettingsController extends Controller
 
         $validated = $request->validate([
             'organization_name' => 'required|string|max:255',
-            'organization_phone' => 'nullable|string|max:255',
-            'organization_email' => 'nullable|email|max:255',
-            'organization_address' => 'nullable|string|max:500',
+            'phone' => 'nullable|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'address' => 'nullable|string|max:500',
             'primary_color' => 'required|regex:/^#[0-9A-F]{6}$/i',
             'secondary_color' => 'required|regex:/^#[0-9A-F]{6}$/i',
             'accent_color' => 'required|regex:/^#[0-9A-F]{6}$/i',
@@ -78,9 +78,9 @@ class OrganizationSettingsController extends Controller
 
         // Only save settings-specific fields to organization_settings table
         $settings->fill([
-            'organization_phone' => $validated['organization_phone'] ?? null,
-            'organization_email' => $validated['organization_email'] ?? null,
-            'organization_address' => $validated['organization_address'] ?? null,
+            'phone' => $validated['phone'] ?? null,
+            'email' => $validated['email'] ?? null,
+            'address' => $validated['address'] ?? null,
             'primary_color' => $validated['primary_color'],
             'secondary_color' => $validated['secondary_color'],
             'accent_color' => $validated['accent_color'],

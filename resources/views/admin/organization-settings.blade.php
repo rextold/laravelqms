@@ -84,8 +84,8 @@
                             <i class="fas fa-phone"></i>
                         </span>
                         <input type="text" 
-                               name="organization_phone" 
-                               value="{{ old('organization_phone', $settings->organization_phone) }}" 
+                               name="phone" 
+                               value="{{ old('phone', $settings->phone) }}" 
                                class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                                placeholder="+1 (555) 123-4567">
                     </div>
@@ -100,8 +100,8 @@
                             <i class="fas fa-envelope"></i>
                         </span>
                         <input type="email" 
-                               name="organization_email" 
-                               value="{{ old('organization_email', $settings->organization_email) }}" 
+                               name="email" 
+                               value="{{ old('email', $settings->email) }}" 
                                class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                                placeholder="contact@example.com">
                     </div>
@@ -115,10 +115,10 @@
                         <span class="absolute left-4 top-3.5 text-gray-400">
                             <i class="fas fa-map-marker-alt"></i>
                         </span>
-                        <textarea name="organization_address" 
+                        <textarea name="address" 
                                   rows="3" 
                                   class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                                  placeholder="Enter full address">{{ old('organization_address', $settings->organization_address) }}</textarea>
+                                  placeholder="Enter full address">{{ old('address', $settings->address) }}</textarea>
                     </div>
                 </div>
 

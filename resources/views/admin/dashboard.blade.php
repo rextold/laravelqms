@@ -284,11 +284,11 @@
                         <p class="text-gray-600">{{ $organization->organization_code }}</p>
                         @if($organization->setting)
                             <div class="flex items-center space-x-4 mt-2 text-sm text-gray-500">
-                                @if($organization->setting->organization_phone)
-                                    <span><i class="fas fa-phone mr-1"></i>{{ $organization->setting->organization_phone }}</span>
+                                @if($organization->setting->phone)
+                                    <span><i class="fas fa-phone mr-1"></i>{{ $organization->setting->phone }}</span>
                                 @endif
-                                @if($organization->setting->organization_email)
-                                    <span><i class="fas fa-envelope mr-1"></i>{{ $organization->setting->organization_email }}</span>
+                                @if($organization->setting->email)
+                                    <span><i class="fas fa-envelope mr-1"></i>{{ $organization->setting->email }}</span>
                                 @endif
                             </div>
                         @endif
