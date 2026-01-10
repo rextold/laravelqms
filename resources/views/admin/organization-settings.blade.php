@@ -525,24 +525,6 @@ secondaryColorInput?.addEventListener('input', updateColorPreview);
 accentColorInput?.addEventListener('input', updateColorPreview);
 textColorInput?.addEventListener('input', updateColorPreview);
 
-// Update color displays
-primaryColorInput?.addEventListener('input', function() {
-    document.querySelector('.primary-color-display').style.background = this.value;
-    document.querySelector('.primary-color-hex').textContent = this.value;
-});
-secondaryColorInput?.addEventListener('input', function() {
-    document.querySelector('.secondary-color-display').style.background = this.value;
-    document.querySelector('.secondary-color-hex').textContent = this.value;
-});
-accentColorInput?.addEventListener('input', function() {
-    document.querySelector('.accent-color-display').style.background = this.value;
-    document.querySelector('.accent-color-hex').textContent = this.value;
-});
-textColorInput?.addEventListener('input', function() {
-    document.querySelector('.text-color-display').style.background = this.value;
-    document.querySelector('.text-color-hex').textContent = this.value;
-});
-
 // Submit form with AJAX for real-time updates on displays
 document.getElementById('settingsForm').addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -558,6 +540,7 @@ document.getElementById('settingsForm').addEventListener('submit', async functio
                 headers: {
                     'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
                     'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
                 },
                 body: formData
             }
@@ -575,10 +558,16 @@ document.getElementById('settingsForm').addEventListener('submit', async functio
                     <span class="font-semibold">${data.message}</span>
                 </div>
             `;
-            const settingsSection = document.querySelector('.bg-white.rounded-lg.shadow-md');
-            settingsSection.insertBefore(successToast, settingsSection.firstChild);
+            document.body.insertBefore(successToast, document.body.firstChild);
 
             setTimeout(() => successToast.remove(), 3000);
+            
+            // Trigger SettingsSync to refresh displays
+            if (window.settingsSync) {
+                window.settingsSync.fetchAndApply();
+            }
+        } else {
+            alert('Error: ' + (data.message || 'Failed to update settings'));
         }
     } catch (error) {
         console.error('Error updating settings:', error);

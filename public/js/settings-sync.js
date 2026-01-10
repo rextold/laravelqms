@@ -99,6 +99,11 @@ class SettingsSync {
         });
     }
 
+    fetchAndApply() {
+        // Public method to manually fetch and apply settings immediately
+        this.fetchSettings();
+    }
+
     destroy() {
         if (this.pollInterval) {
             clearInterval(this.pollInterval);
