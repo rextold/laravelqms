@@ -619,38 +619,6 @@
             }
         }
 
-        // Add status indicator
-        function addStatusIndicator() {
-            const header = document.querySelector('.header');
-            if (!document.getElementById('statusDot')) {
-                const indicator = document.createElement('div');
-                indicator.id = 'statusDot';
-                indicator.style.cssText = `
-                    width: 12px;
-                    height: 12px;
-                    background: #10b981;
-                    border-radius: 50%;
-                    animation: statusPulse 2s ease-in-out infinite;
-                    position: absolute;
-                    right: 2rem;
-                    top: 1.5rem;
-                `;
-                header.style.position = 'relative';
-                header.appendChild(indicator);
-            }
-        }
-
-        // CSS for status indicator
-        const styleSheet = document.createElement('style');
-        styleSheet.textContent = `
-            @keyframes statusPulse {
-                0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-                50% { opacity: 0.9; box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-            }
-        `;
-        document.head.appendChild(styleSheet);
-        addStatusIndicator();
-
         // Initial load
         refreshMonitorData();
 
