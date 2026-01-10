@@ -22,8 +22,11 @@ class HandleSessionExpiration
         }
 
         // Also redirect unauthenticated users trying to access protected routes
-        if (!Auth::check() && $request->route() && !in_array($request->route()->getName(), ['login', 'login.post', 'logout'])) {
-            return redirect()->route('login');
+        if (!Auth::check()) {
+            $route = $request->route();
+            if ($route && !in_array($route->getName(), ['login', 'login.post', 'logout'])) {
+                return redirect()->route('login');
+            }
         }
 
         return $next($request);
