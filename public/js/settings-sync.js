@@ -7,7 +7,7 @@ class SettingsSync {
     constructor(organizationCode, updateInterval = 5000) {
         this.orgCode = organizationCode;
         this.updateInterval = updateInterval;
-        this.settingsUrl = `/${organizationCode}/admin/organization-settings/api/get`;
+        this.settingsUrl = `/${organizationCode}/api/settings`;
         this.cachedSettings = {};
         this.pollInterval = null;
         this.init();

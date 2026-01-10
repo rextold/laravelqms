@@ -68,6 +68,9 @@ Route::prefix('{organization_code}')->middleware('organization.context')->group(
         Route::get('/', [MonitorController::class, 'index'])->name('index');
         Route::get('/data', [MonitorController::class, 'getData'])->name('data');
     });
+    
+    // Public API for settings sync (used by Monitor, Kiosk, and Admin)
+    Route::get('/api/settings', [OrganizationSettingsController::class, 'getSettings'])->name('api.settings');
 
     // Protected routes
     Route::middleware('auth')->group(function () {
@@ -84,7 +87,6 @@ Route::prefix('{organization_code}')->middleware('organization.context')->group(
             Route::get('/organization-settings', [OrganizationSettingsController::class, 'edit'])->name('organization-settings.edit');
             Route::put('/organization-settings', [OrganizationSettingsController::class, 'update'])->name('organization-settings.update');
             Route::delete('/organization-settings/logo', [OrganizationSettingsController::class, 'removeLogo'])->name('organization-settings.remove-logo');
-            Route::get('/organization-settings/api/get', [OrganizationSettingsController::class, 'getSettings'])->name('organization-settings.get');
             
             // User management
             Route::get('/users', [AdminController::class, 'manageUsers'])->name('users.index');
