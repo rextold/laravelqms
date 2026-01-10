@@ -90,6 +90,21 @@ class OrganizationSettingsController extends Controller
         ]);
         $settings->save();
 
+        // Return JSON for AJAX requests for real-time updates
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Settings updated successfully',
+                'settings' => [
+                    'primary_color' => $settings->primary_color,
+                    'secondary_color' => $settings->secondary_color,
+                    'accent_color' => $settings->accent_color,
+                    'text_color' => $settings->text_color,
+                    'company_logo' => $settings->company_logo ? asset('storage/' . $settings->company_logo) : null,
+                ]
+            ]);
+        }
+
         return redirect()->back()
             ->with('success', 'Settings updated successfully.');
     }
@@ -120,5 +135,28 @@ class OrganizationSettingsController extends Controller
 
         return redirect()->back()
             ->with('error', 'No logo to remove.');
+    }
+
+    /**
+     * Get organization settings as JSON for real-time updates
+     */
+    public function getSettings($organization_code)
+    {
+        $organization = Organization::where('organization_code', $organization_code)->firstOrFail();
+        
+        $settings = OrganizationSetting::where('organization_id', $organization->id)->first();
+        
+        if (!$settings) {
+            return response()->json(['error' => 'Settings not found'], 404);
+        }
+
+        return response()->json([
+            'primary_color' => $settings->primary_color,
+            'secondary_color' => $settings->secondary_color,
+            'accent_color' => $settings->accent_color,
+            'text_color' => $settings->text_color,
+            'company_logo' => $settings->company_logo ? asset('storage/' . $settings->company_logo) : null,
+            'company_name' => $settings->company_name,
+        ]);
     }
 }

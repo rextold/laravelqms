@@ -619,6 +619,20 @@
             }
         }
 
+        // Refresh color settings in real-time
+        function updateColorSettings() {
+            fetch(`/${orgCode}/admin/organization-settings/api/get`)
+                .then(response => response.json())
+                .then(data => {
+                    const root = document.documentElement;
+                    if (data.primary_color) root.style.setProperty('--primary', data.primary_color);
+                    if (data.secondary_color) root.style.setProperty('--secondary', data.secondary_color);
+                    if (data.accent_color) root.style.setProperty('--accent', data.accent_color);
+                    if (data.text_color) root.style.setProperty('--text', data.text_color);
+                })
+                .catch(error => console.error('Color settings refresh failed:', error));
+        }
+
         // Initial load
         refreshMonitorData();
 
@@ -636,6 +650,9 @@
                 .catch(error => console.error('Video/Marquee refresh failed:', error));
         }, 3000);
 
+        // Refresh colors every 5 seconds
+        let colorRefresh = setInterval(updateColorSettings, 5000);
+
         // Prevent sleep/screensaver and track visibility
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
@@ -643,6 +660,7 @@
             } else {
                 console.log('Monitor visible, refreshing...');
                 refreshMonitorData();
+                updateColorSettings();
             }
         });
 

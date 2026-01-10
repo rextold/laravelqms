@@ -504,6 +504,87 @@ setTimeout(() => {
 document.querySelector('input[name="organization_name"]')?.addEventListener('input', function() {
     document.getElementById('previewTitle').textContent = this.value || 'Organization Name';
 });
+
+// Real-time color preview and update
+const primaryColorInput = document.querySelector('input[name="primary_color"]');
+const secondaryColorInput = document.querySelector('input[name="secondary_color"]');
+const accentColorInput = document.querySelector('input[name="accent_color"]');
+const textColorInput = document.querySelector('input[name="text_color"]');
+
+function updateColorPreview() {
+    const root = document.documentElement;
+    root.style.setProperty('--primary', primaryColorInput.value);
+    root.style.setProperty('--secondary', secondaryColorInput.value);
+    root.style.setProperty('--accent', accentColorInput.value);
+    root.style.setProperty('--text', textColorInput.value);
+}
+
+// Update preview on input change
+primaryColorInput?.addEventListener('input', updateColorPreview);
+secondaryColorInput?.addEventListener('input', updateColorPreview);
+accentColorInput?.addEventListener('input', updateColorPreview);
+textColorInput?.addEventListener('input', updateColorPreview);
+
+// Update color displays
+primaryColorInput?.addEventListener('input', function() {
+    document.querySelector('.primary-color-display').style.background = this.value;
+    document.querySelector('.primary-color-hex').textContent = this.value;
+});
+secondaryColorInput?.addEventListener('input', function() {
+    document.querySelector('.secondary-color-display').style.background = this.value;
+    document.querySelector('.secondary-color-hex').textContent = this.value;
+});
+accentColorInput?.addEventListener('input', function() {
+    document.querySelector('.accent-color-display').style.background = this.value;
+    document.querySelector('.accent-color-hex').textContent = this.value;
+});
+textColorInput?.addEventListener('input', function() {
+    document.querySelector('.text-color-display').style.background = this.value;
+    document.querySelector('.text-color-hex').textContent = this.value;
+});
+
+// Submit form with AJAX for real-time updates on displays
+document.getElementById('settingsForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const orgCode = '{{ request()->route("organization_code") }}';
+    
+    try {
+        const response = await fetch(
+            `/${orgCode}/admin/organization-settings`,
+            {
+                method: 'PUT',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
+                    'Accept': 'application/json',
+                },
+                body: formData
+            }
+        );
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Show success message
+            const successToast = document.createElement('div');
+            successToast.className = 'bg-green-100 border-l-4 border-green-500 text-green-700 px-6 py-4 rounded-lg mb-6 shadow-md';
+            successToast.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas fa-check-circle text-xl mr-3"></i>
+                    <span class="font-semibold">${data.message}</span>
+                </div>
+            `;
+            const settingsSection = document.querySelector('.bg-white.rounded-lg.shadow-md');
+            settingsSection.insertBefore(successToast, settingsSection.firstChild);
+
+            setTimeout(() => successToast.remove(), 3000);
+        }
+    } catch (error) {
+        console.error('Error updating settings:', error);
+        alert('Error updating settings. Please try again.');
+    }
+});
 </script>
 @endpush
 @endsection
