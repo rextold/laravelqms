@@ -76,6 +76,15 @@
             color: white;
             font-size: 1.4rem;
             font-weight: 600;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.25rem;
+        }
+        .header-date {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.8);
+            font-weight: 400;
         }
         .video-container {
             grid-column: 1;
@@ -132,36 +141,101 @@
             overflow: hidden;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
-        .counters-header {
-            padding: 0.75rem 1rem;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            border-radius: 8px;
-            color: white;
-            font-weight: 700;
-            text-align: center;
-            font-size: 1.1rem;
-        }
-        .counters-list {
-            flex: 1;
-            overflow-y: auto;
+        .section-group {
             display: flex;
             flex-direction: column;
             gap: 0.75rem;
-            padding-right: 0.5rem;
+            flex: 1;
+            min-height: 0;
         }
-        .counters-list::-webkit-scrollbar {
-            width: 6px;
-        }
-        .counters-list::-webkit-scrollbar-track {
+        .section-title {
+            padding: 0.5rem 0.75rem;
             background: rgba(255,255,255,0.05);
-            border-radius: 10px;
+            border-left: 3px solid var(--accent);
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
-        .counters-list::-webkit-scrollbar-thumb {
-            background: rgba(255,255,255,0.2);
-            border-radius: 10px;
+        .section-title.serving {
+            border-left-color: #10b981;
+            color: #10b981;
         }
-        .counters-list::-webkit-scrollbar-thumb:hover {
-            background: rgba(255,255,255,0.3);
+        .section-title.waiting {
+            border-left-color: #f59e0b;
+            color: #f59e0b;
+        }
+        .serving-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            flex: 1;
+            min-height: 0;
+        }
+        .waiting-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            flex: 1;
+            min-height: 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .waiting-list::-webkit-scrollbar {
+            width: 4px;
+        }
+        .waiting-list::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.02);
+        }
+        .waiting-list::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.15);
+            border-radius: 4px;
+        }
+        .counter-card-small {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 0.75rem;
+            color: white;
+            font-size: 0.85rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+        .counter-card-small:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(255,255,255,0.15);
+        }
+        .counter-card-small.serving {
+            border-color: rgba(16, 185, 129, 0.5);
+            background: rgba(16, 185, 129, 0.08);
+        }
+        .counter-card-small.waiting {
+            border-color: rgba(245, 158, 11, 0.3);
+            background: rgba(245, 158, 11, 0.05);
+        }
+        .counter-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+        .counter-info-name {
+            font-weight: 600;
+            color: white;
+        }
+        .counter-info-queue {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.6);
+        }
+        .queue-badge {
+            background: var(--accent);
+            color: #000;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 700;
+            font-size: 0.8rem;
         }
         .counter-card {
             background: rgba(255,255,255,0.05);
@@ -268,7 +342,10 @@
                     <p>{{ $organization->organization_name }}</p>
                 </div>
             </div>
-            <div class="header-time" id="currentTime">00:00:00</div>
+            <div class="header-time">
+                <div id="currentTime">00:00:00</div>
+                <div class="header-date" id="currentDate">Jan 01, 2026</div>
+            </div>
         </div>
 
         <!-- Video Display -->
@@ -283,13 +360,29 @@
 
         <!-- Counters Panel -->
         <div class="counters-panel">
-            <div class="counters-header">
-                <i class="fas fa-headset mr-2"></i>Service Counters
+            <!-- Now Serving Section -->
+            <div class="section-group">
+                <div class="section-title serving">
+                    <i class="fas fa-phone-alt mr-2"></i>Now Serving
+                </div>
+                <div class="serving-list" id="servingList">
+                    <div class="text-center text-gray-400 py-4">
+                        <i class="fas fa-hourglass-end text-xl opacity-50"></i>
+                        <p class="text-sm mt-1">No active service</p>
+                    </div>
+                </div>
             </div>
-            <div class="counters-list" id="countersList">
-                <div class="text-center text-gray-400 py-8">
-                    <i class="fas fa-spinner animate-spin text-2xl mb-2"></i>
-                    <p>Loading counters...</p>
+
+            <!-- Waiting Section -->
+            <div class="section-group">
+                <div class="section-title waiting">
+                    <i class="fas fa-users mr-2"></i>Waiting Queue
+                </div>
+                <div class="waiting-list" id="waitingList">
+                    <div class="text-center text-gray-400 py-4">
+                        <i class="fas fa-inbox text-xl opacity-50"></i>
+                        <p class="text-sm mt-1">No waiting customers</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -309,7 +402,7 @@
         let lastDataUpdate = Date.now();
         let videoRotationIndex = 0;
 
-        // Update time with milliseconds for smooth animation
+        // Update time and date
         function updateTime() {
             const now = new Date();
             document.getElementById('currentTime').textContent = now.toLocaleTimeString('en-US', {
@@ -317,6 +410,13 @@
                 hour: '2-digit',
                 minute: '2-digit',
                 second: '2-digit'
+            });
+            
+            // Update date
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('en-US', {
+                month: 'short',
+                day: '2-digit',
+                year: 'numeric'
             });
         }
         updateTime();
@@ -348,49 +448,99 @@
         }
 
         function updateCounters(counters) {
-            const containerList = document.getElementById('countersList');
+            const servingList = document.getElementById('servingList');
+            const waitingList = document.getElementById('waitingList');
             
             if (!counters || counters.length === 0) {
-                containerList.innerHTML = `
-                    <div class="text-center text-gray-400 py-8">
-                        <i class="fas fa-inbox text-2xl mb-2"></i>
-                        <p>No active counters</p>
+                servingList.innerHTML = `
+                    <div class="text-center text-gray-400 py-4">
+                        <i class="fas fa-hourglass-end text-xl opacity-50"></i>
+                        <p class="text-sm mt-1">No active service</p>
+                    </div>
+                `;
+                waitingList.innerHTML = `
+                    <div class="text-center text-gray-400 py-4">
+                        <i class="fas fa-inbox text-xl opacity-50"></i>
+                        <p class="text-sm mt-1">No waiting customers</p>
                     </div>
                 `;
                 return;
             }
 
-            // Check if content changed to trigger animations
-            const currentCards = document.querySelectorAll('.counter-card');
-            const newHTML = counters.map(item => {
-                const counter = item.counter;
-                const queue = item.queue;
-                const isActive = !!queue;
-                const queueDisplay = queue ? `#${queue.queue_number}` : 'Idle';
+            // Separate serving and waiting counters
+            const servingCounters = counters.filter(item => !!item.queue);
+            const waitingQueues = [];
+            
+            // Collect all waiting queues
+            counters.forEach(item => {
+                if (item.waiting_queues && item.waiting_queues.length > 0) {
+                    item.waiting_queues.forEach(q => {
+                        waitingQueues.push({
+                            queue_number: q.queue_number,
+                            counter_number: item.counter.counter_number,
+                            counter_name: item.counter.display_name
+                        });
+                    });
+                }
+            });
 
-                return `
-                    <div class="counter-card ${isActive ? 'active' : ''}" data-counter-id="${counter.id}">
-                        <div class="counter-number">Counter ${counter.counter_number}</div>
-                        <div class="counter-name">${counter.display_name}</div>
-                        <div class="counter-status" style="font-size: 0.9rem; color: rgba(255,255,255,0.7); margin-bottom: 0.5rem;">
-                            ${isActive ? '🔴 <strong>Serving</strong>' : '⚪ <strong>Waiting</strong>'}
-                        </div>
-                        <div class="counter-queue" style="margin-top: 0.5rem;">
-                            <strong>${queueDisplay}</strong>
-                        </div>
+            // Update Now Serving section
+            if (servingCounters.length === 0) {
+                servingList.innerHTML = `
+                    <div class="text-center text-gray-400 py-4">
+                        <i class="fas fa-hourglass-end text-xl opacity-50"></i>
+                        <p class="text-sm mt-1">No active service</p>
                     </div>
                 `;
-            }).join('');
+            } else {
+                const servingHTML = servingCounters.map(item => {
+                    const counter = item.counter;
+                    const queue = item.queue;
+                    return `
+                        <div class="counter-card-small serving">
+                            <div class="counter-info">
+                                <div class="counter-info-name">Counter ${counter.counter_number}</div>
+                                <div class="counter-info-queue">${counter.display_name}</div>
+                            </div>
+                            <div class="queue-badge">#${queue.queue_number}</div>
+                        </div>
+                    `;
+                }).join('');
+                servingList.innerHTML = servingHTML;
+            }
 
-            containerList.innerHTML = newHTML;
-
-            // Animate new or updated counters
-            document.querySelectorAll('.counter-card.active').forEach(card => {
-                card.style.animation = 'none';
-                setTimeout(() => {
-                    card.style.animation = 'pulse 2s ease-in-out infinite';
-                }, 10);
-            });
+            // Update Waiting section
+            if (waitingQueues.length === 0) {
+                waitingList.innerHTML = `
+                    <div class="text-center text-gray-400 py-4">
+                        <i class="fas fa-inbox text-xl opacity-50"></i>
+                        <p class="text-sm mt-1">No waiting customers</p>
+                    </div>
+                `;
+            } else {
+                const waitingHTML = waitingQueues.slice(0, 10).map(queue => {
+                    return `
+                        <div class="counter-card-small waiting">
+                            <div class="counter-info">
+                                <div class="counter-info-name">Queue #${queue.queue_number}</div>
+                                <div class="counter-info-queue">Waiting for Counter ${queue.counter_number}</div>
+                            </div>
+                            <i class="fas fa-clock text-yellow-500 opacity-70"></i>
+                        </div>
+                    `;
+                }).join('');
+                
+                if (waitingQueues.length > 10) {
+                    const extraHTML = `
+                        <div class="counter-card-small waiting" style="justify-content: center; opacity: 0.7;">
+                            <span class="text-sm">+${waitingQueues.length - 10} more waiting...</span>
+                        </div>
+                    `;
+                    waitingList.innerHTML = waitingHTML + extraHTML;
+                } else {
+                    waitingList.innerHTML = waitingHTML;
+                }
+            }
         }
 
         function updateVideo(videoControl) {
