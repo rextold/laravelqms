@@ -11,16 +11,17 @@ class OrganizationSetting extends Model
     protected $fillable = [
         'organization_id',
         'code',
+        'company_name',
+        'company_logo',
         'primary_color',
         'secondary_color',
         'accent_color',
         'text_color',
-        'address',
-        'phone',
-        'email',
+        'company_address',
+        'company_phone',
+        'company_email',
         'queue_number_digits',
         'is_active',
-        'logo_path',
     ];
 
     public function organization()

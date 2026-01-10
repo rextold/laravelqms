@@ -14,8 +14,8 @@
                 </h1>
                 <p class="text-gray-600 mt-2">Manage your organization's information, branding, and display preferences</p>
             </div>
-            @if($settings->logo_url)
-                <img src="{{ $settings->logo_url }}" alt="Logo" class="h-16 object-contain">
+            @if($settings->company_logo)
+                <img src="{{ asset('storage/' . $settings->company_logo) }}" alt="Logo" class="h-16 object-contain">
             @endif
         </div>
     </div>
@@ -84,8 +84,8 @@
                             <i class="fas fa-phone"></i>
                         </span>
                         <input type="text" 
-                               name="phone" 
-                               value="{{ old('phone', $settings->phone) }}" 
+                               name="company_phone" 
+                               value="{{ old('company_phone', $settings->company_phone) }}" 
                                class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                                placeholder="+1 (555) 123-4567">
                     </div>
@@ -100,8 +100,8 @@
                             <i class="fas fa-envelope"></i>
                         </span>
                         <input type="email" 
-                               name="email" 
-                               value="{{ old('email', $settings->email) }}" 
+                               name="company_email" 
+                               value="{{ old('company_email', $settings->company_email) }}" 
                                class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                                placeholder="contact@example.com">
                     </div>
@@ -115,10 +115,10 @@
                         <span class="absolute left-4 top-3.5 text-gray-400">
                             <i class="fas fa-map-marker-alt"></i>
                         </span>
-                        <textarea name="address" 
+                        <textarea name="company_address" 
                                   rows="3" 
                                   class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                                  placeholder="Enter full address">{{ old('address', $settings->address) }}</textarea>
+                                  placeholder="Enter full address">{{ old('company_address', $settings->company_address) }}</textarea>
                     </div>
                 </div>
 
@@ -153,11 +153,11 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                @if($settings->logo_url)
+                @if($settings->company_logo)
                 <div>
                     <label class="block text-gray-700 font-semibold mb-3">Current Logo</label>
                     <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50 text-center">
-                        <img src="{{ $settings->logo_url }}" 
+                        <img src="{{ asset('storage/' . $settings->company_logo) }}" 
                              alt="Organization Logo" 
                              class="max-h-32 mx-auto mb-4 object-contain">
                         <button type="button" 
@@ -169,9 +169,9 @@
                 </div>
                 @endif
 
-                <div class="{{ $settings->logo_url ? '' : 'md:col-span-2' }}">
+                <div class="{{ $settings->company_logo ? '' : 'md:col-span-2' }}">
                     <label class="block text-gray-700 font-semibold mb-3">
-                        {{ $settings->logo_url ? 'Upload New Logo' : 'Upload Logo' }}
+                        {{ $settings->company_logo ? 'Upload New Logo' : 'Upload Logo' }}
                     </label>
                     <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50 hover:bg-gray-100 transition">
                         <div class="text-center">

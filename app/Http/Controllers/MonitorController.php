@@ -17,10 +17,10 @@ class MonitorController extends Controller
     {
         $organization = Organization::where('organization_code', $request->route('organization_code'))->firstOrFail();
         $companyCode = $request->route('organization_code');
-        $onlineCounters = User::onlineCounters()->get();
-        $videos = Video::active()->get();
+        $onlineCounters = User::onlineCounters()->where('organization_id', $organization->id)->get();
+        $videos = Video::where('organization_id', $organization->id)->active()->get();
         $videoControl = VideoControl::getCurrent();
-        $marquee = MarqueeSetting::getActive();
+        $marquee = MarqueeSetting::getActiveForOrganization($organization->id);
         $settings = OrganizationSetting::where('organization_id', $organization->id)->first();
         
         // Create default settings if none exist
@@ -46,11 +46,13 @@ class MonitorController extends Controller
         return view('monitor.index', compact('onlineCounters', 'videos', 'videoControl', 'marquee', 'counterQueues', 'settings', 'companyCode', 'organization'));
     }
 
-    public function getData()
+    public function getData(Request $request)
     {
-        $onlineCounters = User::onlineCounters()->get();
+        $organization = Organization::where('organization_code', $request->route('organization_code'))->firstOrFail();
+        
+        $onlineCounters = User::onlineCounters()->where('organization_id', $organization->id)->get();
         $videoControl = VideoControl::getCurrent();
-        $marquee = MarqueeSetting::getActive();
+        $marquee = MarqueeSetting::getActiveForOrganization($organization->id);
 
         $counterQueues = [];
         foreach ($onlineCounters as $counter) {
@@ -64,7 +66,8 @@ class MonitorController extends Controller
         }
 
         // Get waiting queues grouped by counter for clearer display
-        $waitingQueues = \App\Models\Queue::where('status', 'waiting')
+        $waitingQueues = \App\Models\Queue::where('organization_id', $organization->id)
+            ->where('status', 'waiting')
             ->with('counter:id,counter_number,display_name')
             ->orderBy('counter_id')
             ->orderBy('updated_at')

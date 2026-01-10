@@ -34,9 +34,9 @@ class OrganizationSettingsController extends Controller
 
         $validated = $request->validate([
             'organization_name' => 'required|string|max:255',
-            'phone' => 'nullable|string|max:255',
-            'email' => 'nullable|email|max:255',
-            'address' => 'nullable|string|max:500',
+            'company_phone' => 'nullable|string|max:255',
+            'company_email' => 'nullable|email|max:255',
+            'company_address' => 'nullable|string|max:500',
             'primary_color' => 'required|regex:/^#[0-9A-F]{6}$/i',
             'secondary_color' => 'required|regex:/^#[0-9A-F]{6}$/i',
             'accent_color' => 'required|regex:/^#[0-9A-F]{6}$/i',
@@ -65,28 +65,28 @@ class OrganizationSettingsController extends Controller
                 'size' => $file->getSize(),
             ]);
             
-            if ($settings->logo_path) {
-                \Storage::disk('public')->delete($settings->logo_path);
+            if ($settings->company_logo) {
+                \Storage::disk('public')->delete($settings->company_logo);
             }
             
             // Store file synchronously for immediate availability
             $path = $file->storeAs('logos', uniqid() . '_' . $file->getClientOriginalName(), 'public');
-            $validated['logo_path'] = $path;
+            $validated['company_logo'] = $path;
             
             \Log::info('Logo stored successfully', ['path' => $path]);
         }
 
         // Only save settings-specific fields to organization_settings table
         $settings->fill([
-            'phone' => $validated['phone'] ?? null,
-            'email' => $validated['email'] ?? null,
-            'address' => $validated['address'] ?? null,
+            'company_phone' => $validated['company_phone'] ?? null,
+            'company_email' => $validated['company_email'] ?? null,
+            'company_address' => $validated['company_address'] ?? null,
             'primary_color' => $validated['primary_color'],
             'secondary_color' => $validated['secondary_color'],
             'accent_color' => $validated['accent_color'],
             'text_color' => $validated['text_color'],
             'queue_number_digits' => $validated['queue_number_digits'],
-            'logo_path' => $validated['logo_path'] ?? $settings->logo_path,
+            'company_logo' => $validated['company_logo'] ?? $settings->company_logo,
         ]);
         $settings->save();
 
@@ -106,12 +106,12 @@ class OrganizationSettingsController extends Controller
 
         $settings = OrganizationSetting::where('organization_id', $organization->id)->first();
         
-        if ($settings && $settings->logo_path) {
+        if ($settings && $settings->company_logo) {
             // Delete the file from storage
-            \Storage::disk('public')->delete($settings->logo_path);
+            \Storage::disk('public')->delete($settings->company_logo);
             
             // Clear the logo path in database
-            $settings->logo_path = null;
+            $settings->company_logo = null;
             $settings->save();
             
             return redirect()->back()

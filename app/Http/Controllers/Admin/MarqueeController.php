@@ -10,18 +10,31 @@ class MarqueeController extends Controller
 {
     public function index()
     {
-        $marquees = MarqueeSetting::orderBy('created_at', 'desc')->get();
+        $orgCode = request()->route('organization_code');
+        $organization = \App\Models\Organization::where('organization_code', $orgCode)->firstOrFail();
+        
+        $marquees = MarqueeSetting::where('organization_id', $organization->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
         return view('admin.marquee.index', compact('marquees'));
     }
 
     public function list()
     {
-        $marquees = MarqueeSetting::orderBy('created_at', 'desc')->get();
+        $orgCode = request()->route('organization_code');
+        $organization = \App\Models\Organization::where('organization_code', $orgCode)->firstOrFail();
+        
+        $marquees = MarqueeSetting::where('organization_id', $organization->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
         return response()->json(['marquees' => $marquees]);
     }
 
     public function store(Request $request)
     {
+        $orgCode = request()->route('organization_code');
+        $organization = \App\Models\Organization::where('organization_code', $orgCode)->firstOrFail();
+        
         $validated = $request->validate([
             'text' => 'required|string|max:1000',
             'speed' => 'nullable|integer|min:10|max:200',
@@ -31,6 +44,7 @@ class MarqueeController extends Controller
             'text' => $validated['text'],
             'speed' => $validated['speed'] ?? 50,
             'is_active' => true,
+            'organization_id' => $organization->id,
         ]);
 
         if ($request->expectsJson()) {
@@ -47,6 +61,14 @@ class MarqueeController extends Controller
 
     public function update(Request $request, MarqueeSetting $marquee)
     {
+        $orgCode = request()->route('organization_code');
+        $organization = \App\Models\Organization::where('organization_code', $orgCode)->firstOrFail();
+        
+        // Verify marquee belongs to this organization
+        if ($marquee->organization_id !== $organization->id) {
+            abort(403, 'Unauthorized');
+        }
+        
         $validated = $request->validate([
             'text' => 'required|string|max:1000',
             'speed' => 'nullable|integer|min:10|max:200',
@@ -60,9 +82,18 @@ class MarqueeController extends Controller
 
     public function toggleActive(MarqueeSetting $marquee)
     {
-        // Deactivate all others if activating this one
+        $orgCode = request()->route('organization_code');
+        $organization = \App\Models\Organization::where('organization_code', $orgCode)->firstOrFail();
+        
+        // Verify marquee belongs to this organization
+        if ($marquee->organization_id !== $organization->id) {
+            abort(403, 'Unauthorized');
+        }
+        
+        // Deactivate all others in this organization if activating this one
         if (!$marquee->is_active) {
-            MarqueeSetting::where('id', '!=', $marquee->id)
+            MarqueeSetting::where('organization_id', $organization->id)
+                ->where('id', '!=', $marquee->id)
                 ->update(['is_active' => false]);
         }
 
@@ -73,6 +104,14 @@ class MarqueeController extends Controller
 
     public function destroy(MarqueeSetting $marquee)
     {
+        $orgCode = request()->route('organization_code');
+        $organization = \App\Models\Organization::where('organization_code', $orgCode)->firstOrFail();
+        
+        // Verify marquee belongs to this organization
+        if ($marquee->organization_id !== $organization->id) {
+            abort(403, 'Unauthorized');
+        }
+        
         $marquee->delete();
 
         return redirect()->route('admin.marquee.index', ['organization_code' => request()->route('organization_code')])
