@@ -603,10 +603,10 @@
             const marqueeSection = document.getElementById('marqueeSection');
             const marqueeText = document.getElementById('marqueeText');
             
-            if (marquee && marquee.is_active && marquee.message) {
+            if (marquee && marquee.is_active && marquee.text) {
                 // Update text if changed
-                if (marqueeText.textContent !== marquee.message) {
-                    marqueeText.textContent = marquee.message;
+                if (marqueeText.textContent !== marquee.text) {
+                    marqueeText.textContent = marquee.text;
                     // Restart animation
                     marqueeText.style.animation = 'none';
                     setTimeout(() => {
