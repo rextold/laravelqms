@@ -534,6 +534,12 @@ document.getElementById('settingsForm').addEventListener('submit', async functio
     
     const formData = new FormData(this);
     const orgCode = '{{ request()->route("organization_code") }}';
+    const submitButton = this.querySelector('button[type="submit"]');
+    const originalText = submitButton.innerHTML;
+    
+    // Disable submit button while loading
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
     
     try {
         const response = await fetch(
@@ -551,30 +557,86 @@ document.getElementById('settingsForm').addEventListener('submit', async functio
 
         const data = await response.json();
 
-        if (data.success) {
+        if (response.ok && data.success) {
             // Show success message
             const successToast = document.createElement('div');
             successToast.className = 'bg-green-100 border-l-4 border-green-500 text-green-700 px-6 py-4 rounded-lg mb-6 shadow-md';
             successToast.innerHTML = `
                 <div class="flex items-center">
                     <i class="fas fa-check-circle text-xl mr-3"></i>
-                    <span class="font-semibold">${data.message}</span>
+                    <span class="font-semibold">${data.message || 'Settings updated successfully'}</span>
                 </div>
             `;
-            document.body.insertBefore(successToast, document.body.firstChild);
+            
+            // Remove any existing error messages
+            document.querySelectorAll('.bg-red-100').forEach(el => el.remove());
+            
+            // Insert toast at top
+            const container = document.querySelector('.container');
+            if (container) {
+                container.insertBefore(successToast, container.firstChild);
+            }
 
-            setTimeout(() => successToast.remove(), 3000);
+            // Auto-hide success toast
+            setTimeout(() => {
+                if (successToast.parentElement) {
+                    successToast.style.transition = 'opacity 0.5s';
+                    successToast.style.opacity = '0';
+                    setTimeout(() => successToast.remove(), 500);
+                }
+            }, 4000);
             
             // Trigger SettingsSync to refresh displays
             if (window.settingsSync) {
                 window.settingsSync.fetchAndApply();
             }
         } else {
-            alert('Error: ' + (data.message || 'Failed to update settings'));
+            // Handle validation or other errors
+            const errors = data.errors || {};
+            const errorMessages = Object.values(errors).flat();
+            
+            const errorToast = document.createElement('div');
+            errorToast.className = 'bg-red-100 border-l-4 border-red-500 text-red-700 px-6 py-4 rounded-lg mb-6 shadow-md';
+            errorToast.innerHTML = `
+                <div class="flex items-start">
+                    <i class="fas fa-exclamation-triangle text-xl mr-3 mt-0.5"></i>
+                    <div class="flex-1">
+                        <p class="font-semibold mb-2">Please fix the following errors:</p>
+                        <ul class="list-disc list-inside space-y-1">
+                            ${errorMessages.map(msg => `<li>${msg}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+            `;
+            
+            const container = document.querySelector('.container');
+            if (container) {
+                container.insertBefore(errorToast, container.firstChild);
+            }
+            
+            // Scroll to error
+            errorToast.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
     } catch (error) {
         console.error('Error updating settings:', error);
-        alert('Error updating settings. Please try again.');
+        
+        const errorToast = document.createElement('div');
+        errorToast.className = 'bg-red-100 border-l-4 border-red-500 text-red-700 px-6 py-4 rounded-lg mb-6 shadow-md';
+        errorToast.innerHTML = `
+            <div class="flex items-center">
+                <i class="fas fa-exclamation-circle text-xl mr-3"></i>
+                <span class="font-semibold">Error updating settings. Please try again.</span>
+            </div>
+        `;
+        
+        const container = document.querySelector('.container');
+        if (container) {
+            container.insertBefore(errorToast, container.firstChild);
+        }
+    } finally {
+        // Re-enable submit button
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalText;
     }
 });
 </script>
