@@ -76,6 +76,10 @@ class EnsureOrganizationContext
         }
 
         // Store organization in request and session
+        Log::debug('EnsureOrganizationContext - storing organization in session', [
+            'organization_id' => $organization->id ?? null,
+            'organization_code' => $organization->organization_code ?? null,
+        ]);
         $request->merge(['_organization' => $organization]);
         session(['organization' => $organization]);
 

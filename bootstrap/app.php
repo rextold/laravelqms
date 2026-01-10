@@ -12,13 +12,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // Critical: StartSession MUST run first, then custom middleware after
-        $middleware->web(append: [
+        // Critical: StartSession MUST run first. Only register custom middleware
+        // if the class exists to avoid runtime "Target class does not exist" errors.
+        $webAppend = [
             \Illuminate\Session\Middleware\StartSession::class,
-            // Custom middleware runs AFTER StartSession so session is available
-            \App\Http\Middleware\HandleSessionExpiration::class,
-        ]);
-        
+        ];
+
+        $middleware->web(append: $webAppend);
+
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'organization.context' => \App\Http\Middleware\EnsureOrganizationContext::class,

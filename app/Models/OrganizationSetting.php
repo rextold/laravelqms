@@ -60,7 +60,7 @@ class OrganizationSetting extends Model
         if (!$column) {
             return null;
         }
-        return $this->getAttributeValue($column);
+        return $this->attributes[$column] ?? null;
     }
 
     public function setOrganizationLogoAttribute($value): void
@@ -78,7 +78,7 @@ class OrganizationSetting extends Model
         if (!$column) {
             return null;
         }
-        return $this->getAttributeValue($column);
+        return $this->attributes[$column] ?? null;
     }
 
     public function setCompanyPhoneAttribute($value): void
@@ -96,7 +96,7 @@ class OrganizationSetting extends Model
         if (!$column) {
             return null;
         }
-        return $this->getAttributeValue($column);
+        return $this->attributes[$column] ?? null;
     }
 
     public function setCompanyEmailAttribute($value): void
@@ -114,7 +114,7 @@ class OrganizationSetting extends Model
         if (!$column) {
             return null;
         }
-        return $this->getAttributeValue($column);
+        return $this->attributes[$column] ?? null;
     }
 
     public function setCompanyAddressAttribute($value): void
@@ -168,8 +168,9 @@ class OrganizationSetting extends Model
      */
     public function getLogoUrlAttribute()
     {
-        if ($this->organization_logo) {
-            return asset('storage/' . $this->organization_logo);
+        $column = $this->resolveExistingColumn(['organization_logo', 'company_logo', 'logo_path']);
+        if ($column && !empty($this->attributes[$column])) {
+            return asset('storage/' . $this->attributes[$column]);
         }
         return null;
     }

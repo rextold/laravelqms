@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 use App\Models\Organization;
 use App\Models\User;
 
@@ -103,9 +104,40 @@ class AuthController extends Controller
                     'username' => 'User organization not assigned. Please contact administrator.',
                 ])->onlyInput('username');
             }
+
+            // Ensure organization_code is available before building route
+            $orgCode = $organization->organization_code ?? null;
+            if (empty($orgCode)) {
+                Auth::logout();
+                return back()->withErrors([
+                    'username' => 'User organization code is not configured. Please contact administrator.',
+                ])->onlyInput('username');
+            }
+
             $request->session()->put('organization', $organization);
+
+            // Log resolved organization and attempt to build dashboard URL
+            Log::debug('Admin login redirect - resolved organization', [
+                'user_id' => $user->id ?? null,
+                'organization_id' => $organization->id ?? null,
+                'organization_code' => $orgCode,
+            ]);
+
             // Always send admins to their dashboard to prevent cross-role redirect loops
-            return redirect()->to(route('admin.dashboard', ['organization_code' => $organization->organization_code]));
+            try {
+                $url = route('admin.dashboard', ['organization_code' => $orgCode]);
+            } catch (\\Exception $e) {
+                // Fallback: logout and show error if route generation fails
+                Log::error('Failed to generate admin dashboard route', ['exception' => $e->getMessage(), 'user_id' => $user->id ?? null, 'organization_code' => $orgCode]);
+                Auth::logout();
+                return back()->withErrors([
+                    'username' => 'Unable to determine dashboard URL. Please contact administrator.',
+                ])->onlyInput('username');
+            }
+
+            Log::debug('Admin login redirect - redirecting to dashboard', ['user_id' => $user->id ?? null, 'url' => $url]);
+
+            return redirect()->to($url);
         }
 
         if ($user->isCounter()) {
