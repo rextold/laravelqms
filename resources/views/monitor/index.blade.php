@@ -334,12 +334,12 @@
         <!-- Header -->
         <div class="header">
             <div class="header-left">
-                <div class="header-logo">
+                <div class="header-logo org-logo" data-org-logo>
                     <i class="fas fa-tv"></i>
                 </div>
                 <div class="header-title">
                     <h1>Queue Management System</h1>
-                    <p>{{ $organization->organization_name }}</p>
+                    <p data-org-name>{{ $organization->organization_name }}</p>
                 </div>
             </div>
             <div class="header-time">
@@ -671,5 +671,6 @@
             }
         }, 5000);
     </script>
+    <script src="{{ asset('js/settings-sync.js') }}"></script>
 </body>
 </html>

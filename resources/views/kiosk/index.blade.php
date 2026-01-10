@@ -413,7 +413,7 @@
                     @if($settings->logo_url)
                         <div class="spacing-sm">
                             <img src="{{ $settings->logo_url }}" alt="{{ $organization->organization_name }}" 
-                                 class="logo-size mx-auto drop-shadow-2xl">
+                                 class="logo-size mx-auto drop-shadow-2xl" data-org-logo>
                         </div>
                     @endif
                     <h1 class="title-size font-black spacing-sm drop-shadow-2xl animate-fadeInScale" 
@@ -421,7 +421,7 @@
                         Welcome!
                     </h1>
                     <p class="subtitle-size font-bold spacing-sm drop-shadow-lg" 
-                       style="color: var(--text-color); opacity: 0.95;">
+                       style="color: var(--text-color); opacity: 0.95;" data-org-name>
                         {{ $organization->organization_name }}
                     </p>
                     <div class="inline-block glass-card px-4 sm:px-8 py-2 sm:py-4 rounded-xl sm:rounded-2xl">
@@ -1002,7 +1002,7 @@
                 </style>
             </head>
             <body>
-                <div class="organization-name">{{ $organization->organization_name }}</div>
+                <div class="organization-name" data-org-name>{{ $organization->organization_name }}</div>
                 <div class="header">QUEUE MANAGEMENT SYSTEM</div>
                 <div class="title">Priority Number</div>
                 <div class="queue-number">${displayNumber}</div>
@@ -1073,5 +1073,6 @@
         });
     }
     </script>
+    <script src="{{ asset('js/settings-sync.js') }}"></script>
 </body>
 </html>

@@ -151,12 +151,15 @@ class OrganizationSettingsController extends Controller
         }
 
         return response()->json([
+            'organization_name' => $organization->organization_name,
             'primary_color' => $settings->primary_color,
             'secondary_color' => $settings->secondary_color,
             'accent_color' => $settings->accent_color,
             'text_color' => $settings->text_color,
             'company_logo' => $settings->company_logo ? asset('storage/' . $settings->company_logo) : null,
-            'company_name' => $settings->company_name,
+            'company_phone' => $settings->company_phone,
+            'company_email' => $settings->company_email,
+            'company_address' => $settings->company_address,
         ]);
     }
 }

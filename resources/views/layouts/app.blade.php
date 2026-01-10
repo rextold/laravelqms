@@ -117,7 +117,7 @@
     </style>
     @stack('styles')
 </head>
-<body class="bg-gray-50">
+<body class="bg-gray-50" data-organization-code="{{ request()->route('organization_code') ?? (auth()->user() && auth()->user()->organization ? auth()->user()->organization->organization_code : '') }}">
     @if(auth()->check() && !request()->is('monitor*') && !request()->is('kiosk*'))
     <div class="flex h-screen overflow-hidden">
         <!-- Sidebar -->
@@ -136,11 +136,11 @@
                 <div class="p-6 border-b border-white border-opacity-20">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center space-x-3">
-                            <div class="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                            <div class="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center org-logo" data-org-logo>
                                 <i class="fas fa-calendar-check text-2xl"></i>
                             </div>
                             <div class="logo-text">
-                                <h1 class="text-xl font-bold">QMS Admin</h1>
+                                <h1 class="text-xl font-bold" data-org-name>{{ $organization->organization_name ?? 'QMS Admin' }}</h1>
                                 <p class="text-xs opacity-75">Management System</p>
                             </div>
                         </div>
@@ -374,6 +374,7 @@
             localStorage.setItem('sidebarCollapsed', isCollapsed);
         });
     </script>
+    <script src="{{ asset('js/settings-sync.js') }}"></script>
     @else
     <main>
         @yield('content')
