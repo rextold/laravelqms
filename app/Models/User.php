@@ -52,6 +52,7 @@ class User extends Authenticatable
     protected $casts = [
         'is_online' => 'boolean',
         'password' => 'hashed',
+        'organization_id' => 'integer',
     ];
 
     public function queues()
