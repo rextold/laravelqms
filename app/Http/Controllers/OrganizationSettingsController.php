@@ -38,19 +38,12 @@ class OrganizationSettingsController extends Controller
             'company_phone' => 'nullable|string|max:255',
             'company_email' => 'nullable|email|max:255',
             'company_address' => 'nullable|string|max:500',
-            'primary_color' => 'required|string|regex:/^#[0-9A-Fa-f]{6}$/',
-            'secondary_color' => 'required|string|regex:/^#[0-9A-Fa-f]{6}$/',
-            'accent_color' => 'required|string|regex:/^#[0-9A-Fa-f]{6}$/',
-            'text_color' => 'required|string|regex:/^#[0-9A-Fa-f]{6}$/',
-            'queue_number_digits' => 'required|integer|min:3|max:6',
+            'primary_color' => 'required|regex:/^#[0-9A-F]{6}$/i',
+            'secondary_color' => 'required|regex:/^#[0-9A-F]{6}$/i',
+            'accent_color' => 'required|regex:/^#[0-9A-F]{6}$/i',
+            'text_color' => 'required|regex:/^#[0-9A-F]{6}$/i',
+            'queue_number_digits' => 'required|integer|min:1|max:10',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-        ], [
-            'primary_color.regex' => 'Primary color must be a valid hex color code (e.g., #FF5733)',
-            'secondary_color.regex' => 'Secondary color must be a valid hex color code (e.g., #FF5733)',
-            'accent_color.regex' => 'Accent color must be a valid hex color code (e.g., #FF5733)',
-            'text_color.regex' => 'Text color must be a valid hex color code (e.g., #FF5733)',
-            'queue_number_digits.min' => 'Queue number format must be between 3 and 6 digits',
-            'queue_number_digits.max' => 'Queue number format must be between 3 and 6 digits',
         ]);
 
         // Update organization data
@@ -104,7 +97,7 @@ class OrganizationSettingsController extends Controller
         $settings->save();
 
         // Return JSON for AJAX requests for real-time updates
-        if ($request->expectsJson() || $request->isXmlHttpRequest()) {
+        if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,
                 'message' => 'Settings updated successfully',
@@ -113,12 +106,7 @@ class OrganizationSettingsController extends Controller
                     'secondary_color' => $settings->secondary_color,
                     'accent_color' => $settings->accent_color,
                     'text_color' => $settings->text_color,
-                    'organization_name' => $organization->organization_name,
                     'organization_logo' => $settings->organization_logo ? asset('storage/' . $settings->organization_logo) : null,
-                    'company_phone' => $settings->company_phone,
-                    'company_email' => $settings->company_email,
-                    'company_address' => $settings->company_address,
-                    'queue_number_digits' => $settings->queue_number_digits,
                 ]
             ]);
         }

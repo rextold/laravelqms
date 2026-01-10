@@ -12,7 +12,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        $middleware->use([
+        // Critical: StartSession MUST run first, then custom middleware after
+        $middleware->web(append: [
+            \Illuminate\Session\Middleware\StartSession::class,
+            // Custom middleware runs AFTER StartSession so session is available
             \App\Http\Middleware\HandleSessionExpiration::class,
         ]);
         
