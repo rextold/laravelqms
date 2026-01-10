@@ -47,9 +47,22 @@ class EnsureOrganizationContext
 
         // SuperAdmin can access any organization
         // Admin and Counter can only access their assigned organization
+        // Kiosk and Monitor routes are public and don't require authorization
         $user = auth()->user();
+        
+        // Skip authorization check for public routes (kiosk, monitor)
+        $publicRoutes = ['kiosk.', 'monitor.', 'api.settings'];
+        $routeName = $request->route()->getName();
+        $isPublicRoute = false;
+        
+        foreach ($publicRoutes as $prefix) {
+            if (str_starts_with($routeName, $prefix)) {
+                $isPublicRoute = true;
+                break;
+            }
+        }
 
-        if ($user && !$user->isSuperAdmin() && $user->organization_id && $user->organization_id !== $organization->id) {
+        if ($user && !$user->isSuperAdmin() && $user->organization_id && $user->organization_id !== $organization->id && !$isPublicRoute) {
             Log::warning('403 Unauthorized access attempt', [
                 'user_id' => $user->id,
                 'user_email' => $user->email,
