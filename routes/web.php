@@ -96,12 +96,21 @@ Route::prefix('{organization_code}')->middleware('organization.context')->group(
             // Video management
             Route::get('/videos', [VideoController::class, 'index'])->name('videos.index');
             Route::post('/videos', [VideoController::class, 'store'])->name('videos.store');
+            Route::put('/videos/{video}', [VideoController::class, 'update'])->name('videos.update')->whereNumber('video');
             Route::post('/videos/order', [VideoController::class, 'updateOrder'])->name('videos.order');
-            Route::post('/videos/{video}/toggle', [VideoController::class, 'toggleActive'])->name('videos.toggle');
-            Route::delete('/videos/{video}', [VideoController::class, 'destroy'])->name('videos.destroy');
+            Route::post('/videos/{video}/toggle', [VideoController::class, 'toggleActive'])->name('videos.toggle')->whereNumber('video');
+            Route::delete('/videos/{video}', [VideoController::class, 'destroy'])->name('videos.destroy')->whereNumber('video');
             Route::post('/videos/control', [VideoController::class, 'updateControl'])->name('videos.control');
             Route::post('/videos/upload-bell', [VideoController::class, 'uploadBellSound'])->name('videos.upload-bell');
             Route::post('/videos/reset-bell', [VideoController::class, 'resetBellSound'])->name('videos.reset-bell');
+            
+            // Playlist management
+            Route::get('/playlist', [VideoController::class, 'getPlaylist'])->name('playlist.get');
+            Route::post('/playlist/add', [VideoController::class, 'addToPlaylist'])->name('playlist.add');
+            Route::post('/playlist/remove', [VideoController::class, 'removeFromPlaylist'])->name('playlist.remove');
+            Route::post('/playlist/reorder', [VideoController::class, 'reorderPlaylist'])->name('playlist.reorder');
+            Route::post('/playlist/control', [VideoController::class, 'updatePlaylistControl'])->name('playlist.control');
+            Route::post('/playlist/now-playing', [VideoController::class, 'setNowPlaying'])->name('playlist.now-playing');
             
             // Marquee management
             Route::get('/marquee', [MarqueeController::class, 'index'])->name('marquee.index');

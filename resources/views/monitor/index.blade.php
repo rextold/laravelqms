@@ -406,7 +406,7 @@
         function updateTime() {
             const now = new Date();
             document.getElementById('currentTime').textContent = now.toLocaleTimeString('en-US', {
-                hour12: false,
+                hour12: true,
                 hour: '2-digit',
                 minute: '2-digit',
                 second: '2-digit'
@@ -573,7 +573,7 @@
 
             if (video.is_youtube) {
                 const newHTML = `
-                    <iframe src="${video.youtube_embed_url}?autoplay=1&mute=1&loop=1&modestbranding=1&rel=0" 
+                    <iframe src="${video.youtube_embed_url}?autoplay=1&loop=1&modestbranding=1&rel=0" 
                             allow="autoplay; encrypted-media" 
                             style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></iframe>
                 `;
@@ -583,7 +583,7 @@
             } else if (video.file_path) {
                 if (!player.querySelector('video')) {
                     player.innerHTML = `
-                        <video autoplay muted loop style="width: 100%; height: 100%; object-fit: cover;">
+                        <video autoplay loop style="width: 100%; height: 100%; object-fit: cover;">
                             <source src="/storage/${video.file_path}" type="video/mp4">
                             Your browser does not support the video tag.
                         </video>

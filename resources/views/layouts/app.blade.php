@@ -43,6 +43,30 @@
             border-radius: 50%;
             font-size: 0.65rem;
         }
+        /* Top navbar quick buttons styling */
+        .nav-quick {
+            background: rgba(102, 126, 234, 0.10);
+            border: 1px solid rgba(118, 75, 162, 0.30);
+            color: #374151;
+            transition: all 0.2s ease;
+        }
+        .nav-quick:hover {
+            background: rgba(102, 126, 234, 0.18);
+            border-color: rgba(118, 75, 162, 0.45);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+        }
+        .nav-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            background: rgba(102, 126, 234, 0.25);
+            border-radius: 50%;
+            font-size: 0.60rem;
+            margin-left: 0.5rem;
+        }
         .gradient-bg {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
@@ -105,6 +129,7 @@
                     if (!$orgCode && auth()->user() && auth()->user()->organization) {
                         $orgCode = auth()->user()->organization->organization_code;
                     }
+                    $canAccountSettings = auth()->check() && !auth()->user()->isSuperAdmin() && !empty($orgCode);
                 @endphp
             <div class="h-full flex flex-col">
                 <!-- Logo/Brand -->
@@ -234,6 +259,18 @@
                     @php($defaultPageTitle = (auth()->check() && auth()->user()->isCounter()) ? 'Counter Panel' : 'Dashboard')
                     <h2 class="text-2xl font-bold text-gray-800">@yield('page-title', $defaultPageTitle)</h2>
                     <div class="flex items-center space-x-4">
+                        @if(auth()->check() && auth()->user()->isAdmin() && !empty($orgCode))
+                        <a href="{{ route('monitor.index', ['organization_code' => $orgCode]) }}" target="_blank" class="inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium nav-quick">
+                            <i class="fas fa-tv mr-2"></i>
+                            Monitor
+                            <span class="nav-badge"><i class="fas fa-external-link-alt"></i></span>
+                        </a>
+                        <a href="{{ route('kiosk.index', ['organization_code' => $orgCode]) }}" target="_blank" class="inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium nav-quick">
+                            <i class="fas fa-tablet-alt mr-2"></i>
+                            Kiosk
+                            <span class="nav-badge"><i class="fas fa-external-link-alt"></i></span>
+                        </a>
+                        @endif
                         <!-- User Profile Dropdown -->
                         <div class="relative group">
                             <button class="flex items-center space-x-2 text-gray-700 hover:text-gray-900 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors">
@@ -245,10 +282,12 @@
                             <!-- Dropdown Menu -->
                             <div class="absolute right-0 mt-0 w-48 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                                 <!-- Account Settings -->
-                                <a href="{{ route('account.settings', ['organization_code' => $orgCode]) }}" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 border-b border-gray-200 rounded-t-lg">
-                                    <i class="fas fa-user-cog w-4 mr-3 text-blue-600"></i>
-                                    <span>Account Settings</span>
-                                </a>
+                                @if($canAccountSettings)
+                                    <a href="{{ route('account.settings', ['organization_code' => $orgCode]) }}" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 border-b border-gray-200 rounded-t-lg">
+                                        <i class="fas fa-user-cog w-4 mr-3 text-blue-600"></i>
+                                        <span>Account Settings</span>
+                                    </a>
+                                @endif
                                 
                                 <!-- Logout -->
                                 <form action="{{ route('logout') }}" method="POST" class="block">

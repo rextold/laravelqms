@@ -16,6 +16,7 @@ class Video extends Model
         'youtube_url',
         'order',
         'is_active',
+        'organization_id',
     ];
 
     protected $casts = [
@@ -64,5 +65,13 @@ class Video extends Model
     public function isFile()
     {
         return $this->video_type === 'file';
+    }
+
+    /**
+     * Get organization relationship
+     */
+    public function organization()
+    {
+        return $this->belongsTo(Organization::class);
     }
 }

@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use App\Models\Organization;
 use App\Models\User;
 
@@ -21,18 +23,45 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'username' => 'required|string',
-            'password' => 'required|string',
+            'username' => 'required|string|exists:users,username',
+            'password' => 'required|string|min:6',
+        ], [
+            'username.exists' => 'No account found for this username.',
+            'password.min' => 'Password must be at least 6 characters.',
         ]);
+
+        // Simple rate limiting: max 5 attempts per minute per username+IP
+        $throttleKey = Str::lower($request->input('username')).'|'.$request->ip();
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            return back()->withErrors([
+                'username' => 'Too many login attempts. Please try again in a minute.',
+            ])->onlyInput('username');
+        }
 
         // Try to authenticate with username and password only
         if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
             $user = Auth::user();
+            // Verify account is active only if the column exists
+            $attributes = method_exists($user, 'getAttributes') ? $user->getAttributes() : [];
+            if (array_key_exists('is_active', $attributes)) {
+                $isActive = (bool) $user->getAttribute('is_active');
+                if (!$isActive) {
+                    Auth::logout();
+                    $request->session()->invalidate();
+                    $request->session()->regenerateToken();
+                    return back()->withErrors([
+                        'username' => 'This account is inactive. Please contact the administrator.',
+                    ])->onlyInput('username');
+                }
+            }
+
+            RateLimiter::clear($throttleKey);
 
             return $this->redirectByRole($user, $request);
         }
 
+        RateLimiter::hit($throttleKey, 60);
         return back()->withErrors([
             'username' => 'The provided credentials do not match our records.',
         ])->onlyInput('username');
@@ -96,5 +125,10 @@ class AuthController extends Controller
 
         // Fallback
         return redirect('/');
+    }
+
+    protected function throttleKey(Request $request): string
+    {
+        return Str::lower($request->input('username')).'|'.$request->ip();
     }
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Video;
 use App\Models\VideoControl;
+use App\Models\PlaylistItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -49,7 +50,10 @@ class VideoController extends Controller
 
     public function index()
     {
-        $videos = Video::orderBy('order')->get();
+        $orgCode = request()->route('organization_code');
+        $organization = \App\Models\Organization::where('organization_code', $orgCode)->firstOrFail();
+        
+        $videos = Video::where('organization_id', $organization->id)->orderBy('order')->get();
         $control = VideoControl::getCurrent();
         // Compute effective upload limit from php.ini settings
         $uploadBytes = $this->bytesFromIni(ini_get('upload_max_filesize') ?: '0');
@@ -69,6 +73,9 @@ class VideoController extends Controller
             $effectiveBytes = ($uploadBytes && $postBytes) ? min($uploadBytes, $postBytes) : max($uploadBytes, $postBytes);
             $effectiveKB = max(1, (int) floor($effectiveBytes / 1024));
 
+            $orgCode = $request->route('organization_code');
+            $organization = \App\Models\Organization::where('organization_code', $orgCode)->firstOrFail();
+
             $validated = $request->validate([
                 'title' => 'required|string|max:255',
                 'video_type' => 'required|in:file,youtube',
@@ -80,24 +87,25 @@ class VideoController extends Controller
             $data = [
                 'title' => $validated['title'],
                 'video_type' => $validated['video_type'],
-                'order' => $validated['order'] ?? Video::max('order') + 1,
+                'order' => $validated['order'] ?? Video::where('organization_id', $organization->id)->max('order') + 1,
                 'is_active' => true,
+                'organization_id' => $organization->id,
             ];
 
+            // Handle file upload (sync for speed)
             if ($validated['video_type'] === 'file' && $request->hasFile('video')) {
                 $file = $request->file('video');
                 
-                \Log::info('Video file upload attempted', [
+                \Log::info('Video file upload started', [
                     'name' => $file->getClientOriginalName(),
-                    'mime' => $file->getMimeType(),
                     'size' => $file->getSize(),
                 ]);
                 
-                $path = $file->store('videos', 'public');
-                
-                \Log::info('Video file stored successfully', ['path' => $path]);
-                
+                // Store file synchronously for immediate availability
+                $path = $file->storeAs('videos', uniqid() . '_' . $file->getClientOriginalName(), 'public');
                 $data['file_path'] = $path;
+                
+                \Log::info('Video file stored', ['path' => $path]);
             } elseif ($validated['video_type'] === 'youtube') {
                 $data['youtube_url'] = $validated['youtube_url'];
             }
@@ -161,15 +169,47 @@ class VideoController extends Controller
         return response()->json(['success' => true, 'is_active' => $video->is_active]);
     }
 
-    public function destroy(Video $video)
+    public function destroy($video)
     {
-        if ($video->isFile() && $video->file_path) {
-            Storage::disk('public')->delete($video->file_path);
-        }
-        $video->delete();
+        try {
+            $orgCode = request()->route('organization_code');
+            $organization = \App\Models\Organization::where('organization_code', $orgCode)->firstOrFail();
+            
+            // Always treat as ID since we use whereNumber() in route
+            $videoModel = Video::where('id', (int)$video)
+                ->where('organization_id', $organization->id)
+                ->firstOrFail();
+            
+            // Remove from all playlists
+            PlaylistItem::where('video_id', $videoModel->id)->delete();
+            
+            // Delete file from storage if it exists
+            if ($videoModel->isFile() && $videoModel->file_path) {
+                Storage::disk('public')->delete($videoModel->file_path);
+            }
+            
+            $videoModel->delete();
 
-        return redirect()->route('admin.videos.index', ['organization_code' => request()->route('organization_code')])
-            ->with('success', 'Video deleted successfully.');
+            // Return JSON for AJAX requests
+            if (request()->expectsJson()) {
+                return response()->json(['success' => true, 'message' => 'Video deleted successfully.']);
+            }
+
+            return redirect()->route('admin.videos.index', ['organization_code' => request()->route('organization_code')])
+                ->with('success', 'Video deleted successfully.');
+        } catch (\Exception $e) {
+            \Log::error('Video deletion error', [
+                'video_id' => $video,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            if (request()->expectsJson()) {
+                return response()->json(['success' => false, 'error' => 'Failed to delete video'], 400);
+            }
+            
+            return redirect()->back()->with('error', 'Failed to delete video: ' . $e->getMessage());
+        }
     }
 
     public function updateControl(Request $request)
@@ -187,6 +227,20 @@ class VideoController extends Controller
         return response()->json(['success' => true]);
     }
 
+    public function update(Request $request, Video $video)
+    {
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+        ]);
+
+        $video->update(['title' => $validated['title']]);
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'video' => $video]);
+        }
+
+        return redirect()->back()->with('success', 'Video updated successfully.');
+    }
     public function uploadBellSound(Request $request)
     {
         try {
@@ -239,5 +293,183 @@ class VideoController extends Controller
         }
 
         return response()->json(['success' => true, 'message' => 'Bell sound reset to default.']);
+    }
+
+    /**
+     * Get playlist for the organization
+     */
+    public function getPlaylist(Request $request)
+    {
+        $orgCode = $request->route('organization_code');
+        $organization = \App\Models\Organization::where('organization_code', $orgCode)->first();
+        
+        if (!$organization) {
+            return response()->json(['error' => 'Organization not found'], 404);
+        }
+
+        // Eager load videos to avoid N+1 queries
+        $playlist = PlaylistItem::with('video:id,title,video_type')
+            ->where('organization_id', $organization->id)
+            ->orderBy('sequence_order')
+            ->select('id', 'video_id', 'sequence_order')
+            ->get();
+        
+        // Get now playing video with eager load
+        $control = VideoControl::getCurrent();
+        $nowPlaying = null;
+        if ($control->current_video_id) {
+            $nowPlaying = Video::select('id', 'title', 'video_type', 'file_path', 'youtube_url')
+                ->find($control->current_video_id);
+        }
+
+        return response()->json([
+            'success' => true,
+            'playlist' => $playlist->map(fn($item) => [
+                'id' => $item->id,
+                'video_id' => $item->video_id,
+                'title' => $item->video->title,
+                'type' => $item->video->video_type,
+                'is_youtube' => $item->video->isYoutube(),
+                'sequence_order' => $item->sequence_order,
+            ]),
+            'now_playing' => $nowPlaying ? [
+                'id' => $nowPlaying->id,
+                'title' => $nowPlaying->title,
+                'video_type' => $nowPlaying->video_type,
+                'file_path' => $nowPlaying->file_path,
+                'youtube_url' => $nowPlaying->youtube_url,
+                'youtube_embed_url' => $nowPlaying->youtube_embed_url,
+            ] : null,
+            'control' => [
+                'current_video_id' => $control->current_video_id,
+                'is_playing' => $control->is_playing,
+                'repeat_mode' => $control->repeat_mode,
+                'is_shuffle' => $control->is_shuffle,
+                'is_sequence' => $control->is_sequence,
+            ]
+        ]);
+    }
+
+    /**
+     * Add video to playlist
+     */
+    public function addToPlaylist(Request $request)
+    {
+        $validated = $request->validate([
+            'video_id' => 'required|exists:videos,id',
+        ]);
+
+        $orgCode = $request->route('organization_code');
+        $organization = \App\Models\Organization::where('organization_code', $orgCode)->first();
+        
+        if (!$organization) {
+            return response()->json(['error' => 'Organization not found'], 404);
+        }
+
+        // Check if already in playlist
+        $existing = PlaylistItem::where('video_id', $validated['video_id'])
+            ->where('organization_id', $organization->id)
+            ->first();
+
+        if ($existing) {
+            return response()->json(['error' => 'Video already in playlist'], 422);
+        }
+
+        PlaylistItem::addToPlaylist($organization->id, $validated['video_id']);
+
+        return response()->json(['success' => true, 'message' => 'Video added to playlist.']);
+    }
+
+    /**
+     * Remove video from playlist
+     */
+    public function removeFromPlaylist(Request $request)
+    {
+        $validated = $request->validate([
+            'video_id' => 'required|exists:videos,id',
+        ]);
+
+        $orgCode = $request->route('organization_code');
+        $organization = \App\Models\Organization::where('organization_code', $orgCode)->first();
+        
+        if (!$organization) {
+            return response()->json(['error' => 'Organization not found'], 404);
+        }
+
+        PlaylistItem::removeFromPlaylist($organization->id, $validated['video_id']);
+
+        return response()->json(['success' => true, 'message' => 'Video removed from playlist.']);
+    }
+
+    /**
+     * Reorder playlist
+     */
+    public function reorderPlaylist(Request $request)
+    {
+        $validated = $request->validate([
+            'video_ids' => 'required|array',
+            'video_ids.*' => 'required|exists:videos,id',
+        ]);
+
+        $orgCode = $request->route('organization_code');
+        $organization = \App\Models\Organization::where('organization_code', $orgCode)->first();
+        
+        if (!$organization) {
+            return response()->json(['error' => 'Organization not found'], 404);
+        }
+
+        PlaylistItem::reorderPlaylist($organization->id, $validated['video_ids']);
+
+        return response()->json(['success' => true, 'message' => 'Playlist reordered.']);
+    }
+
+    /**
+     * Update playlist control settings (repeat, shuffle, sequence)
+     */
+    public function updatePlaylistControl(Request $request)
+    {
+        $validated = $request->validate([
+            'repeat_mode' => 'nullable|in:off,one,all',
+            'is_shuffle' => 'nullable|boolean',
+            'is_sequence' => 'nullable|boolean',
+        ]);
+
+        $control = VideoControl::getCurrent();
+        
+        if (isset($validated['repeat_mode'])) {
+            $control->repeat_mode = $validated['repeat_mode'];
+        }
+        if (isset($validated['is_shuffle'])) {
+            $control->is_shuffle = $validated['is_shuffle'];
+        }
+        if (isset($validated['is_sequence'])) {
+            $control->is_sequence = $validated['is_sequence'];
+        }
+        
+        $control->save();
+
+        return response()->json([
+            'success' => true,
+            'control' => [
+                'repeat_mode' => $control->repeat_mode,
+                'is_shuffle' => $control->is_shuffle,
+                'is_sequence' => $control->is_sequence,
+            ]
+        ]);
+    }
+
+    /**
+     * Set now playing video
+     */
+    public function setNowPlaying(Request $request)
+    {
+        $validated = $request->validate([
+            'video_id' => 'required|exists:videos,id',
+        ]);
+
+        $control = VideoControl::getCurrent();
+        $control->update(['current_video_id' => $validated['video_id']]);
+
+        return response()->json(['success' => true, 'message' => 'Now playing updated.']);
     }
 }

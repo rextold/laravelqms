@@ -230,7 +230,7 @@
             @endif
 
             <!-- Login Form -->
-            <form action="{{ route('login') }}" method="POST" class="space-y-6">
+            <form action="{{ route('login.post') }}" method="POST" class="space-y-6">
                 @csrf
                 
                 <!-- Username Field -->
@@ -246,11 +246,15 @@
                         id="username" 
                         name="username" 
                         value="{{ old('username') }}" 
-                        class="w-full px-0 py-3 text-gray-900 placeholder-gray-400 focus:outline-none transition-all"
+                        class="w-full px-0 py-3 text-gray-900 placeholder-gray-400 focus:outline-none transition-all @error('username') border-b-2 border-red-500 @enderror"
                         placeholder="Enter your username"
                         required 
                         autofocus
+                        aria-invalid="@error('username') true @else false @enderror"
                     >
+                    @error('username')
+                        <p class="text-sm text-red-600 mt-2">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 <!-- Password Field -->
@@ -265,10 +269,14 @@
                         type="password" 
                         id="password" 
                         name="password" 
-                        class="w-full px-0 py-3 text-gray-900 placeholder-gray-400 focus:outline-none transition-all"
+                        class="w-full px-0 py-3 text-gray-900 placeholder-gray-400 focus:outline-none transition-all @error('password') border-b-2 border-red-500 @enderror"
                         placeholder="Enter your password"
                         required
+                        aria-invalid="@error('password') true @else false @enderror"
                     >
+                    @error('password')
+                        <p class="text-sm text-red-600 mt-2">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 <!-- Login Button -->

@@ -15,10 +15,16 @@ class VideoControl extends Model
         'bell_volume',
         'bell_sound_path',
         'current_video_id',
+        'repeat_mode',
+        'is_shuffle',
+        'is_sequence',
+        'organization_id',
     ];
 
     protected $casts = [
         'is_playing' => 'boolean',
+        'is_shuffle' => 'boolean',
+        'is_sequence' => 'boolean',
     ];
 
     public function currentVideo()
