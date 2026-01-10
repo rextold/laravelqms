@@ -13,6 +13,7 @@ use App\Http\Controllers\AccountController;
 use App\Models\User;
 use App\Models\Video;
 use App\Models\MarqueeSetting;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -31,6 +32,14 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 });
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
+
+// Gracefully handle accidental GET requests to /logout by logging out then redirecting
+Route::get('/logout', function () {
+    if (auth()->check()) {
+        Auth::logout();
+    }
+    return redirect()->route('login');
+})->middleware('auth');
 
 // SuperAdmin routes (no company code in URL)
 Route::middleware(['auth', 'role:superadmin'])->prefix('superadmin')->name('superadmin.')->group(function () {
