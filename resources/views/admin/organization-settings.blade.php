@@ -14,8 +14,8 @@
                 </h1>
                 <p class="text-gray-600 mt-2">Manage your organization's information, branding, and display preferences</p>
             </div>
-            @if($settings->company_logo)
-                <img src="{{ asset('storage/' . $settings->company_logo) }}" alt="Logo" class="h-16 object-contain">
+            @if($settings->organization_logo)
+                <img src="{{ asset('storage/' . $settings->organization_logo) }}" alt="Logo" class="h-16 object-contain">
             @endif
         </div>
     </div>
@@ -74,9 +74,9 @@
                     <label class="block text-gray-700 font-semibold mb-2">Phone Number</label>
                     <input 
                         type="text" 
-                        name="company_phone" 
-                        id="companyPhone"
-                        value="{{ old('company_phone', $settings->company_phone) }}" 
+                        name="organization_phone" 
+                        id="organizationPhone"
+                        value="{{ old('organization_phone', $settings->organization_phone) }}" 
                         class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                         placeholder="+1 (555) 123-4567">
                 </div>
@@ -86,9 +86,9 @@
                     <label class="block text-gray-700 font-semibold mb-2">Email Address</label>
                     <input 
                         type="email" 
-                        name="company_email" 
-                        id="companyEmail"
-                        value="{{ old('company_email', $settings->company_email) }}" 
+                        name="organization_email" 
+                        id="organizationEmail"
+                        value="{{ old('organization_email', $settings->organization_email) }}" 
                         class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                         placeholder="contact@example.com">
                 </div>
@@ -97,11 +97,11 @@
                 <div class="md:col-span-2">
                     <label class="block text-gray-700 font-semibold mb-2">Address</label>
                     <textarea 
-                        name="company_address" 
-                        id="companyAddress"
+                        name="organization_address" 
+                        id="organizationAddress"
                         rows="3" 
                         class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                        placeholder="Enter full address">{{ old('company_address', $settings->company_address) }}</textarea>
+                        placeholder="Enter full address">{{ old('organization_address', $settings->organization_address) }}</textarea>
                 </div>
 
                 <!-- Queue Number Format (Optional) -->
@@ -131,11 +131,11 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                @if($settings->company_logo)
+                @if($settings->organization_logo)
                 <div>
                     <label class="block text-gray-700 font-semibold mb-3">Current Logo</label>
                     <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50 text-center">
-                        <img src="{{ asset('storage/' . $settings->company_logo) }}" alt="Organization Logo" class="max-h-32 mx-auto mb-4 object-contain">
+                        <img src="{{ asset('storage/' . $settings->organization_logo) }}" alt="Organization Logo" class="max-h-32 mx-auto mb-4 object-contain">
                     </div>
                 </div>
                 @endif

@@ -32,20 +32,6 @@
                 <div class="bg-gray-800 rounded-lg overflow-hidden border border-gray-700">
                     <!-- Player Controls -->
                     <div class="bg-gray-900 p-3 space-y-2">
-                        <div class="flex items-center space-x-2">
-                            <button onclick="togglePlay()" id="playBtn" class="bg-gray-700 hover:bg-gray-600 p-2 rounded text-sm font-semibold transition flex-shrink-0">
-                                <i id="playIcon" class="fas fa-play text-lg"></i>
-                            </button>
-                            <div class="flex-1 space-y-1">
-                                <div class="bg-gray-700 h-1 rounded-full overflow-hidden">
-                                    <div id="progressBar" class="bg-blue-600 h-full" style="width: 0%"></div>
-                                </div>
-                                <p id="currentVideo" class="text-xs text-gray-400">—</p>
-                            </div>
-                            <button onclick="nextVideo()" class="bg-gray-700 hover:bg-gray-600 p-2 rounded text-sm transition flex-shrink-0" title="Next">
-                                <i class="fas fa-step-forward text-lg"></i>
-                            </button>
-                        </div>
                         
                         <!-- Volume Control -->
                         <div class="flex items-center space-x-2">

@@ -37,9 +37,9 @@ class OrganizationSettingsController extends Controller
         try {
             $validated = $request->validate([
                 'organization_name' => 'required|string|max:255',
-                'company_phone' => 'nullable|string|max:255',
-                'company_email' => 'nullable|email|max:255',
-                'company_address' => 'nullable|string|max:500',
+                'organization_phone' => 'nullable|string|max:255',
+                'organization_email' => 'nullable|email|max:255',
+                'organization_address' => 'nullable|string|max:500',
                 'primary_color' => 'nullable|regex:/^#[0-9A-F]{6}$/i',
                 'secondary_color' => 'nullable|regex:/^#[0-9A-F]{6}$/i',
                 'accent_color' => 'nullable|regex:/^#[0-9A-F]{6}$/i',
@@ -90,9 +90,8 @@ class OrganizationSettingsController extends Controller
             ]);
             
             // Delete old logo if exists
-            $existingLogo = $settings->logo_path ?? $settings->company_logo ?? null;
-            if ($existingLogo) {
-                \Storage::disk('public')->delete($existingLogo);
+            if ($settings->organization_logo) {
+                \Storage::disk('public')->delete($settings->organization_logo);
             }
             
             // Read file and compress with Intervention Image
@@ -131,9 +130,9 @@ class OrganizationSettingsController extends Controller
         }
 
         // Update settings using actual database column names
-        $settings->company_phone = $validated['company_phone'] ?? null;
-        $settings->company_email = $validated['company_email'] ?? null;
-        $settings->company_address = $validated['company_address'] ?? null;
+        $settings->organization_phone = $validated['organization_phone'] ?? null;
+        $settings->organization_email = $validated['organization_email'] ?? null;
+        $settings->organization_address = $validated['organization_address'] ?? null;
         $settings->primary_color = $validated['primary_color'];
         $settings->secondary_color = $validated['secondary_color'];
         $settings->accent_color = $validated['accent_color'];
@@ -157,7 +156,7 @@ class OrganizationSettingsController extends Controller
                     'secondary_color' => $settings->secondary_color,
                     'accent_color' => $settings->accent_color,
                     'text_color' => $settings->text_color,
-                    'company_logo' => $settings->logo_path ? asset('storage/' . $settings->logo_path) : null,
+                    'organization_logo' => $settings->organization_logo ? asset('storage/' . $settings->organization_logo) : null,
                 ]
             ]);
         }
@@ -178,13 +177,12 @@ class OrganizationSettingsController extends Controller
 
         $settings = OrganizationSetting::where('organization_id', $organization->id)->first();
         
-        $logoPath = $settings->logo_path ?? $settings->company_logo ?? null;
-        if ($settings && $logoPath) {
+        if ($settings && $settings->organization_logo) {
             // Delete the file from storage
-            \Storage::disk('public')->delete($logoPath);
+            \Storage::disk('public')->delete($settings->organization_logo);
             
             // Clear the logo path in database
-            $settings->logo_path = null;
+            $settings->organization_logo = null;
             $settings->save();
             
             return redirect()->back()
@@ -214,10 +212,10 @@ class OrganizationSettingsController extends Controller
             'secondary_color' => $settings->secondary_color,
             'accent_color' => $settings->accent_color,
             'text_color' => $settings->text_color,
-            'company_logo' => $settings->logo_path ? asset('storage/' . $settings->logo_path) : null,
-            'company_phone' => $settings->phone ?? null,
-            'company_email' => $settings->email ?? null,
-            'company_address' => $settings->address ?? null,
+            'organization_logo' => $settings->organization_logo ? asset('storage/' . $settings->organization_logo) : null,
+            'organization_phone' => $settings->organization_phone,
+            'organization_email' => $settings->organization_email,
+            'organization_address' => $settings->organization_address,
         ]);
     }
 }
