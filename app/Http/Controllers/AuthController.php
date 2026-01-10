@@ -105,8 +105,8 @@ class AuthController extends Controller
                 ])->onlyInput('username');
             }
 
-            // Ensure organization_code is available before building route
-            $orgCode = $organization->organization_code ?? null;
+            // Ensure organization_code is available before building route and normalize to lowercase
+            $orgCode = strtolower($organization->organization_code ?? '');
             if (empty($orgCode)) {
                 Auth::logout();
                 return back()->withErrors([
@@ -126,7 +126,7 @@ class AuthController extends Controller
             // Always send admins to their dashboard to prevent cross-role redirect loops
             try {
                 $url = route('admin.dashboard', ['organization_code' => $orgCode]);
-            } catch (\\Exception $e) {
+            } catch (\Exception $e) {
                 // Fallback: logout and show error if route generation fails
                 Log::error('Failed to generate admin dashboard route', ['exception' => $e->getMessage(), 'user_id' => $user->id ?? null, 'organization_code' => $orgCode]);
                 Auth::logout();

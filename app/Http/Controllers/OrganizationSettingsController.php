@@ -6,6 +6,7 @@ use App\Models\Organization;
 use App\Models\OrganizationSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
+use Intervention\Image\ImageManagerStatic as Image;
 
 class OrganizationSettingsController extends Controller
 {
@@ -33,18 +34,29 @@ class OrganizationSettingsController extends Controller
             abort(403);
         }
 
-        $validated = $request->validate([
-            'organization_name' => 'required|string|max:255',
-            'company_phone' => 'nullable|string|max:255',
-            'company_email' => 'nullable|email|max:255',
-            'company_address' => 'nullable|string|max:500',
-            'primary_color' => 'required|regex:/^#[0-9A-F]{6}$/i',
-            'secondary_color' => 'required|regex:/^#[0-9A-F]{6}$/i',
-            'accent_color' => 'required|regex:/^#[0-9A-F]{6}$/i',
-            'text_color' => 'required|regex:/^#[0-9A-F]{6}$/i',
-            'queue_number_digits' => 'required|integer|min:1|max:10',
-            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-        ]);
+        try {
+            $validated = $request->validate([
+                'organization_name' => 'required|string|max:255',
+                'company_phone' => 'nullable|string|max:255',
+                'company_email' => 'nullable|email|max:255',
+                'company_address' => 'nullable|string|max:500',
+                'primary_color' => 'nullable|regex:/^#[0-9A-F]{6}$/i',
+                'secondary_color' => 'nullable|regex:/^#[0-9A-F]{6}$/i',
+                'accent_color' => 'nullable|regex:/^#[0-9A-F]{6}$/i',
+                'text_color' => 'nullable|regex:/^#[0-9A-F]{6}$/i',
+                'queue_number_digits' => 'nullable|integer|min:1|max:10',
+                'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $e->errors()
+                ], 422);
+            }
+            throw $e;
+        }
 
         // Update organization data
         $organization->update([
@@ -62,38 +74,77 @@ class OrganizationSettingsController extends Controller
             $settings->code = $organization->organization_code;
         }
 
-        // Handle logo upload
+        // Handle logo upload with compression
+        $logoPath = null;
         if ($request->hasFile('logo')) {
             $file = $request->file('logo');
+            
+            $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+            $ext = $file->getClientOriginalExtension();
+            $newName = uniqid() . '_' . $originalName . '.' . $ext;
             
             \Log::info('Logo upload started', [
                 'name' => $file->getClientOriginalName(),
                 'size' => $file->getSize(),
+                'mime' => $file->getMimeType(),
             ]);
             
-            if ($settings->company_logo) {
-                \Storage::disk('public')->delete($settings->company_logo);
+            // Delete old logo if exists
+            $existingLogo = $settings->logo_path ?? $settings->company_logo ?? null;
+            if ($existingLogo) {
+                \Storage::disk('public')->delete($existingLogo);
             }
             
-            // Store file synchronously for immediate availability
-            $path = $file->storeAs('logos', uniqid() . '_' . $file->getClientOriginalName(), 'public');
-            $validated['company_logo'] = $path;
+            // Read file and compress with Intervention Image
+            $img = Image::make($file->getRealPath());
             
-            \Log::info('Logo stored successfully', ['path' => $path]);
+            // Resize if too large (max 400x400)
+            if ($img->width() > 400 || $img->height() > 400) {
+                $img->resize(400, 400, function ($constraint) {
+                    $constraint->aspectRatio();
+                    $constraint->upsize();
+                });
+            }
+            
+            // Set quality based on format
+            $quality = 85; // Default quality for compression
+            if (in_array(strtolower($ext), ['jpg', 'jpeg'])) {
+                $quality = 80; // Slightly lower for JPG
+            }
+            
+            // Encode image
+            $img->encode($ext, $quality);
+            
+            // Store compressed image
+            $storagePath = 'logos/' . $newName;
+            \Storage::disk('public')->put($storagePath, (string) $img);
+            
+            $logoPath = $storagePath;
+            
+            $compressedSize = \Storage::disk('public')->size($storagePath);
+            \Log::info('Logo compressed and stored', [
+                'path' => $storagePath,
+                'original_size' => $file->getSize(),
+                'compressed_size' => $compressedSize,
+                'reduction' => round((1 - $compressedSize / $file->getSize()) * 100, 2) . '%'
+            ]);
         }
 
-        // Only save settings-specific fields to organization_settings table
-        $settings->fill([
-            'company_phone' => $validated['company_phone'] ?? null,
-            'company_email' => $validated['company_email'] ?? null,
-            'company_address' => $validated['company_address'] ?? null,
-            'primary_color' => $validated['primary_color'],
-            'secondary_color' => $validated['secondary_color'],
-            'accent_color' => $validated['accent_color'],
-            'text_color' => $validated['text_color'],
-            'queue_number_digits' => $validated['queue_number_digits'],
-            'company_logo' => $validated['company_logo'] ?? $settings->company_logo,
-        ]);
+        // Update settings using actual database column names
+        $settings->company_phone = $validated['company_phone'] ?? null;
+        $settings->company_email = $validated['company_email'] ?? null;
+        $settings->company_address = $validated['company_address'] ?? null;
+        $settings->primary_color = $validated['primary_color'];
+        $settings->secondary_color = $validated['secondary_color'];
+        $settings->accent_color = $validated['accent_color'];
+        $settings->text_color = $validated['text_color'];
+        $settings->queue_number_digits = $validated['queue_number_digits'];
+        
+        // Update organization_logo if new logo was uploaded
+        if ($logoPath) {
+            $settings->organization_logo = $logoPath;
+        }
+        
         $settings->save();
 
         // Return JSON for AJAX requests for real-time updates
@@ -106,7 +157,7 @@ class OrganizationSettingsController extends Controller
                     'secondary_color' => $settings->secondary_color,
                     'accent_color' => $settings->accent_color,
                     'text_color' => $settings->text_color,
-                    'company_logo' => $settings->company_logo ? asset('storage/' . $settings->company_logo) : null,
+                    'company_logo' => $settings->logo_path ? asset('storage/' . $settings->logo_path) : null,
                 ]
             ]);
         }
@@ -127,12 +178,13 @@ class OrganizationSettingsController extends Controller
 
         $settings = OrganizationSetting::where('organization_id', $organization->id)->first();
         
-        if ($settings && $settings->company_logo) {
+        $logoPath = $settings->logo_path ?? $settings->company_logo ?? null;
+        if ($settings && $logoPath) {
             // Delete the file from storage
-            \Storage::disk('public')->delete($settings->company_logo);
+            \Storage::disk('public')->delete($logoPath);
             
             // Clear the logo path in database
-            $settings->company_logo = null;
+            $settings->logo_path = null;
             $settings->save();
             
             return redirect()->back()
@@ -162,10 +214,10 @@ class OrganizationSettingsController extends Controller
             'secondary_color' => $settings->secondary_color,
             'accent_color' => $settings->accent_color,
             'text_color' => $settings->text_color,
-            'company_logo' => $settings->company_logo ? asset('storage/' . $settings->company_logo) : null,
-            'company_phone' => $settings->company_phone,
-            'company_email' => $settings->company_email,
-            'company_address' => $settings->company_address,
+            'company_logo' => $settings->logo_path ? asset('storage/' . $settings->logo_path) : null,
+            'company_phone' => $settings->phone ?? null,
+            'company_email' => $settings->email ?? null,
+            'company_address' => $settings->address ?? null,
         ]);
     }
 }

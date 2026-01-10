@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Organization;
 use App\Models\OrganizationSetting;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class OrganizationController extends Controller
 {
@@ -37,11 +39,23 @@ class OrganizationController extends Controller
             abort(403);
         }
 
-        $validated = $request->validate([
+        // Log incoming request for debugging validation issues
+        Log::debug('OrganizationController@store - incoming', $request->all());
+
+        $rules = [
             'organization_code' => 'required|string|unique:organizations,organization_code|max:50|alpha_dash',
             'organization_name' => 'required|string|max:255',
             'is_active' => 'boolean',
-        ]);
+        ];
+
+        $validator = Validator::make($request->all(), $rules);
+
+        if ($validator->fails()) {
+            Log::warning('OrganizationController@store - validation failed', ['errors' => $validator->errors()->toArray()]);
+            return back()->withErrors($validator)->withInput();
+        }
+
+        $validated = $validator->validated();
 
         $validated['organization_code'] = strtoupper($validated['organization_code']);
         $validated['is_active'] = $request->has('is_active');

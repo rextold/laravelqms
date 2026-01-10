@@ -40,13 +40,6 @@ class EnsureOrganizationContext
 
         $organization = Organization::findByCode($organizationCode);
 
-        Log::debug('Organization lookup in middleware', [
-            'organization_code' => $organizationCode,
-            'organization_found' => $organization ? true : false,
-            'organization_id' => $organization?->id,
-            'organization_is_active' => $organization?->is_active,
-        ]);
-
         if (!$organization) {
             Log::warning('Organization not found for code: ' . $organizationCode);
             return response('Organization not found', 404);
@@ -55,13 +48,6 @@ class EnsureOrganizationContext
         // SuperAdmin can access any organization
         // Admin and Counter can only access their assigned organization
         $user = auth()->user();
-        Log::debug('User authorization check', [
-            'user_id' => $user?->id,
-            'user_role' => $user?->role,
-            'user_organization_id' => $user?->organization_id,
-            'requested_organization_id' => $organization->id,
-            'is_superadmin' => $user?->isSuperAdmin(),
-        ]);
 
         if ($user && !$user->isSuperAdmin() && $user->organization_id && $user->organization_id !== $organization->id) {
             Log::warning('403 Unauthorized access attempt', [
@@ -75,11 +61,11 @@ class EnsureOrganizationContext
             abort(403, 'Unauthorized access to this organization.');
         }
 
-        // Store organization in request and session
-        Log::debug('EnsureOrganizationContext - storing organization in session', [
-            'organization_id' => $organization->id ?? null,
-            'organization_code' => $organization->organization_code ?? null,
-        ]);
+        // Normalize organization_code to lowercase for routes and session storage
+        $normalizedOrgCode = strtolower($organization->organization_code ?? '');
+        $organization->organization_code = $normalizedOrgCode;
+
+        // Store organization in request and session (with normalized code)
         $request->merge(['_organization' => $organization]);
         session(['organization' => $organization]);
 

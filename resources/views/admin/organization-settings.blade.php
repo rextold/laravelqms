@@ -4,7 +4,7 @@
 @section('page-title', 'Organization Settings')
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
+<div class="container mx-auto px-4 py-8" id="settingsContainer">
     <!-- Header -->
     <div class="bg-white rounded-lg shadow-md p-6 mb-6">
         <div class="flex items-center justify-between">
@@ -20,34 +20,28 @@
         </div>
     </div>
 
-    <!-- Success/Error Messages -->
+    <!-- Session Messages (Server-side) -->
     @if(session('success'))
-        <div id="successToast" class="bg-green-100 border-l-4 border-green-500 text-green-700 px-6 py-4 rounded-lg mb-6 shadow-md">
-            <div class="flex items-center">
-                <i class="fas fa-check-circle text-xl mr-3"></i>
-                <span class="font-semibold">{{ session('success') }}</span>
-            </div>
+        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded fixed top-4 right-4 z-50 max-w-md shadow-lg" id="sessionSuccess">
+            {{ session('success') }}
         </div>
     @endif
 
     @if($errors->any())
-        <div class="bg-red-100 border-l-4 border-red-500 text-red-700 px-6 py-4 rounded-lg mb-6 shadow-md">
-            <div class="flex items-start">
-                <i class="fas fa-exclamation-triangle text-xl mr-3 mt-0.5"></i>
-                <div class="flex-1">
-                    <p class="font-semibold mb-2">Please fix the following errors:</p>
-                    <ul class="list-disc list-inside space-y-1">
-                        @foreach($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            </div>
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded fixed top-4 right-4 z-50 max-w-md shadow-lg" id="sessionError">
+            <ul class="list-disc list-inside">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
         </div>
     @endif
 
-    <form action="{{ route('admin.organization-settings.update', ['organization_code' => request()->route('organization_code')]) }}" 
-          method="POST" enctype="multipart/form-data" id="settingsForm">
+    <!-- AJAX Messages (Client-side) -->
+    <div id="ajaxMessage"></div>
+
+    <!-- Main Form -->
+    <form id="settingsForm" method="POST">
         @csrf
         @method('PUT')
 
@@ -61,84 +55,68 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Organization Name (Required) -->
                 <div class="md:col-span-2">
                     <label class="block text-gray-700 font-semibold mb-2">
                         Organization Name <span class="text-red-500">*</span>
                     </label>
-                    <input type="text" 
-                           name="organization_name" 
-                           value="{{ old('organization_name', $organization->organization_name) }}" 
-                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition @error('organization_name') border-red-500 @enderror" 
-                           required>
-                    @error('organization_name')
-                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                    @enderror
+                    <input 
+                        type="text" 
+                        name="organization_name" 
+                        id="organizationName"
+                        value="{{ old('organization_name', $organization->organization_name) }}" 
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" 
+                        required>
                 </div>
 
+                <!-- Phone Number (Optional) -->
                 <div>
-                    <label class="block text-gray-700 font-semibold mb-2">
-                        Phone Number
-                    </label>
-                    <div class="relative">
-                        <span class="absolute left-4 top-3.5 text-gray-400">
-                            <i class="fas fa-phone"></i>
-                        </span>
-                        <input type="text" 
-                               name="company_phone" 
-                               value="{{ old('company_phone', $settings->company_phone) }}" 
-                               class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                               placeholder="+1 (555) 123-4567">
-                    </div>
+                    <label class="block text-gray-700 font-semibold mb-2">Phone Number</label>
+                    <input 
+                        type="text" 
+                        name="company_phone" 
+                        id="companyPhone"
+                        value="{{ old('company_phone', $settings->company_phone) }}" 
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                        placeholder="+1 (555) 123-4567">
                 </div>
 
+                <!-- Email Address (Optional) -->
                 <div>
-                    <label class="block text-gray-700 font-semibold mb-2">
-                        Email Address
-                    </label>
-                    <div class="relative">
-                        <span class="absolute left-4 top-3.5 text-gray-400">
-                            <i class="fas fa-envelope"></i>
-                        </span>
-                        <input type="email" 
-                               name="company_email" 
-                               value="{{ old('company_email', $settings->company_email) }}" 
-                               class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                               placeholder="contact@example.com">
-                    </div>
+                    <label class="block text-gray-700 font-semibold mb-2">Email Address</label>
+                    <input 
+                        type="email" 
+                        name="company_email" 
+                        id="companyEmail"
+                        value="{{ old('company_email', $settings->company_email) }}" 
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                        placeholder="contact@example.com">
                 </div>
 
+                <!-- Address (Optional) -->
                 <div class="md:col-span-2">
-                    <label class="block text-gray-700 font-semibold mb-2">
-                        Address
-                    </label>
-                    <div class="relative">
-                        <span class="absolute left-4 top-3.5 text-gray-400">
-                            <i class="fas fa-map-marker-alt"></i>
-                        </span>
-                        <textarea name="company_address" 
-                                  rows="3" 
-                                  class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                                  placeholder="Enter full address">{{ old('company_address', $settings->company_address) }}</textarea>
-                    </div>
+                    <label class="block text-gray-700 font-semibold mb-2">Address</label>
+                    <textarea 
+                        name="company_address" 
+                        id="companyAddress"
+                        rows="3" 
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                        placeholder="Enter full address">{{ old('company_address', $settings->company_address) }}</textarea>
                 </div>
 
+                <!-- Queue Number Format (Optional) -->
                 <div>
-                    <label class="block text-gray-700 font-semibold mb-2">
-                        Queue Number Format <span class="text-red-500">*</span>
-                    </label>
-                    <select name="queue_number_digits" 
-                            id="queueDigits"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" 
-                            required>
+                    <label class="block text-gray-700 font-semibold mb-2">Queue Number Format</label>
+                    <select 
+                        name="queue_number_digits" 
+                        id="queueDigits"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
                         <option value="3" {{ $settings->queue_number_digits == 3 ? 'selected' : '' }}>3 digits (001)</option>
                         <option value="4" {{ $settings->queue_number_digits == 4 ? 'selected' : '' }}>4 digits (0001)</option>
                         <option value="5" {{ $settings->queue_number_digits == 5 ? 'selected' : '' }}>5 digits (00001)</option>
                         <option value="6" {{ $settings->queue_number_digits == 6 ? 'selected' : '' }}>6 digits (000001)</option>
                     </select>
-                    <p class="text-sm text-gray-500 mt-2 flex items-center">
-                        <i class="fas fa-info-circle mr-2"></i>
-                        <span>Example: <code id="queueExample" class="bg-gray-100 px-2 py-1 rounded">YYYYMMDD-CC-{{ str_repeat('0', $settings->queue_number_digits) }}</code></span>
-                    </p>
+                    <p class="text-sm text-gray-500 mt-2">Example: YYYYMMDD-CC-<code id="queueExample" class="bg-gray-100 px-2 py-1 rounded">{{ str_repeat('0', $settings->queue_number_digits) }}</code></p>
                 </div>
             </div>
         </div>
@@ -157,22 +135,13 @@
                 <div>
                     <label class="block text-gray-700 font-semibold mb-3">Current Logo</label>
                     <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50 text-center">
-                        <img src="{{ asset('storage/' . $settings->company_logo) }}" 
-                             alt="Organization Logo" 
-                             class="max-h-32 mx-auto mb-4 object-contain">
-                        <button type="button" 
-                                onclick="confirmRemoveLogo()"
-                                class="inline-flex items-center px-4 py-2 bg-red-50 text-red-700 hover:bg-red-600 hover:text-white rounded-lg transition font-medium text-sm">
-                            <i class="fas fa-trash mr-2"></i>Remove Logo
-                        </button>
+                        <img src="{{ asset('storage/' . $settings->company_logo) }}" alt="Organization Logo" class="max-h-32 mx-auto mb-4 object-contain">
                     </div>
                 </div>
                 @endif
 
-                <div class="{{ $settings->company_logo ? '' : 'md:col-span-2' }}">
-                    <label class="block text-gray-700 font-semibold mb-3">
-                        {{ $settings->company_logo ? 'Upload New Logo' : 'Upload Logo' }}
-                    </label>
+                <div>
+                    <label class="block text-gray-700 font-semibold mb-3">Upload Logo</label>
                     <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50 hover:bg-gray-100 transition">
                         <div class="text-center">
                             <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-3"></i>
@@ -180,15 +149,16 @@
                                 <label for="logoUpload" class="cursor-pointer inline-flex items-center px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium">
                                     <i class="fas fa-folder-open mr-2"></i>Choose File
                                 </label>
-                                <input type="file" 
-                                       name="logo" 
-                                       id="logoUpload"
-                                       accept="image/*" 
-                                       class="hidden"
-                                       onchange="previewLogo(this)">
+                                <input 
+                                    type="file" 
+                                    name="logo" 
+                                    id="logoUpload"
+                                    accept="image/*" 
+                                    class="hidden"
+                                    onchange="previewLogo(this)">
                             </div>
                             <p class="text-sm text-gray-600">PNG, JPG, GIF up to 2MB</p>
-                            <p class="text-xs text-gray-500 mt-1">Recommended: Transparent background, 400x400px</p>
+                            <p class="text-xs text-gray-500 mt-1">Recommended: 400x400px</p>
                         </div>
                         <div id="logoPreview" class="mt-4 hidden">
                             <img id="logoPreviewImage" src="" alt="Preview" class="max-h-32 mx-auto">
@@ -205,142 +175,84 @@
                 <h2 class="text-2xl font-bold text-gray-800">
                     <i class="fas fa-palette text-blue-600 mr-2"></i>Brand Colors
                 </h2>
-                <p class="text-gray-600 mt-1 text-sm">Customize the color scheme for your organization's displays</p>
+                <p class="text-gray-600 mt-1 text-sm">Customize the color scheme for your organization</p>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                 <!-- Primary Color -->
                 <div>
-                    <label class="block text-gray-700 font-semibold mb-3">
-                        Primary Color <span class="text-red-500">*</span>
-                    </label>
-                    <div class="relative">
-                        <input type="color" 
-                               name="primary_color" 
-                               id="primaryColor"
-                               value="{{ old('primary_color', $settings->primary_color) }}" 
-                               class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
-                               required>
-                        <div class="h-24 rounded-lg border-2 border-gray-300 cursor-pointer hover:border-blue-500 transition relative overflow-hidden"
-                             style="background: {{ $settings->primary_color }}">
+                    <label class="block text-gray-700 font-semibold mb-3">Primary Color</label>
+                    <input type="hidden" name="primary_color" id="primaryColorValue" value="{{ old('primary_color', $settings->primary_color) }}">
+                    <div class="relative cursor-pointer" onclick="document.getElementById('primaryColor').click()">
+                        <input type="color" id="primaryColor" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                        <div class="h-24 rounded-lg border-2 border-gray-300 hover:border-blue-500 transition" style="background: {{ $settings->primary_color }}">
                             <div class="absolute inset-0 flex items-center justify-center">
                                 <i class="fas fa-palette text-white text-2xl drop-shadow-lg"></i>
                             </div>
                         </div>
                     </div>
-                    <input type="text" 
-                           id="primaryColorHex"
-                           value="{{ $settings->primary_color }}" 
-                           class="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-center font-mono text-sm" 
-                           readonly>
+                    <input type="text" id="primaryColorHex" value="{{ $settings->primary_color }}" class="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-center font-mono text-sm" readonly>
                     <p class="text-xs text-gray-500 mt-1 text-center">Main buttons, headers</p>
                 </div>
 
                 <!-- Secondary Color -->
                 <div>
-                    <label class="block text-gray-700 font-semibold mb-3">
-                        Secondary Color <span class="text-red-500">*</span>
-                    </label>
-                    <div class="relative">
-                        <input type="color" 
-                               name="secondary_color" 
-                               id="secondaryColor"
-                               value="{{ old('secondary_color', $settings->secondary_color) }}" 
-                               class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
-                               required>
-                        <div class="h-24 rounded-lg border-2 border-gray-300 cursor-pointer hover:border-blue-500 transition relative overflow-hidden"
-                             style="background: {{ $settings->secondary_color }}">
+                    <label class="block text-gray-700 font-semibold mb-3">Secondary Color</label>
+                    <input type="hidden" name="secondary_color" id="secondaryColorValue" value="{{ old('secondary_color', $settings->secondary_color) }}">
+                    <div class="relative cursor-pointer" onclick="document.getElementById('secondaryColor').click()">
+                        <input type="color" id="secondaryColor" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                        <div class="h-24 rounded-lg border-2 border-gray-300 hover:border-blue-500 transition" style="background: {{ $settings->secondary_color }}">
                             <div class="absolute inset-0 flex items-center justify-center">
                                 <i class="fas fa-brush text-white text-2xl drop-shadow-lg"></i>
                             </div>
                         </div>
                     </div>
-                    <input type="text" 
-                           id="secondaryColorHex"
-                           value="{{ $settings->secondary_color }}" 
-                           class="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-center font-mono text-sm" 
-                           readonly>
+                    <input type="text" id="secondaryColorHex" value="{{ $settings->secondary_color }}" class="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-center font-mono text-sm" readonly>
                     <p class="text-xs text-gray-500 mt-1 text-center">Gradients, accents</p>
                 </div>
 
                 <!-- Accent Color -->
                 <div>
-                    <label class="block text-gray-700 font-semibold mb-3">
-                        Accent Color <span class="text-red-500">*</span>
-                    </label>
-                    <div class="relative">
-                        <input type="color" 
-                               name="accent_color" 
-                               id="accentColor"
-                               value="{{ old('accent_color', $settings->accent_color) }}" 
-                               class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
-                               required>
-                        <div class="h-24 rounded-lg border-2 border-gray-300 cursor-pointer hover:border-blue-500 transition relative overflow-hidden"
-                             style="background: {{ $settings->accent_color }}">
+                    <label class="block text-gray-700 font-semibold mb-3">Accent Color</label>
+                    <input type="hidden" name="accent_color" id="accentColorValue" value="{{ old('accent_color', $settings->accent_color) }}">
+                    <div class="relative cursor-pointer" onclick="document.getElementById('accentColor').click()">
+                        <input type="color" id="accentColor" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                        <div class="h-24 rounded-lg border-2 border-gray-300 hover:border-blue-500 transition" style="background: {{ $settings->accent_color }}">
                             <div class="absolute inset-0 flex items-center justify-center">
                                 <i class="fas fa-star text-white text-2xl drop-shadow-lg"></i>
                             </div>
                         </div>
                     </div>
-                    <input type="text" 
-                           id="accentColorHex"
-                           value="{{ $settings->accent_color }}" 
-                           class="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-center font-mono text-sm" 
-                           readonly>
+                    <input type="text" id="accentColorHex" value="{{ $settings->accent_color }}" class="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-center font-mono text-sm" readonly>
                     <p class="text-xs text-gray-500 mt-1 text-center">Success, highlights</p>
                 </div>
 
                 <!-- Text Color -->
                 <div>
-                    <label class="block text-gray-700 font-semibold mb-3">
-                        Text Color <span class="text-red-500">*</span>
-                    </label>
-                    <div class="relative">
-                        <input type="color" 
-                               name="text_color" 
-                               id="textColor"
-                               value="{{ old('text_color', $settings->text_color) }}" 
-                               class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
-                               required>
-                        <div class="h-24 rounded-lg border-2 border-gray-300 cursor-pointer hover:border-blue-500 transition relative overflow-hidden"
-                             style="background: {{ $settings->text_color }}">
+                    <label class="block text-gray-700 font-semibold mb-3">Text Color</label>
+                    <input type="hidden" name="text_color" id="textColorValue" value="{{ old('text_color', $settings->text_color) }}">
+                    <div class="relative cursor-pointer" onclick="document.getElementById('textColor').click()">
+                        <input type="color" id="textColor" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                        <div class="h-24 rounded-lg border-2 border-gray-300 hover:border-blue-500 transition" style="background: {{ $settings->text_color }}">
                             <div class="absolute inset-0 flex items-center justify-center">
                                 <i class="fas fa-font text-gray-800 text-2xl drop-shadow-lg"></i>
                             </div>
                         </div>
                     </div>
-                    <input type="text" 
-                           id="textColorHex"
-                           value="{{ $settings->text_color }}" 
-                           class="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-center font-mono text-sm" 
-                           readonly>
+                    <input type="text" id="textColorHex" value="{{ $settings->text_color }}" class="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-center font-mono text-sm" readonly>
                     <p class="text-xs text-gray-500 mt-1 text-center">On colored backgrounds</p>
                 </div>
             </div>
 
             <!-- Live Preview -->
             <div class="border-2 border-gray-200 rounded-lg p-6 bg-gray-50">
-                <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
-                    <i class="fas fa-eye mr-2 text-blue-600"></i>Live Preview
-                </h3>
-                <div id="brandPreview" class="rounded-lg p-8 shadow-lg transition-all duration-300" 
-                     style="background: linear-gradient(135deg, {{ $settings->primary_color }}, {{ $settings->secondary_color }});">
-                    <h3 id="previewTitle" class="text-3xl font-bold mb-3" style="color: {{ $settings->text_color }}">
-                        {{ $organization->organization_name }}
-                    </h3>
-                    <p id="previewText" class="text-lg mb-4" style="color: {{ $settings->text_color }}; opacity: 0.9;">
-                        This is how your brand colors will appear across the system
-                    </p>
-                    <div class="flex items-center space-x-3">
-                        <button type="button" id="previewButton" class="px-6 py-3 rounded-lg font-semibold shadow-md hover:shadow-lg transition-all" 
-                                style="background: {{ $settings->accent_color }}; color: white;">
-                            <i class="fas fa-check mr-2"></i>Sample Button
-                        </button>
-                        <div class="px-6 py-3 rounded-lg font-semibold bg-white bg-opacity-20 backdrop-blur-sm" 
-                             id="previewCard"
-                             style="color: {{ $settings->text_color }}">
-                            <i class="fas fa-info-circle mr-2"></i>Info Card
-                        </div>
+                <h3 class="text-lg font-bold text-gray-800 mb-4">Live Preview</h3>
+                <div id="brandPreview" class="rounded-lg p-8 shadow-lg" style="background: linear-gradient(135deg, {{ $settings->primary_color }}, {{ $settings->secondary_color }});">
+                    <h3 id="previewTitle" class="text-3xl font-bold mb-3" style="color: {{ $settings->text_color }}">{{ $organization->organization_name }}</h3>
+                    <p id="previewText" class="text-lg mb-4" style="color: {{ $settings->text_color }}; opacity: 0.9;">This is how your brand colors will appear</p>
+                    <div class="flex gap-3">
+                        <button type="button" class="px-6 py-3 rounded-lg font-semibold" style="background: {{ $settings->accent_color }}; color: white;">Sample Button</button>
+                        <div class="px-6 py-3 rounded-lg font-semibold bg-white bg-opacity-20" style="color: {{ $settings->text_color }}">Info Card</div>
                     </div>
                 </div>
             </div>
@@ -349,18 +261,14 @@
         <!-- Action Buttons -->
         <div class="bg-white rounded-lg shadow-md p-6">
             <div class="flex items-center justify-between">
-                <a href="{{ route('admin.dashboard', ['organization_code' => request()->route('organization_code')]) }}" 
-                   class="inline-flex items-center px-6 py-3 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg transition font-semibold">
+                <a href="{{ route('admin.dashboard', ['organization_code' => request()->route('organization_code')]) }}" class="inline-flex items-center px-6 py-3 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg transition font-semibold">
                     <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
                 </a>
                 <div class="flex items-center space-x-3">
-                    <button type="button" 
-                            onclick="document.getElementById('settingsForm').reset(); location.reload();"
-                            class="inline-flex items-center px-6 py-3 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 rounded-lg transition font-semibold">
-                        <i class="fas fa-undo mr-2"></i>Reset Changes
+                    <button type="reset" class="inline-flex items-center px-6 py-3 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 rounded-lg transition font-semibold">
+                        <i class="fas fa-undo mr-2"></i>Reset
                     </button>
-                    <button type="submit" 
-                            class="inline-flex items-center px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 rounded-lg transition font-semibold shadow-md hover:shadow-lg">
+                    <button type="submit" class="inline-flex items-center px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 rounded-lg transition font-semibold shadow-md hover:shadow-lg">
                         <i class="fas fa-save mr-2"></i>Save Settings
                     </button>
                 </div>
@@ -369,81 +277,7 @@
     </form>
 </div>
 
-<!-- Remove Logo Confirmation Modal -->
-<div id="removeLogoModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 transform transition-all">
-        <div class="bg-gradient-to-r from-red-600 to-red-700 px-6 py-4 rounded-t-lg">
-            <h3 class="text-xl font-bold text-white flex items-center">
-                <i class="fas fa-exclamation-triangle mr-3"></i>Remove Logo
-            </h3>
-        </div>
-        <div class="p-6">
-            <p class="text-gray-700 mb-6">Are you sure you want to remove the organization logo? This action cannot be undone.</p>
-            <div class="flex justify-end space-x-3">
-                <button type="button" 
-                        onclick="closeRemoveLogoModal()" 
-                        class="px-5 py-2.5 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition font-medium">
-                    <i class="fas fa-times mr-2"></i>Cancel
-                </button>
-                <button type="button" 
-                        onclick="submitRemoveLogo()" 
-                        class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition font-medium">
-                    <i class="fas fa-trash mr-2"></i>Remove Logo
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Hidden form for logo removal -->
-<form id="removeLogoForm" action="{{ route('admin.organization-settings.remove-logo', ['organization_code' => request()->route('organization_code')]) }}" method="POST" class="hidden">
-    @csrf
-    @method('DELETE')
-</form>
-
-@push('scripts')
 <script>
-// Color picker updates
-const colorInputs = [
-    { picker: 'primaryColor', hex: 'primaryColorHex', preview: 'brandPreview' },
-    { picker: 'secondaryColor', hex: 'secondaryColorHex', preview: 'brandPreview' },
-    { picker: 'accentColor', hex: 'accentColorHex', preview: 'previewButton' },
-    { picker: 'textColor', hex: 'textColorHex', preview: 'previewTitle' }
-];
-
-colorInputs.forEach(item => {
-    const pickerEl = document.getElementById(item.picker);
-    const hexEl = document.getElementById(item.hex);
-    
-    pickerEl.addEventListener('input', function() {
-        hexEl.value = this.value.toUpperCase();
-        pickerEl.parentElement.querySelector('div').style.background = this.value;
-        updatePreview();
-    });
-});
-
-function updatePreview() {
-    const primary = document.getElementById('primaryColor').value;
-    const secondary = document.getElementById('secondaryColor').value;
-    const accent = document.getElementById('accentColor').value;
-    const text = document.getElementById('textColor').value;
-    
-    const preview = document.getElementById('brandPreview');
-    preview.style.background = `linear-gradient(135deg, ${primary}, ${secondary})`;
-    
-    document.getElementById('previewTitle').style.color = text;
-    document.getElementById('previewText').style.color = text;
-    document.getElementById('previewCard').style.color = text;
-    document.getElementById('previewButton').style.background = accent;
-}
-
-// Queue format example update
-document.getElementById('queueDigits').addEventListener('change', function() {
-    const digits = parseInt(this.value);
-    const zeros = '0'.repeat(digits);
-    document.getElementById('queueExample').textContent = `YYYYMMDD-CC-${zeros}`;
-});
-
 // Logo preview
 function previewLogo(input) {
     if (input.files && input.files[0]) {
@@ -457,123 +291,146 @@ function previewLogo(input) {
     }
 }
 
-// Remove logo modal
-function confirmRemoveLogo() {
-    const modal = document.getElementById('removeLogoModal');
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-    document.body.style.overflow = 'hidden';
-}
-
-function closeRemoveLogoModal() {
-    const modal = document.getElementById('removeLogoModal');
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
-    document.body.style.overflow = '';
-}
-
-function submitRemoveLogo() {
-    document.getElementById('removeLogoForm').submit();
-}
-
-// Close modal on escape key
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closeRemoveLogoModal();
-    }
+// Color synchronization
+document.getElementById('primaryColor').addEventListener('change', function() {
+    document.getElementById('primaryColorValue').value = this.value;
+    document.getElementById('primaryColorHex').value = this.value;
+    updatePreview();
 });
 
-// Close modal on backdrop click
-document.getElementById('removeLogoModal')?.addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeRemoveLogoModal();
-    }
+document.getElementById('secondaryColor').addEventListener('change', function() {
+    document.getElementById('secondaryColorValue').value = this.value;
+    document.getElementById('secondaryColorHex').value = this.value;
+    updatePreview();
 });
 
-// Auto-hide success toast
-setTimeout(() => {
-    const toast = document.getElementById('successToast');
-    if (toast) {
-        toast.style.transition = 'opacity 0.5s';
-        toast.style.opacity = '0';
-        setTimeout(() => toast.remove(), 500);
-    }
-}, 5000);
-
-// Organization name live update in preview
-document.querySelector('input[name="organization_name"]')?.addEventListener('input', function() {
-    document.getElementById('previewTitle').textContent = this.value || 'Organization Name';
+document.getElementById('accentColor').addEventListener('change', function() {
+    document.getElementById('accentColorValue').value = this.value;
+    document.getElementById('accentColorHex').value = this.value;
+    updatePreview();
 });
 
-// Real-time color preview and update
-const primaryColorInput = document.querySelector('input[name="primary_color"]');
-const secondaryColorInput = document.querySelector('input[name="secondary_color"]');
-const accentColorInput = document.querySelector('input[name="accent_color"]');
-const textColorInput = document.querySelector('input[name="text_color"]');
+document.getElementById('textColor').addEventListener('change', function() {
+    document.getElementById('textColorValue').value = this.value;
+    document.getElementById('textColorHex').value = this.value;
+    updatePreview();
+});
 
-function updateColorPreview() {
-    const root = document.documentElement;
-    root.style.setProperty('--primary', primaryColorInput.value);
-    root.style.setProperty('--secondary', secondaryColorInput.value);
-    root.style.setProperty('--accent', accentColorInput.value);
-    root.style.setProperty('--text', textColorInput.value);
+// Update preview
+function updatePreview() {
+    const primary = document.getElementById('primaryColorValue').value;
+    const secondary = document.getElementById('secondaryColorValue').value;
+    const accent = document.getElementById('accentColorValue').value;
+    const text = document.getElementById('textColorValue').value;
+    
+    document.getElementById('brandPreview').style.background = `linear-gradient(135deg, ${primary}, ${secondary})`;
+    document.getElementById('previewTitle').style.color = text;
+    document.getElementById('previewText').style.color = text;
+    document.querySelectorAll('#brandPreview button, #brandPreview div')[0].style.background = accent;
 }
 
-// Update preview on input change
-primaryColorInput?.addEventListener('input', updateColorPreview);
-secondaryColorInput?.addEventListener('input', updateColorPreview);
-accentColorInput?.addEventListener('input', updateColorPreview);
-textColorInput?.addEventListener('input', updateColorPreview);
-
-// Submit form with AJAX for real-time updates on displays
+// Form submission via AJAX
 document.getElementById('settingsForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     
-    const formData = new FormData(this);
     const orgCode = '{{ request()->route("organization_code") }}';
+    const orgName = document.getElementById('organizationName').value.trim();
+    
+    // Validate organization name
+    if (!orgName) {
+        showAjaxMessage('error', 'The organization name field is required.');
+        return;
+    }
+    
+    const formData = new FormData(this);
+    
+    // Debug: Log FormData contents
+    console.log('FormData contents:');
+    for (let [key, value] of formData.entries()) {
+        console.log(`${key}: ${value}`);
+    }
+    
+    // Ensure organization_name is in FormData
+    if (!formData.has('organization_name')) {
+        console.warn('organization_name not found in FormData, adding it');
+        formData.set('organization_name', orgName);
+    }
+    
+    // Ensure _method is set to PUT for Laravel
+    if (!formData.has('_method')) {
+        formData.set('_method', 'PUT');
+    }
+    
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
     
     try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        
         const response = await fetch(
             `/${orgCode}/admin/organization-settings`,
             {
-                method: 'PUT',
+                method: 'POST',
                 headers: {
-                    'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
+                    'X-CSRF-TOKEN': csrfToken,
                     'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
                 },
                 body: formData
             }
         );
-
+        
         const data = await response.json();
-
-        if (data.success) {
-            // Show success message
-            const successToast = document.createElement('div');
-            successToast.className = 'bg-green-100 border-l-4 border-green-500 text-green-700 px-6 py-4 rounded-lg mb-6 shadow-md';
-            successToast.innerHTML = `
-                <div class="flex items-center">
-                    <i class="fas fa-check-circle text-xl mr-3"></i>
-                    <span class="font-semibold">${data.message}</span>
-                </div>
-            `;
-            document.body.insertBefore(successToast, document.body.firstChild);
-
-            setTimeout(() => successToast.remove(), 3000);
-            
-            // Trigger SettingsSync to refresh displays
+        console.log('Server response:', data);
+        
+        if (response.ok && data.success) {
+            showAjaxMessage('success', data.message);
             if (window.settingsSync) {
+                window.settingsSync.broadcastUpdate(data.settings);
                 window.settingsSync.fetchAndApply();
             }
         } else {
-            alert('Error: ' + (data.message || 'Failed to update settings'));
+            if (data.errors) {
+                const errorList = Object.values(data.errors).flat().join(' ');
+                showAjaxMessage('error', errorList);
+            } else {
+                showAjaxMessage('error', data.message || 'Failed to update settings');
+            }
         }
     } catch (error) {
-        console.error('Error updating settings:', error);
-        alert('Error updating settings. Please try again.');
+        showAjaxMessage('error', 'Network error: ' + error.message);
+        console.error('Submit error:', error);
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
     }
 });
+
+function showAjaxMessage(type, message) {
+    const container = document.getElementById('ajaxMessage');
+    const bgColor = type === 'success' ? 'bg-green-100 border-green-400 text-green-700' : 'bg-red-100 border-red-400 text-red-700';
+    
+    container.innerHTML = `
+        <div class="${bgColor} border px-4 py-3 rounded fixed top-4 right-4 z-50 max-w-md shadow-lg">
+            ${message}
+        </div>
+    `;
+    
+    setTimeout(() => {
+        const alert = container.querySelector('div');
+        if (alert) {
+            alert.style.transition = 'opacity 0.5s';
+            alert.style.opacity = '0';
+            setTimeout(() => { alert.remove(); }, 500);
+        }
+    }, 4000);
+}
+
+// Organization name live preview
+document.getElementById('organizationName').addEventListener('input', function() {
+    document.getElementById('previewTitle').textContent = this.value || '{{ $organization->organization_name }}';
+});
 </script>
-@endpush
 @endsection
