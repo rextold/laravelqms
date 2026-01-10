@@ -23,13 +23,13 @@ class OrganizationSeeder extends Seeder
                 'is_active' => true,
             ],
             [
-                'organization_code' => 'COMPANY_A',
-                'organization_name' => 'Company A',
+                'organization_code' => 'ORG_A',
+                'organization_name' => 'Organization A',
                 'is_active' => true,
             ],
             [
-                'organization_code' => 'COMPANY_B',
-                'organization_name' => 'Company B',
+                'organization_code' => 'ORG_B',
+                'organization_name' => 'Organization B',
                 'is_active' => true,
             ],
         ];

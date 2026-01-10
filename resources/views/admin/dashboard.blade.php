@@ -45,13 +45,13 @@
                             <i class="fas fa-building text-white text-2xl"></i>
                         </div>
                         <div class="text-right">
-                            <p class="text-4xl font-bold text-gray-800">{{ $companiesCount }}</p>
+                            <p class="text-4xl font-bold text-gray-800">{{ $organizationsCount ?? $companiesCount }}</p>
                         </div>
                     </div>
                     <h3 class="text-gray-600 font-semibold mb-1">Total Organizations</h3>
                     <div class="flex items-center text-sm text-green-600">
                         <i class="fas fa-check-circle mr-1"></i>
-                        <span>Active companies</span>
+                        <span>Active organizations</span>
                     </div>
                 </div>
                 <div class="h-1 bg-gradient-to-r from-blue-500 to-blue-600"></div>
@@ -71,7 +71,7 @@
                     <h3 class="text-gray-600 font-semibold mb-1">Organization Admins</h3>
                     <div class="flex items-center text-sm text-purple-600">
                         <i class="fas fa-users-cog mr-1"></i>
-                        <span>Company administrators</span>
+                        <span>Organization administrators</span>
                     </div>
                 </div>
                 <div class="h-1 bg-gradient-to-r from-purple-500 to-purple-600"></div>

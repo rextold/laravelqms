@@ -52,7 +52,7 @@
                     <input type="checkbox" name="is_active" value="1" {{ old('is_active', $organization->is_active) ? 'checked' : '' }} class="mr-2">
                     <span class="text-gray-700 font-semibold">Active</span>
                 </label>
-                <p class="text-sm text-gray-500 mt-1">Only active companies can be accessed by users.</p>
+                <p class="text-sm text-gray-500 mt-1">Only active organizations can be accessed by users.</p>
             </div>
 
             <div class="flex justify-end space-x-4">
@@ -60,7 +60,7 @@
                     Cancel
                 </a>
                 <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                    Update Company
+                    Update Organization
                 </button>
             </div>
         </form>

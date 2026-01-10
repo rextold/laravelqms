@@ -17,7 +17,7 @@ class OrganizationController extends Controller
         }
 
         $organizations = Organization::with('setting')->orderBy('created_at', 'desc')->get();
-        return view('admin.companies.index', compact('organizations'));
+        return view('admin.organizations.index', compact('organizations'));
     }
 
     public function create()
@@ -27,7 +27,7 @@ class OrganizationController extends Controller
             abort(403);
         }
 
-        return view('admin.companies.create');
+        return view('admin.organizations.create');
     }
 
     public function store(Request $request)
@@ -72,7 +72,7 @@ class OrganizationController extends Controller
         }
 
         $organization = Organization::findOrFail($organization);
-        return view('admin.companies.edit', compact('organization'));
+        return view('admin.organizations.edit', compact('organization'));
     }
 
     public function update(Request $request, $organization)

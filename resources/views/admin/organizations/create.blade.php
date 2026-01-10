@@ -24,7 +24,7 @@
                 <label for="organization_code" class="block text-gray-700 font-semibold mb-2">Organization Code *</label>
                 <input type="text" id="organization_code" name="organization_code" value="{{ old('organization_code') }}" 
                        class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 uppercase"
-                       placeholder="e.g., ACME, COMPANY_A"
+                       placeholder="e.g., ACME, ORG_A"
                        required>
                 <p class="text-sm text-gray-500 mt-1">Must be unique. Use only letters, numbers, dashes, and underscores.</p>
             </div>

@@ -971,7 +971,7 @@
                     @media print { @page { margin: 0; size: 80mm auto; } body { margin: 0; padding: 10mm; } }
                     body { font-family: Arial, sans-serif; text-align: center; padding: 20px; max-width: 300px; margin: 0 auto; }
                     .header { font-size: 24px; font-weight: bold; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 3px double #000; }
-                    .company-name { font-size: 18px; margin-bottom: 10px; color: #333; }
+                    .organization-name { font-size: 18px; margin-bottom: 10px; color: #333; }
                     .title { font-size: 18px; font-weight: bold; margin-bottom: 20px; text-transform: uppercase; }
                     .queue-number { font-size: 84px; font-weight: bold; margin: 30px 0; letter-spacing: 4px; 
                                    border: 5px solid #000; padding: 25px; background: linear-gradient(135deg, #f0f0f0, #fff); 
@@ -987,7 +987,7 @@
                 </style>
             </head>
             <body>
-                <div class="company-name">{{ $organization->organization_name }}</div>
+                <div class="organization-name">{{ $organization->organization_name }}</div>
                 <div class="header">QUEUE MANAGEMENT SYSTEM</div>
                 <div class="title">Priority Number</div>
                 <div class="queue-number">${displayNumber}</div>
