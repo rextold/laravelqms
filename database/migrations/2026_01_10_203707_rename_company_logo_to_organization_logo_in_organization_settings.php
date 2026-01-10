@@ -11,9 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('organization_settings', function (Blueprint $table) {
-            $table->renameColumn('company_logo', 'organization_logo');
-        });
+        if (!Schema::hasTable('organization_settings')) {
+            return;
+        }
+
+        if (Schema::hasColumn('organization_settings', 'company_logo') && !Schema::hasColumn('organization_settings', 'organization_logo')) {
+            Schema::table('organization_settings', function (Blueprint $table) {
+                $table->renameColumn('company_logo', 'organization_logo');
+            });
+        }
     }
 
     /**
@@ -21,8 +27,14 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('organization_settings', function (Blueprint $table) {
-            $table->renameColumn('organization_logo', 'company_logo');
-        });
+        if (!Schema::hasTable('organization_settings')) {
+            return;
+        }
+
+        if (Schema::hasColumn('organization_settings', 'organization_logo') && !Schema::hasColumn('organization_settings', 'company_logo')) {
+            Schema::table('organization_settings', function (Blueprint $table) {
+                $table->renameColumn('organization_logo', 'company_logo');
+            });
+        }
     }
 };

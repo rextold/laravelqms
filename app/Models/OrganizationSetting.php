@@ -3,10 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 
 class OrganizationSetting extends Model
 {
     protected $table = 'organization_settings';
+
+    protected static array $columnListingCache = [];
 
     protected $fillable = [
         'organization_id',
@@ -27,6 +30,100 @@ class OrganizationSetting extends Model
     public function organization()
     {
         return $this->belongsTo(Organization::class, 'organization_id');
+    }
+
+    protected function resolveExistingColumn(array $candidates): ?string
+    {
+        $table = $this->getTable();
+
+        if (!array_key_exists($table, self::$columnListingCache)) {
+            try {
+                self::$columnListingCache[$table] = Schema::getColumnListing($table);
+            } catch (\Throwable $e) {
+                self::$columnListingCache[$table] = [];
+            }
+        }
+
+        $columns = self::$columnListingCache[$table];
+        foreach ($candidates as $candidate) {
+            if (in_array($candidate, $columns, true)) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+
+    public function getOrganizationLogoAttribute(): ?string
+    {
+        $column = $this->resolveExistingColumn(['organization_logo', 'company_logo', 'logo_path']);
+        if (!$column) {
+            return null;
+        }
+        return $this->getAttributeValue($column);
+    }
+
+    public function setOrganizationLogoAttribute($value): void
+    {
+        $column = $this->resolveExistingColumn(['organization_logo', 'company_logo', 'logo_path']);
+        if (!$column) {
+            return;
+        }
+        $this->attributes[$column] = $value;
+    }
+
+    public function getCompanyPhoneAttribute(): ?string
+    {
+        $column = $this->resolveExistingColumn(['company_phone', 'organization_phone', 'phone']);
+        if (!$column) {
+            return null;
+        }
+        return $this->getAttributeValue($column);
+    }
+
+    public function setCompanyPhoneAttribute($value): void
+    {
+        $column = $this->resolveExistingColumn(['company_phone', 'organization_phone', 'phone']);
+        if (!$column) {
+            return;
+        }
+        $this->attributes[$column] = $value;
+    }
+
+    public function getCompanyEmailAttribute(): ?string
+    {
+        $column = $this->resolveExistingColumn(['company_email', 'organization_email', 'email']);
+        if (!$column) {
+            return null;
+        }
+        return $this->getAttributeValue($column);
+    }
+
+    public function setCompanyEmailAttribute($value): void
+    {
+        $column = $this->resolveExistingColumn(['company_email', 'organization_email', 'email']);
+        if (!$column) {
+            return;
+        }
+        $this->attributes[$column] = $value;
+    }
+
+    public function getCompanyAddressAttribute(): ?string
+    {
+        $column = $this->resolveExistingColumn(['company_address', 'organization_address', 'address']);
+        if (!$column) {
+            return null;
+        }
+        return $this->getAttributeValue($column);
+    }
+
+    public function setCompanyAddressAttribute($value): void
+    {
+        $column = $this->resolveExistingColumn(['company_address', 'organization_address', 'address']);
+        if (!$column) {
+            return;
+        }
+        $this->attributes[$column] = $value;
     }
 
     /**

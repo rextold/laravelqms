@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Organization;
 use App\Models\OrganizationSetting;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class OrganizationSettingsController extends Controller
 {
@@ -61,6 +62,11 @@ class OrganizationSettingsController extends Controller
         $settings = OrganizationSetting::where('organization_id', $organization->id)->first();
         if (!$settings) {
             $settings = new OrganizationSetting(['organization_id' => $organization->id]);
+        }
+
+        // Some schemas require a non-null/unique code column
+        if (!$settings->exists && empty($settings->code) && Schema::hasColumn('organization_settings', 'code')) {
+            $settings->code = $organization->organization_code;
         }
 
         // Handle logo upload
