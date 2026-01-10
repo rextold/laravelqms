@@ -114,6 +114,7 @@ Route::prefix('{organization_code}')->middleware('organization.context')->group(
             
             // Marquee management
             Route::get('/marquee', [MarqueeController::class, 'index'])->name('marquee.index');
+            Route::get('/marquee/list', [MarqueeController::class, 'list'])->name('marquee.list');
             Route::post('/marquee', [MarqueeController::class, 'store'])->name('marquee.store');
             Route::put('/marquee/{marquee}', [MarqueeController::class, 'update'])->name('marquee.update');
             Route::post('/marquee/{marquee}/toggle', [MarqueeController::class, 'toggleActive'])->name('marquee.toggle');

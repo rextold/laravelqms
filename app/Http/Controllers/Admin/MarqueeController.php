@@ -14,6 +14,12 @@ class MarqueeController extends Controller
         return view('admin.marquee.index', compact('marquees'));
     }
 
+    public function list()
+    {
+        $marquees = MarqueeSetting::orderBy('created_at', 'desc')->get();
+        return response()->json(['marquees' => $marquees]);
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -21,11 +27,19 @@ class MarqueeController extends Controller
             'speed' => 'nullable|integer|min:10|max:200',
         ]);
 
-        MarqueeSetting::create([
+        $marquee = MarqueeSetting::create([
             'text' => $validated['text'],
             'speed' => $validated['speed'] ?? 50,
             'is_active' => true,
         ]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Marquee created successfully',
+                'marquee' => $marquee
+            ]);
+        }
 
         return redirect()->route('admin.marquee.index', ['organization_code' => request()->route('organization_code')])
             ->with('success', 'Marquee created successfully.');
