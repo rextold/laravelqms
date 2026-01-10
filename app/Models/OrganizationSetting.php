@@ -15,7 +15,7 @@ class OrganizationSetting extends Model
         'organization_id',
         'code',
         'company_name',
-        'organization_logo',
+        'company_logo',
         'primary_color',
         'secondary_color',
         'accent_color',

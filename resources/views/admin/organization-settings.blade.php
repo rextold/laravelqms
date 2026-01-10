@@ -14,8 +14,8 @@
                 </h1>
                 <p class="text-gray-600 mt-2">Manage your organization's information, branding, and display preferences</p>
             </div>
-            @if(!empty($settings->organization_logo) && file_exists(storage_path('app/public/' . $settings->organization_logo)))
-                <img src="{{ asset('storage/' . $settings->organization_logo) }}" alt="Logo" class="h-16 object-contain">
+            @if($settings->company_logo)
+                <img src="{{ asset('storage/' . $settings->company_logo) }}" alt="Logo" class="h-16 object-contain">
             @endif
         </div>
     </div>
@@ -153,14 +153,11 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                @php
-                    $hasValidLogo = !empty($settings->organization_logo) && file_exists(storage_path('app/public/' . $settings->organization_logo));
-                @endphp
-                @if($hasValidLogo)
+                @if($settings->company_logo)
                 <div>
                     <label class="block text-gray-700 font-semibold mb-3">Current Logo</label>
                     <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50 text-center">
-                        <img src="{{ asset('storage/' . $settings->organization_logo) }}" 
+                        <img src="{{ asset('storage/' . $settings->company_logo) }}" 
                              alt="Organization Logo" 
                              class="max-h-32 mx-auto mb-4 object-contain">
                         <button type="button" 
@@ -172,9 +169,9 @@
                 </div>
                 @endif
 
-                <div class="{{ $hasValidLogo ? '' : 'md:col-span-2' }}">
+                <div class="{{ $settings->company_logo ? '' : 'md:col-span-2' }}">
                     <label class="block text-gray-700 font-semibold mb-3">
-                        {{ $hasValidLogo ? 'Upload New Logo' : 'Upload Logo' }}
+                        {{ $settings->company_logo ? 'Upload New Logo' : 'Upload Logo' }}
                     </label>
                     <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50 hover:bg-gray-100 transition">
                         <div class="text-center">
