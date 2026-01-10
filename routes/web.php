@@ -30,6 +30,9 @@ Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 });
+Route::get('/logout', function () {
+    return view('auth.logout-redirect');
+})->middleware('auth');
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
 // SuperAdmin routes (no company code in URL)

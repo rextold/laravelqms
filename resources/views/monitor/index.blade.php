@@ -219,6 +219,13 @@
             border-color: rgba(16, 185, 129, 0.5);
             background: rgba(16, 185, 129, 0.08);
         }
+        .counter-card-small.serving.notify {
+            animation: blink 1.5s ease-in-out infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; border-color: rgba(16, 185, 129, 0.8); }
+            50% { opacity: 0.5; border-color: rgba(16, 185, 129, 0.3); }
+        }
         .counter-card-small.waiting {
             border-color: rgba(245, 158, 11, 0.3);
             background: rgba(245, 158, 11, 0.05);
@@ -374,7 +381,7 @@
             <!-- Now Serving Section -->
             <div class="section-group">
                 <div class="section-title serving">
-                    <i class="fas fa-phone-alt mr-2"></i>Now Serving
+                    <i class="fas fa-bell mr-2"></i>Now Serving
                 </div>
                 <div class="serving-list" id="servingList">
                     <div class="text-center text-gray-400 py-4">
@@ -406,12 +413,18 @@
         </div>
     </div>
 
+    <!-- Notification Sound -->
+    <audio id="notificationSound" preload="auto">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFAtGmN7yvmwhBjiKz/HPgTQGG2W07O2hUhELRZff8r5sIQc4iM/x0H40BhtktOztolIRC0WX3/K+bCEHOIjP8dB+NAYbZLTs7aFSEQtFl9/yvmwhBziIz/HQfjQGG2S07O2hUhELRZff8r5sIQc4h8/x0H40BhtktOztolIRC0SX3vK+bCEHN4fP8c9+MwYaZLPr7aFSEQxEl97yvmwhBzeHz/HPfjMGGmSz6+2hUhEMRJfe8r5sIQc3h8/xz34zBhpks+vtoVIRDESX3vK+ayEHN4bP8c9+MwYaZLPr7aFSEQxEl97yv2shBzeGz/HPfTMGGmSz6+2hUhEMRJfe8r9rIQc3hs/xz30zBhpks+vtoVIRDESX3vK/ayEHN4bP8c99MwYaZLPr7aFSEQxEl97yv2shBzeGz/HPfTMGGmSz6+2hUhEMRJfe8r9rIQc3hs/xz30zBhpks+vtoVIRDESX3vK/ayEHN4bP8c99MwYaZLPr7aFSEQxEl97yv2shBzeGz/HPfTMGGmSz6+2hUhEMRJfe8r9rIQc3hs/xz30zBhpks+vtoVIRDESX3vK/ayEHN4bP8c99MwYaZLPr7aFSEQxEl97yv2shBzeGz/HPfTMGGmSz6+2hUhEMRJfe8r9rIQc3hs/xz30zBhpks+vtoVIRDESX3vK/ayEHN4bP8c99MwYaZLPr7aFSEQxEl97yv2shBzeGz/HPfTMGGmSz6+2hUhEMRJfe8r9rIQc3hs/xz30zBhpks+vtoVIRDESX3vK/ayEHN4bP8c99MwYaZLPr7aFSEQxEl97yv2shBzeGz/HPfTMGGmSz6+2hUhEMRJfe8r9rIQc3hs/xz30zBhpks+vtoVIRDESX3vK/ayEHN4bP8c99MwYaZLPr7aFSEQxEl97yv2shBzeGz/HPfTMGGmSz6+2hUhEMRJfe8r9rIQc3hs/xz30zBhpks+vtoVIRDESX3vK/ayEHN4bP8c99MwYaZLPr7aFSEQxEl97yv2shBzeGz/HPfTMGGmSz6+2hUhEMRJfe8r9rIQc3hs/xz30zBhpks+vtoVIRDESX3vK/ayEHN4bP8c99MwYaZLPr7aFSEQxEl97yv2shBzeGz/HPfTMGGmSz6+2hUhEMRJfe8r9rIQc3hs/xz30zBhpks+vtoVIRDESX3vK/ayEHN4bP8c99MwYaZLPr7aFSEQxEl97yv2shBzeGz/HPfTMGGmSz6+2hUhEMRJfe8r9rIQc3hs/xz30zBhpks+vtoVIRDESX3vK/ayEHN4bP8c99MwYaZLPr7aFSEQxEl97yv2shBzeGz/HPfTMGGmSz6+2hUhEMRJfe8r9rIQ=" type="audio/wav">
+    </audio>
     <script>
         const orgCode = '{{ $companyCode }}';
         let currentPlayingVideo = null;
         let refreshInterval = null;
         let lastDataUpdate = Date.now();
         let videoRotationIndex = 0;
+        let previousServingQueues = [];
+        const notificationSound = document.getElementById('notificationSound');
 
         // Update time and date
         function updateTime() {
@@ -495,7 +508,7 @@
                 }
             });
 
-            // Update Now Serving section
+            // Update Now Serving section with notification detection
             if (servingCounters.length === 0) {
                 servingList.innerHTML = `
                     <div class="text-center text-gray-400 py-4">
@@ -503,12 +516,32 @@
                         <p class="text-sm mt-1">No active service</p>
                     </div>
                 `;
+                previousServingQueues = [];
             } else {
+                // Detect new queue calls
+                const currentServingIds = servingCounters.map(item => item.queue.id);
+                const newQueues = servingCounters.filter(item => 
+                    !previousServingQueues.includes(item.queue.id)
+                );
+                
+                // Play notification sound if new queue is called
+                if (newQueues.length > 0 && previousServingQueues.length > 0) {
+                    try {
+                        notificationSound.currentTime = 0;
+                        notificationSound.play().catch(e => console.log('Audio play failed:', e));
+                    } catch(e) {
+                        console.log('Audio error:', e);
+                    }
+                }
+                
+                previousServingQueues = currentServingIds;
+                
                 const servingHTML = servingCounters.map(item => {
                     const counter = item.counter;
                     const queue = item.queue;
+                    const isNew = newQueues.some(nq => nq.queue.id === queue.id);
                     return `
-                        <div class="counter-card-small serving">
+                        <div class="counter-card-small serving ${isNew ? 'notify' : ''}">
                             <div class="counter-info">
                                 <div class="counter-info-name">Counter ${counter.counter_number}</div>
                                 <div class="counter-info-queue">${counter.display_name}</div>
@@ -520,7 +553,7 @@
                 servingList.innerHTML = servingHTML;
             }
 
-            // Update Waiting section
+            // Update Waiting section - grouped by counter
             if (waitingQueues.length === 0) {
                 waitingList.innerHTML = `
                     <div class="text-center text-gray-400 py-4">
@@ -529,28 +562,59 @@
                     </div>
                 `;
             } else {
-                const waitingHTML = waitingQueues.slice(0, 10).map(queue => {
-                    return `
-                        <div class="counter-card-small waiting">
-                            <div class="counter-info">
-                                <div class="counter-info-name">Queue #${queue.queue_number}</div>
-                                <div class="counter-info-queue">Waiting for Counter ${queue.counter_number}</div>
-                            </div>
-                            <i class="fas fa-clock text-yellow-500 opacity-70"></i>
-                        </div>
-                    `;
-                }).join('');
+                // Group by counter name
+                const groupedByCounter = {};
+                waitingQueues.forEach(queue => {
+                    const counterKey = `${queue.counter_number}-${queue.counter_name}`;
+                    if (!groupedByCounter[counterKey]) {
+                        groupedByCounter[counterKey] = {
+                            counter_number: queue.counter_number,
+                            counter_name: queue.counter_name,
+                            queues: []
+                        };
+                    }
+                    groupedByCounter[counterKey].queues.push(queue);
+                });
                 
-                if (waitingQueues.length > 10) {
-                    const extraHTML = `
-                        <div class="counter-card-small waiting" style="justify-content: center; opacity: 0.7;">
-                            <span class="text-sm">+${waitingQueues.length - 10} more waiting...</span>
+                // Generate HTML grouped by counter
+                let waitingHTML = '';
+                let totalDisplayed = 0;
+                const maxDisplay = 10;
+                
+                Object.values(groupedByCounter).forEach(group => {
+                    if (totalDisplayed >= maxDisplay) return;
+                    
+                    // Counter header
+                    waitingHTML += `
+                        <div style="font-size: 0.7rem; color: rgba(255,255,255,0.5); font-weight: 600; margin-top: 0.5rem; padding-left: 0.25rem;">
+                            ${group.counter_name} (Counter ${group.counter_number})
                         </div>
                     `;
-                    waitingList.innerHTML = waitingHTML + extraHTML;
-                } else {
-                    waitingList.innerHTML = waitingHTML;
+                    
+                    // Queues under this counter
+                    group.queues.slice(0, maxDisplay - totalDisplayed).forEach(queue => {
+                        waitingHTML += `
+                            <div class="counter-card-small waiting">
+                                <div class="counter-info">
+                                    <div class="counter-info-name">Queue #${queue.queue_number}</div>
+                                    <div class="counter-info-queue">Waiting</div>
+                                </div>
+                                <i class="fas fa-clock text-yellow-500 opacity-70"></i>
+                            </div>
+                        `;
+                        totalDisplayed++;
+                    });
+                });
+                
+                if (waitingQueues.length > maxDisplay) {
+                    waitingHTML += `
+                        <div class="counter-card-small waiting" style="justify-content: center; opacity: 0.7;">
+                            <span class="text-sm">+${waitingQueues.length - maxDisplay} more waiting...</span>
+                        </div>
+                    `;
                 }
+                
+                waitingList.innerHTML = waitingHTML;
             }
         }
 
