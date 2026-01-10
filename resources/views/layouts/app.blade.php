@@ -183,20 +183,8 @@
                     @endauth
                 </nav>
 
-                <!-- Logout -->
-                <div class="p-4 border-t border-white border-opacity-20">
-                    <a href="{{ route('account.settings', ['organization_code' => $orgCode]) }}" class="sidebar-link flex items-center w-full px-4 py-3 rounded-lg mb-2 {{ request()->routeIs('account.settings') ? 'active' : '' }}">
-                        <i class="fas fa-user-cog w-5"></i>
-                        <span class="ml-3 sidebar-text">Account Settings</span>
-                    </a>
-                    <form action="{{ route('logout') }}" method="POST">
-                        @csrf
-                        <button type="submit" class="sidebar-link flex items-center w-full px-4 py-3 rounded-lg hover:bg-red-500 hover:bg-opacity-20">
-                            <i class="fas fa-sign-out-alt w-5"></i>
-                            <span class="ml-3 sidebar-text">Logout</span>
-                        </button>
-                    </form>
-                </div>
+                <!-- Empty space to push logout to bottom -->
+                <div class="flex-1"></div>
             </div>
         </aside>
 
@@ -211,7 +199,32 @@
                     @php($defaultPageTitle = (auth()->check() && auth()->user()->isCounter()) ? 'Counter Panel' : 'Dashboard')
                     <h2 class="text-2xl font-bold text-gray-800">@yield('page-title', $defaultPageTitle)</h2>
                     <div class="flex items-center space-x-4">
-                        <!-- Placeholder for future actions -->
+                        <!-- User Profile Dropdown -->
+                        <div class="relative group">
+                            <button class="flex items-center space-x-2 text-gray-700 hover:text-gray-900 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                                <i class="fas fa-user-circle text-xl"></i>
+                                <span class="hidden md:inline font-medium">{{ auth()->user()->display_name ?? auth()->user()->username }}</span>
+                                <i class="fas fa-chevron-down text-sm hidden md:inline"></i>
+                            </button>
+                            
+                            <!-- Dropdown Menu -->
+                            <div class="absolute right-0 mt-0 w-48 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                                <!-- Account Settings -->
+                                <a href="{{ route('account.settings', ['organization_code' => $orgCode]) }}" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 border-b border-gray-200 rounded-t-lg">
+                                    <i class="fas fa-user-cog w-4 mr-3 text-blue-600"></i>
+                                    <span>Account Settings</span>
+                                </a>
+                                
+                                <!-- Logout -->
+                                <form action="{{ route('logout') }}" method="POST" class="block">
+                                    @csrf
+                                    <button type="submit" class="w-full flex items-center px-4 py-3 text-gray-700 hover:bg-red-50 rounded-b-lg transition-colors">
+                                        <i class="fas fa-sign-out-alt w-4 mr-3 text-red-600"></i>
+                                        <span>Logout</span>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </header>
