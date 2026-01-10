@@ -58,11 +58,22 @@ class OrganizationSettingsController extends Controller
 
         // Handle logo upload
         if ($request->hasFile('logo')) {
+            $file = $request->file('logo');
+            
+            \Log::info('Logo upload started', [
+                'name' => $file->getClientOriginalName(),
+                'size' => $file->getSize(),
+            ]);
+            
             if ($settings->logo_path) {
                 \Storage::disk('public')->delete($settings->logo_path);
             }
-            $path = $request->file('logo')->store('logos', 'public');
+            
+            // Store file synchronously for immediate availability
+            $path = $file->storeAs('logos', uniqid() . '_' . $file->getClientOriginalName(), 'public');
             $validated['logo_path'] = $path;
+            
+            \Log::info('Logo stored successfully', ['path' => $path]);
         }
 
         // Only save settings-specific fields to organization_settings table
