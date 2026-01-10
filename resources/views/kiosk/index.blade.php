@@ -410,9 +410,9 @@
             <div class="flex flex-col h-full">
                 <!-- Header -->
                 <div class="text-center spacing-md flex-shrink-0">
-                    @if(!empty($settings->organization_logo) && file_exists(storage_path('app/public/' . $settings->organization_logo)))
+                    @if($settings->company_logo)
                         <div class="spacing-sm">
-                            <img src="{{ asset('storage/' . $settings->organization_logo) }}" alt="{{ $organization->organization_name }}" 
+                            <img src="{{ asset('storage/' . $settings->company_logo) }}" alt="{{ $organization->organization_name }}"
                                  class="logo-size mx-auto drop-shadow-2xl" data-org-logo style="max-height: 60px; height: auto;">
                         </div>
                     @endif

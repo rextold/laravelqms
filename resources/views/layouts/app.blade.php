@@ -137,8 +137,8 @@
                     <div class="flex items-center justify-between">
                         <div class="flex items-center space-x-3">
                             <div class="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center org-logo overflow-hidden" data-org-logo>
-                                @if(isset($organization) && $organization->setting && !empty($organization->setting->organization_logo) && file_exists(storage_path('app/public/' . $organization->setting->organization_logo)))
-                                    <img src="{{ asset('storage/' . $organization->setting->organization_logo) }}" alt="Logo" class="w-full h-full object-contain p-1" data-org-logo>
+                                @if(isset($organization) && $organization->setting && $organization->setting->company_logo)
+                                    <img src="{{ asset('storage/' . $organization->setting->company_logo) }}" alt="Logo" class="w-full h-full object-contain p-1" data-org-logo>
                                 @else
                                     <i class="fas fa-calendar-check text-2xl"></i>
                                 @endif
