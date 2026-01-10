@@ -14,7 +14,12 @@ class EnsureOrganizationContext
      */
     public function handle(Request $request, Closure $next)
     {
-        $organizationCode = $request->route('organization_code');
+        $route = $request->route();
+        if (!$route) {
+            return response('Route not found', 404);
+        }
+
+        $organizationCode = $route->parameter('organization_code');
 
         if (!$organizationCode) {
             return response('Organization not found', 404);
