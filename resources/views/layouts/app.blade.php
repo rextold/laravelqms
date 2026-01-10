@@ -294,9 +294,9 @@
                                 @endif
                                 
                                 <!-- Logout -->
-                                <form action="{{ route('logout') }}" method="POST" class="block">
+                                <form id="logoutForm" action="{{ route('logout') }}" method="POST" class="block">
                                     @csrf
-                                    <button type="submit" class="w-full flex items-center px-4 py-3 text-gray-700 hover:bg-red-50 rounded-b-lg transition-colors">
+                                    <button type="submit" class="w-full flex items-center px-4 py-3 text-gray-700 hover:bg-red-50 rounded-b-lg transition-colors" onclick="handleLogout(event)">
                                         <i class="fas fa-sign-out-alt w-4 mr-3 text-red-600"></i>
                                         <span>Logout</span>
                                     </button>
@@ -377,6 +377,29 @@
             const isCollapsed = sidebar.classList.contains('collapsed');
             localStorage.setItem('sidebarCollapsed', isCollapsed);
         });
+
+        // Handle logout with CSRF token refresh
+        window.handleLogout = async function(event) {
+            event.preventDefault();
+            const form = document.getElementById('logoutForm');
+            
+            try {
+                // Refresh CSRF token before logout
+                const response = await fetch('/refresh-csrf');
+                const data = await response.json();
+                
+                // Update CSRF token in form
+                const csrfInput = form.querySelector('input[name="_token"]');
+                if (csrfInput && data.token) {
+                    csrfInput.value = data.token;
+                }
+            } catch (error) {
+                console.log('CSRF refresh failed, proceeding with existing token:', error);
+            }
+            
+            // Submit the form
+            form.submit();
+        };
     </script>
     <script src="{{ asset('js/settings-sync.js') }}"></script>
     @else
