@@ -309,6 +309,9 @@
 </div>
 
 <script>
+// Flag to track if we've already attempted login
+let loginAttempted = false;
+
 async function handleLogin(event) {
     event.preventDefault();
     
@@ -318,38 +321,58 @@ async function handleLogin(event) {
     const buttonText = submitButton.querySelector('span');
     const originalText = buttonText.textContent;
     
+    // Prevent double submission
+    if (submitButton.disabled) {
+        return false;
+    }
+    
     // Disable button and show loading state
     submitButton.disabled = true;
     buttonText.textContent = 'Signing in...';
     
     try {
-        // Refresh CSRF token before submitting
-        const response = await fetch('/refresh-csrf', {
-            method: 'GET',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            if (data.token) {
-                csrfInput.value = data.token;
-                // Also update meta tag
-                const metaTag = document.querySelector('meta[name="csrf-token"]');
-                if (metaTag) {
-                    metaTag.setAttribute('content', data.token);
+        // Only refresh token on first attempt (not after validation errors)
+        if (!loginAttempted) {
+            const response = await fetch('/refresh-csrf', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.token) {
+                    csrfInput.value = data.token;
+                    const metaTag = document.querySelector('meta[name="csrf-token"]');
+                    if (metaTag) {
+                        metaTag.setAttribute('content', data.token);
+                    }
                 }
             }
         }
+        
+        loginAttempted = true;
     } catch (error) {
-        console.warn('Failed to refresh CSRF token, submitting with existing token:', error);
+        console.warn('Failed to refresh CSRF token:', error);
     } finally {
-        // Submit the form regardless of token refresh success
+        // Submit the form
         form.submit();
     }
     
     return false;
 }
+
+// Show button as enabled on page load if there are errors
+document.addEventListener('DOMContentLoaded', function() {
+    const hasErrors = document.querySelector('.error-box') !== null;
+    if (hasErrors) {
+        loginAttempted = true; // Mark as attempted if there are errors
+        const submitButton = document.getElementById('loginButton');
+        if (submitButton) {
+            submitButton.disabled = false;
+        }
+    }
+});
 </script>
 @endsection
