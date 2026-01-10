@@ -342,8 +342,8 @@
         <div class="header">
             <div class="header-left">
                 <div class="header-logo org-logo" data-org-logo>
-                    @if($settings->company_logo)
-                        <img src="{{ asset('storage/' . $settings->company_logo) }}" alt="Logo" data-org-logo>
+                    @if(!empty($settings->organization_logo) && file_exists(storage_path('app/public/' . $settings->organization_logo)))
+                        <img src="{{ asset('storage/' . $settings->organization_logo) }}" alt="Logo" data-org-logo>
                     @else
                         <i class="fas fa-tv"></i>
                     @endif

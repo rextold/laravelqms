@@ -51,8 +51,8 @@ class SettingsSync {
         }
 
         // Update logo in all places
-        if (settings.company_logo) {
-            this.updateLogo(settings.company_logo);
+        if (settings.organization_logo) {
+            this.updateLogo(settings.organization_logo);
         }
     }
 

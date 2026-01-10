@@ -65,13 +65,13 @@ class OrganizationSettingsController extends Controller
                 'size' => $file->getSize(),
             ]);
             
-            if ($settings->company_logo) {
-                \Storage::disk('public')->delete($settings->company_logo);
+            if ($settings->organization_logo) {
+                \Storage::disk('public')->delete($settings->organization_logo);
             }
             
             // Store file synchronously for immediate availability
             $path = $file->storeAs('logos', uniqid() . '_' . $file->getClientOriginalName(), 'public');
-            $validated['company_logo'] = $path;
+            $validated['organization_logo'] = $path;
             
             \Log::info('Logo stored successfully', ['path' => $path]);
         }
@@ -86,7 +86,7 @@ class OrganizationSettingsController extends Controller
             'accent_color' => $validated['accent_color'],
             'text_color' => $validated['text_color'],
             'queue_number_digits' => $validated['queue_number_digits'],
-            'company_logo' => $validated['company_logo'] ?? $settings->company_logo,
+            'organization_logo' => $validated['organization_logo'] ?? $settings->organization_logo,
         ]);
         $settings->save();
 
@@ -100,7 +100,7 @@ class OrganizationSettingsController extends Controller
                     'secondary_color' => $settings->secondary_color,
                     'accent_color' => $settings->accent_color,
                     'text_color' => $settings->text_color,
-                    'company_logo' => $settings->company_logo ? asset('storage/' . $settings->company_logo) : null,
+                    'organization_logo' => $settings->organization_logo ? asset('storage/' . $settings->organization_logo) : null,
                 ]
             ]);
         }
@@ -121,12 +121,12 @@ class OrganizationSettingsController extends Controller
 
         $settings = OrganizationSetting::where('organization_id', $organization->id)->first();
         
-        if ($settings && $settings->company_logo) {
+        if ($settings && $settings->organization_logo) {
             // Delete the file from storage
-            \Storage::disk('public')->delete($settings->company_logo);
+            \Storage::disk('public')->delete($settings->organization_logo);
             
             // Clear the logo path in database
-            $settings->company_logo = null;
+            $settings->organization_logo = null;
             $settings->save();
             
             return redirect()->back()
@@ -156,7 +156,7 @@ class OrganizationSettingsController extends Controller
             'secondary_color' => $settings->secondary_color,
             'accent_color' => $settings->accent_color,
             'text_color' => $settings->text_color,
-            'company_logo' => $settings->company_logo ? asset('storage/' . $settings->company_logo) : null,
+            'organization_logo' => $settings->organization_logo ? asset('storage/' . $settings->organization_logo) : null,
             'company_phone' => $settings->company_phone,
             'company_email' => $settings->company_email,
             'company_address' => $settings->company_address,
