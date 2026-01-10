@@ -364,7 +364,11 @@
         
         /* Print styles */
         @media print {
-            .settings-btn, .step-indicators-container { display: none !important; }
+            .settings-btn, .step-indicators-container, 
+            button[onclick="testPrint()"], 
+            button[onclick="saveSettings()"] { 
+                display: none !important; 
+            }
         }
     </style>
 </head>
@@ -706,11 +710,17 @@
     }
 
     function refreshCounters() {
-        if (document.getElementById('step1').classList.contains('hidden')) return;
-
         fetch(countersEndpoint)
             .then(response => response.ok ? response.json() : Promise.reject('Failed'))
-            .then(data => renderCounters(data.counters || []))
+            .then(data => {
+                // Update the initial counters data
+                initialCounters.splice(0, initialCounters.length, ...(data.counters || []));
+                
+                // Only re-render if on step 1
+                if (!document.getElementById('step1').classList.contains('hidden')) {
+                    renderCounters(data.counters || []);
+                }
+            })
             .catch(error => console.error('Refresh failed:', error));
     }
 
