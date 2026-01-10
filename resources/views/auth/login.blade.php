@@ -230,7 +230,7 @@
             @endif
 
             <!-- Login Form -->
-            <form action="{{ route('login.post') }}" method="POST" class="space-y-6">
+            <form id="loginForm" action="{{ route('login.post') }}" method="POST" class="space-y-6" onsubmit="return handleLogin(event)">
                 @csrf
                 
                 <!-- Username Field -->
@@ -282,6 +282,7 @@
                 <!-- Login Button -->
                 <button 
                     type="submit" 
+                    id="loginButton"
                     class="submit-btn w-full text-white font-bold py-4 rounded-xl mt-8 flex items-center justify-center space-x-2 relative z-0 transition-all duration-300"
                 >
                     <span class="relative z-10">Sign In</span>
@@ -306,4 +307,49 @@
         </div>
     </div>
 </div>
+
+<script>
+async function handleLogin(event) {
+    event.preventDefault();
+    
+    const form = document.getElementById('loginForm');
+    const csrfInput = form.querySelector('input[name="_token"]');
+    const submitButton = document.getElementById('loginButton');
+    const buttonText = submitButton.querySelector('span');
+    const originalText = buttonText.textContent;
+    
+    // Disable button and show loading state
+    submitButton.disabled = true;
+    buttonText.textContent = 'Signing in...';
+    
+    try {
+        // Refresh CSRF token before submitting
+        const response = await fetch('/refresh-csrf', {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.token) {
+                csrfInput.value = data.token;
+                // Also update meta tag
+                const metaTag = document.querySelector('meta[name="csrf-token"]');
+                if (metaTag) {
+                    metaTag.setAttribute('content', data.token);
+                }
+            }
+        }
+    } catch (error) {
+        console.warn('Failed to refresh CSRF token, submitting with existing token:', error);
+    } finally {
+        // Submit the form regardless of token refresh success
+        form.submit();
+    }
+    
+    return false;
+}
+</script>
 @endsection
