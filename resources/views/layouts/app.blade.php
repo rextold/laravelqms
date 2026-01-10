@@ -22,6 +22,27 @@
             background: rgba(255, 255, 255, 0.15);
             border-left: 4px solid #fff;
         }
+        .external-link {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1.5px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+        .external-link:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        .external-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            font-size: 0.65rem;
+        }
         .gradient-bg {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
@@ -156,19 +177,33 @@
                                 <i class="fas fa-scroll w-5"></i>
                                 <span class="ml-3 sidebar-text">Marquee</span>
                             </a>
-                            <div class="px-6 py-2 mt-4 external-label">
-                                <p class="text-xs opacity-50 uppercase tracking-wider">External</p>
+                            <!-- External Links Section -->
+                            <div class="px-6 py-4 mt-6">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <i class="fas fa-link text-xs opacity-60"></i>
+                                    <p class="text-xs opacity-60 uppercase tracking-wider font-semibold">Quick Access</p>
+                                </div>
+                                <div class="flex flex-col gap-2">
+                                    <a href="{{ route('monitor.index', ['organization_code' => $orgCode]) }}" target="_blank" class="external-link sidebar-link flex items-center justify-between px-4 py-3 rounded-lg">
+                                        <div class="flex items-center gap-3">
+                                            <i class="fas fa-tv w-5"></i>
+                                            <span class="ml-1 sidebar-text text-sm font-medium">Monitor</span>
+                                        </div>
+                                        <span class="external-badge">
+                                            <i class="fas fa-external-link-alt"></i>
+                                        </span>
+                                    </a>
+                                    <a href="{{ route('kiosk.index', ['organization_code' => $orgCode]) }}" target="_blank" class="external-link sidebar-link flex items-center justify-between px-4 py-3 rounded-lg">
+                                        <div class="flex items-center gap-3">
+                                            <i class="fas fa-tablet-alt w-5"></i>
+                                            <span class="ml-1 sidebar-text text-sm font-medium">Kiosk</span>
+                                        </div>
+                                        <span class="external-badge">
+                                            <i class="fas fa-external-link-alt"></i>
+                                        </span>
+                                    </a>
+                                </div>
                             </div>
-                            <a href="{{ route('monitor.index', ['organization_code' => $orgCode]) }}" target="_blank" class="sidebar-link flex items-center px-6 py-3">
-                                <i class="fas fa-tv w-5"></i>
-                                <span class="ml-3 sidebar-text">Monitor Display</span>
-                                <i class="fas fa-external-link-alt ml-auto text-xs external-label"></i>
-                            </a>
-                            <a href="{{ route('kiosk.index', ['organization_code' => $orgCode]) }}" target="_blank" class="sidebar-link flex items-center px-6 py-3">
-                                <i class="fas fa-tablet-alt w-5"></i>
-                                <span class="ml-3 sidebar-text">Kiosk</span>
-                                <i class="fas fa-external-link-alt ml-auto text-xs external-label"></i>
-                            </a>
                         @elseif(auth()->user()->isCounter())
                             <a href="{{ route('counter.dashboard', ['organization_code' => $orgCode]) }}" class="sidebar-link flex items-center px-6 py-3 {{ request()->routeIs('counter.dashboard') ? 'active' : '' }}">
                                 <i class="fas fa-chart-line w-5"></i>
