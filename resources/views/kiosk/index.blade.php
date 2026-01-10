@@ -726,7 +726,7 @@
 
     function refreshColorSettings() {
         const orgCode = '{{ $companyCode }}';
-        fetch(`/${orgCode}/admin/organization-settings/api/get`)
+        fetch(`/${orgCode}/api/settings`)
             .then(response => response.json())
             .then(data => {
                 const root = document.documentElement;
