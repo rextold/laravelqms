@@ -12,15 +12,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        $middleware->use([
-            \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
-            \Illuminate\Foundation\Http\Middleware\TrimStrings::class,
-            \Illuminate\Foundation\Http\Middleware\ValidatePostSize::class,
-            \Illuminate\Foundation\Http\Middleware\CheckForMaintenanceMode::class,
-            \Illuminate\Session\Middleware\StartSession::class,
-            \Illuminate\View\Middleware\ShareErrorsFromSession::class,
-            \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
-            \Illuminate\Routing\Middleware\SubstituteBindings::class,
+        // Keep Laravel's default middleware configuration.
+        // Only append project-specific middleware to the appropriate group.
+        $middleware->web(append: [
             \App\Http\Middleware\HandleSessionExpiration::class,
         ]);
         
