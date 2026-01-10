@@ -410,10 +410,10 @@
             <div class="flex flex-col h-full">
                 <!-- Header -->
                 <div class="text-center spacing-md flex-shrink-0">
-                    @if($settings->logo_url)
+                    @if($settings->company_logo)
                         <div class="spacing-sm">
-                            <img src="{{ $settings->logo_url }}" alt="{{ $organization->organization_name }}" 
-                                 class="logo-size mx-auto drop-shadow-2xl" data-org-logo>
+                            <img src="{{ asset('storage/' . $settings->company_logo) }}" alt="{{ $organization->organization_name }}" 
+                                 class="logo-size mx-auto drop-shadow-2xl" data-org-logo style="max-height: 60px; height: auto;">
                         </div>
                     @endif
                     <h1 class="title-size font-black spacing-sm drop-shadow-2xl animate-fadeInScale" 

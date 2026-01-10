@@ -50,14 +50,21 @@
             gap: 1rem;
         }
         .header-logo {
-            width: 50px;
-            height: 50px;
+            width: 35px;
+            height: 35px;
             background: rgba(255,255,255,0.2);
-            border-radius: 10px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
+            font-size: 1.2rem;
+            overflow: hidden;
+        }
+        .header-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            padding: 4px;
             color: white;
         }
         .header-title h1 {
@@ -335,7 +342,11 @@
         <div class="header">
             <div class="header-left">
                 <div class="header-logo org-logo" data-org-logo>
-                    <i class="fas fa-tv"></i>
+                    @if($settings->company_logo)
+                        <img src="{{ asset('storage/' . $settings->company_logo) }}" alt="Logo" data-org-logo>
+                    @else
+                        <i class="fas fa-tv"></i>
+                    @endif
                 </div>
                 <div class="header-title">
                     <h1>Queue Management System</h1>

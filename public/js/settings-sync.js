@@ -79,15 +79,28 @@ class SettingsSync {
     }
 
     updateLogo(logoUrl) {
-        // Update logo images
-        document.querySelectorAll('[data-org-logo]').forEach(img => {
-            if (img.src !== logoUrl) {
-                img.src = logoUrl;
+        // Update logo images with data-org-logo attribute
+        document.querySelectorAll('[data-org-logo]').forEach(el => {
+            if (el.tagName === 'IMG') {
+                if (el.src !== logoUrl) {
+                    el.src = logoUrl;
+                }
+            } else if (el.tagName === 'DIV') {
+                // Check if div contains an img tag
+                const img = el.querySelector('img');
+                if (img) {
+                    if (img.src !== logoUrl) {
+                        img.src = logoUrl;
+                    }
+                } else if (logoUrl) {
+                    // Create img tag if it doesn't exist
+                    el.innerHTML = `<img src="${logoUrl}" alt="Logo" data-org-logo style="width: 100%; height: 100%; object-fit: contain;">`;
+                }
             }
         });
 
-        // Update logo in header/sidebar
-        const logoElements = document.querySelectorAll('.org-logo, [data-logo]');
+        // Update legacy org-logo elements
+        const logoElements = document.querySelectorAll('.org-logo:not([data-org-logo]), [data-logo]');
         logoElements.forEach(el => {
             if (el.tagName === 'IMG') {
                 if (el.src !== logoUrl) {
