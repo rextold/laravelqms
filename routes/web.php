@@ -20,6 +20,26 @@ Route::get('/', function () {
     return redirect('/login');
 });
 
+// Redirect /kiosk to default organization kiosk
+Route::get('/kiosk', function () {
+    // Redirect to default organization kiosk
+    $defaultOrg = \App\Models\Organization::first();
+    if ($defaultOrg) {
+        return redirect('/' . strtolower($defaultOrg->organization_code) . '/kiosk');
+    }
+    return response('No organization found', 404);
+});
+
+// Redirect /monitor to default organization monitor
+Route::get('/monitor', function () {
+    // Redirect to default organization monitor
+    $defaultOrg = \App\Models\Organization::first();
+    if ($defaultOrg) {
+        return redirect('/' . strtolower($defaultOrg->organization_code) . '/monitor');
+    }
+    return response('No organization found', 404);
+});
+
 // CSRF Token Refresh Route
 Route::get('/refresh-csrf', function () {
     return response()->json(['token' => csrf_token()]);
