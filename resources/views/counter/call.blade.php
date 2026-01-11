@@ -255,15 +255,12 @@ function renderLists(data) {
     });
 }
 
-// Display last two segments of the queue number (e.g., 01-0003)
+// Format display as {counter}-{sequence}, e.g., 1-0001
 function formatDisplayQueue(queueNumber) {
     if (!queueNumber) return '---';
     const parts = String(queueNumber).split('-');
-    if (parts.length >= 2) {
-        const lastTwo = parts.slice(-2).join('-');
-        return lastTwo;
-    }
-    return queueNumber;
+    const suffix = parts.length ? (parts[parts.length - 1] || queueNumber) : queueNumber;
+    return `${COUNTER_NUM}-${suffix}`;
 }
 
 function fetchData() {
