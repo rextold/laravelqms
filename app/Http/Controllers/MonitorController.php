@@ -59,8 +59,13 @@ class MonitorController extends Controller
             $currentQueue = $counter->getCurrentQueue();
             $recentRecall = $currentQueue ? Cache::has('recall_queue_' . $currentQueue->id) : false;
             $counterQueues[] = [
-                'counter' => $counter,
-                'queue' => $currentQueue,
+                'counter' => $counter->only(['id', 'counter_number', 'display_name', 'short_description']),
+                'queue' => $currentQueue ? [
+                    'id' => $currentQueue->id,
+                    'queue_number' => $currentQueue->queue_number,
+                    'status' => $currentQueue->status,
+                    'created_at' => $currentQueue->created_at,
+                ] : null,
                 'recent_recall' => $recentRecall,
             ];
         }
