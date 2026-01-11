@@ -95,7 +95,7 @@ class EnsureOrganizationContext
         // Allow: superadmin, users with null organization (legacy), or users matching the organization
         $isUnauthorized = $user 
             && !$user->isSuperAdmin() 
-            && $user->organization_id  // Only enforce if org_id is set
+            && $user->organization_id  // Only enforce if org_id is set (allow NULL = legacy)
             && $user->organization_id !== $organization->id;
 
         if ($isUnauthorized) {
@@ -116,7 +116,11 @@ class EnsureOrganizationContext
             if ($request->expectsJson() || $request->ajax()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'You do not have access to this organization. Your account is assigned to a different organization.',
+                    'message' => 'Access Denied: Your account is assigned to "' . 
+                        ($user->organization ? $user->organization->organization_name : 'No Organization') . 
+                        '" but you are trying to access "' . $organization->organization_name . '"',
+                    'user_org' => $user->organization ? $user->organization->organization_name : 'None',
+                    'requested_org' => $organization->organization_name,
                     'redirect' => null
                 ], 403);
             }

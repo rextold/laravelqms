@@ -385,9 +385,17 @@ const CounterPanel = (function() {
             if (!response.ok) {
                 if (response.status === 403) {
                     const errorData = await response.json().catch(() => ({ message: 'Access forbidden' }));
-                    console.error('403 Forbidden:', errorData.message);
+                    console.error('403 Forbidden:', errorData);
                     
-                    alert(`Access Denied: ${errorData.message || 'You do not have permission to access this organization.'}\n\nPlease contact your administrator or login with the correct account.`);
+                    const message = errorData.message || 'Access Denied';
+                    const userOrg = errorData.user_org || 'Unknown';
+                    const requestedOrg = errorData.requested_org || 'Unknown';
+                    
+                    alert(`${message}\n\n` +
+                          `Your Account: ${userOrg}\n` +
+                          `Requested Org: ${requestedOrg}\n\n` +
+                          `Solution: Contact your administrator to verify your organization assignment,\n` +
+                          `or visit: /counter/panel-auto to auto-redirect to your correct panel.`);
                     
                     // Stop polling on 403
                     return;
