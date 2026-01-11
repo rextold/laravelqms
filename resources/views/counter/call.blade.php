@@ -380,12 +380,24 @@ function fetchData() {
 
     fetch('{{ route('counter.data', ['organization_code' => request()->route('organization_code')]) }}', {
         cache: 'no-store',
-        headers: { 'Accept': 'application/json' },
+        headers: { 
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
         credentials: 'same-origin',
         signal: counterFetchController ? counterFetchController.signal : undefined,
     })
-        .then(r => r.json())
-        .then(d => { if (d.success) renderLists(d); })
+        .then(r => {
+            if (!r.ok) {
+                console.error(`Counter data fetch failed: HTTP ${r.status}`, r);
+                return Promise.reject(`HTTP ${r.status}`);
+            }
+            return r.json();
+        })
+        .then(d => { 
+            if (d.success) renderLists(d);
+        })
         .catch(err => {
             if (err && err.name === 'AbortError') return;
             console.error('Counter refresh failed:', err);
