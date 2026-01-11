@@ -383,6 +383,25 @@ const CounterPanel = (function() {
             });
             
             if (!response.ok) {
+                if (response.status === 403) {
+                    const errorData = await response.json().catch(() => ({ message: 'Access forbidden' }));
+                    console.error('403 Forbidden:', errorData.message);
+                    
+                    alert(`Access Denied: ${errorData.message || 'You do not have permission to access this organization.'}\n\nPlease contact your administrator or login with the correct account.`);
+                    
+                    // Stop polling on 403
+                    return;
+                } else if (response.status === 401) {
+                    console.error('401 Unauthorized - Session expired');
+                    if (confirm('Your session has expired. Click OK to login again.')) {
+                        window.location.href = '/login';
+                    }
+                    return;
+                } else if (response.status === 419) {
+                    console.error('419 CSRF Token Mismatch - Reloading page');
+                    window.location.reload();
+                    return;
+                }
                 throw new Error(`HTTP ${response.status}`);
             }
             
@@ -540,9 +559,11 @@ const CounterPanel = (function() {
                  title="Click to transfer this queue">
                 <div class="flex justify-between items-center">
                     <div class="font-bold text-lg text-gray-800 group-hover:text-blue-600">${formatQueueNumber(q.queue_number)}</div>
-                    <i class="fas fa-exchange-alt text-gray-400 group-hover:text-blue-500"></i>
+                    <button onclick="event.stopPropagation(); CounterPanel.openTransferModal(${q.id})" 
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-semibold text-sm transition shadow-sm">
+                        <i class="fas fa-exchange-alt mr-1"></i>Transfer
+                    </button>
                 </div>
-                <div class="text-xs text-gray-500 mt-1">Tap to transfer</div>
             </div>
         `).join('');
     }
@@ -775,6 +796,9 @@ const CounterPanel = (function() {
     // ========================================================================
     
     function initialize() {
+        // Check authentication on page load
+        checkAuthentication();
+        
         // Start date/time display
         updateDateTime();
         setInterval(updateDateTime, 1000);
@@ -788,6 +812,29 @@ const CounterPanel = (function() {
         // Start data polling
         fetchData();
         setInterval(fetchData, CONFIG.POLL_INTERVAL);
+    }
+    
+    async function checkAuthentication() {
+        try {
+            const response = await fetch(CONFIG.ROUTES.data, {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': CONFIG.CSRF_TOKEN,
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            
+            if (response.status === 401 || response.status === 403) {
+                console.error('Authentication check failed:', response.status);
+                if (confirm('Authentication required. Click OK to login.')) {
+                    window.location.href = '/login';
+                }
+            }
+        } catch (err) {
+            console.error('Authentication check error:', err);
+        }
     }
     
     // Initialize on DOM ready

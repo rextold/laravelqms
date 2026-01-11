@@ -99,14 +99,28 @@ class EnsureOrganizationContext
             && $user->organization_id !== $organization->id;
 
         if ($isUnauthorized) {
-            Log::warning('403 Unauthorized access attempt', [
+            Log::warning('403 Unauthorized access attempt - Organization mismatch', [
                 'user_id' => $user->id,
                 'user_email' => $user->email,
                 'user_role' => $user->role,
                 'user_organization_id' => $user->organization_id,
+                'user_organization_name' => $user->organization ? $user->organization->organization_name : 'N/A',
                 'requested_organization_id' => $organization->id,
                 'requested_organization_code' => $organizationCode,
+                'requested_organization_name' => $organization->organization_name,
+                'route_name' => $routeName,
+                'url' => $request->url(),
             ]);
+            
+            // Return JSON for AJAX requests
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You do not have access to this organization. Your account is assigned to a different organization.',
+                    'redirect' => null
+                ], 403);
+            }
+            
             abort(403, 'Unauthorized access to this organization.');
         }
 

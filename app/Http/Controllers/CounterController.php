@@ -47,58 +47,92 @@ class CounterController extends Controller
 
     public function getData()
     {
-        $counter = auth()->user();
+        try {
+            $counter = auth()->user();
+            
+            // Check if user is authenticated
+            if (!$counter) {
+                \Log::warning('Counter getData: User not authenticated');
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Authentication required'
+                ], 401);
+            }
+            
+            // Check if user has counter role
+            if (!$counter->isCounter()) {
+                \Log::warning('Counter getData: User is not a counter', [
+                    'user_id' => $counter->id,
+                    'role' => $counter->role
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized: Counter role required'
+                ], 403);
+            }
 
-        $buildPayload = function () use ($counter) {
-            $stats = $this->queueService->getCounterStats($counter);
-            $current = $counter->getCurrentQueue();
-            $waiting = $counter->getWaitingQueues();
-            $skipped = $counter->getSkippedQueues();
-            $onlineCounters = User::onlineCounters()
-                ->where('id', '!=', $counter->id)
-                ->when($counter->organization_id, fn ($q) => $q->where('organization_id', $counter->organization_id))
-                ->get(['id', 'counter_number', 'display_name']);
+            $buildPayload = function () use ($counter) {
+                $stats = $this->queueService->getCounterStats($counter);
+                $current = $counter->getCurrentQueue();
+                $waiting = $counter->getWaitingQueues();
+                $skipped = $counter->getSkippedQueues();
+                $onlineCounters = User::onlineCounters()
+                    ->where('id', '!=', $counter->id)
+                    ->when($counter->organization_id, fn ($q) => $q->where('organization_id', $counter->organization_id))
+                    ->get(['id', 'counter_number', 'display_name']);
 
-            return [
-                'success' => true,
-                'is_online' => (bool) $counter->is_online,
-                'stats' => [
-                    'waiting' => $stats['waiting'],
-                    'completed_today' => $stats['completed_today'],
-                ],
-                'current_queue' => $current ? [
-                    'id' => $current->id,
-                    'queue_number' => $current->queue_number,
-                    'status' => $current->status,
-                    'called_at' => optional($current->called_at)->toDateTimeString(),
-                    'notified_at' => optional($current->notified_at)->toDateTimeString(),
-                ] : null,
-                'waiting_queues' => $waiting->map(fn($q) => [
-                    'id' => $q->id,
-                    'queue_number' => $q->queue_number,
-                ])->values(),
-                'skipped' => $skipped->map(fn($q) => [
-                    'id' => $q->id,
-                    'queue_number' => $q->queue_number,
-                    'skipped_at' => optional($q->skipped_at)->toDateTimeString(),
-                ])->values(),
-                'online_counters' => $onlineCounters,
-            ];
-        };
+                return [
+                    'success' => true,
+                    'is_online' => (bool) $counter->is_online,
+                    'stats' => [
+                        'waiting' => $stats['waiting'],
+                        'completed_today' => $stats['completed_today'],
+                    ],
+                    'current_queue' => $current ? [
+                        'id' => $current->id,
+                        'queue_number' => $current->queue_number,
+                        'status' => $current->status,
+                        'called_at' => optional($current->called_at)->toDateTimeString(),
+                        'notified_at' => optional($current->notified_at)->toDateTimeString(),
+                    ] : null,
+                    'waiting_queues' => $waiting->map(fn($q) => [
+                        'id' => $q->id,
+                        'queue_number' => $q->queue_number,
+                    ])->values(),
+                    'skipped' => $skipped->map(fn($q) => [
+                        'id' => $q->id,
+                        'queue_number' => $q->queue_number,
+                        'skipped_at' => optional($q->skipped_at)->toDateTimeString(),
+                    ])->values(),
+                    'online_counters' => $onlineCounters,
+                ];
+            };
 
-        // Database-backed cache can be slower/stale for real-time polling; only cache on fast stores.
-        $cacheStore = (string) config('cache.default');
-        if ($cacheStore !== 'database') {
-            $cacheKey = "counter.data.{$counter->id}";
-            $payload = Cache::remember($cacheKey, 1, $buildPayload);
-        } else {
-            $payload = $buildPayload();
+            // Database-backed cache can be slower/stale for real-time polling; only cache on fast stores.
+            $cacheStore = (string) config('cache.default');
+            if ($cacheStore !== 'database') {
+                $cacheKey = "counter.data.{$counter->id}";
+                $payload = Cache::remember($cacheKey, 1, $buildPayload);
+            } else {
+                $payload = $buildPayload();
+            }
+
+            return response()->json($payload)
+                ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+                ->header('Pragma', 'no-cache')
+                ->header('Expires', '0');
+                
+        } catch (\Exception $e) {
+            \Log::error('Counter getData exception', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Server error occurred'
+            ], 500);
         }
-
-        return response()->json($payload)
-            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
-            ->header('Pragma', 'no-cache')
-            ->header('Expires', '0');
     }
 
     public function toggleOnline(Request $request)
