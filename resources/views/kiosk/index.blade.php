@@ -500,23 +500,23 @@
         <!-- Step 3: Queue Display -->
         <div id="step3" class="hidden step-content animate-fadeInUp">
             <div class="flex items-center justify-center h-full overflow-y-auto custom-scrollbar">
-                <div class="glass-card rounded-2xl sm:rounded-3xl shadow-2xl padding-md text-center max-w-3xl w-full" id="queueContent">
-                    <div class="spacing-md">
-                        <div class="inline-block p-4 sm:p-6 rounded-full spacing-sm shadow-2xl" style="background: linear-gradient(135deg, var(--accent-color), var(--primary-color));">
-                            <i class="fas fa-check-circle text-white text-5xl sm:text-7xl"></i>
+                <div class="glass-card rounded-xl sm:rounded-2xl shadow-xl padding-sm sm:padding-md text-center max-w-xl sm:max-w-2xl w-full" id="queueContent">
+                    <div class="spacing-sm sm:spacing-md">
+                        <div class="inline-block p-3 sm:p-4 rounded-full spacing-sm shadow-xl" style="background: linear-gradient(135deg, var(--accent-color), var(--primary-color));">
+                            <i class="fas fa-check-circle text-white text-3xl sm:text-5xl"></i>
                         </div>
-                        <h2 class="section-title sm:text-5xl font-bold spacing-sm" style="color: var(--accent-color);">
+                        <h2 class="section-title sm:text-4xl font-bold spacing-sm" style="color: var(--accent-color);">
                             Success!
                         </h2>
                         <p class="btn-text text-gray-600 font-semibold">Your queue number is ready</p>
                     </div>
                     
                     <!-- Queue Number Card -->
-                    <div class="relative overflow-hidden rounded-xl sm:rounded-2xl spacing-md shadow-2xl" 
+                    <div class="relative overflow-hidden rounded-xl sm:rounded-2xl spacing-sm sm:spacing-md shadow-xl" 
                          style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));">
                         <div class="absolute inset-0 opacity-10" 
                              style="background-image: radial-gradient(circle, rgba(255,255,255,0.4) 2px, transparent 2px); background-size: 30px 30px;"></div>
-                        <div class="relative z-10 padding-md">
+                        <div class="relative z-10 padding-sm sm:padding-md">
                             <p class="text-xs sm:text-sm font-bold mb-2 sm:mb-3 tracking-widest opacity-90" 
                                style="color: var(--text-color);">
                                 YOUR QUEUE NUMBER
@@ -524,44 +524,44 @@
                             <div class="queue-number-size font-black spacing-sm tracking-wider pulse-animation" 
                                  id="queueNumber" 
                                  style="color: var(--text-color); text-shadow: 0 6px 12px rgba(0,0,0,0.15);"></div>
-                            <div class="btn-text sm:text-2xl font-bold mb-1 sm:mb-2" id="counterInfo" style="color: var(--text-color);"></div>
-                            <div class="text-sm sm:text-lg opacity-90" id="queueTime" style="color: var(--text-color);"></div>
+                            <div class="btn-text sm:text-xl font-bold mb-1 sm:mb-2" id="counterInfo" style="color: var(--text-color);"></div>
+                            <div class="text-xs sm:text-base opacity-90" id="queueTime" style="color: var(--text-color);"></div>
                         </div>
                     </div>
                     
                     <!-- Important Notice -->
-                    <div class="bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-500 rounded-lg sm:rounded-xl padding-sm spacing-md text-left shadow-lg">
+                    <div class="bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-500 rounded-lg sm:rounded-xl padding-sm spacing-sm sm:spacing-md text-left shadow">
                         <p class="text-gray-800 font-medium flex items-start text-xs sm:text-base">
-                            <i class="fas fa-info-circle text-yellow-600 text-lg sm:text-2xl mr-2 sm:mr-3 mt-0.5 sm:mt-1 flex-shrink-0"></i>
+                            <i class="fas fa-info-circle text-yellow-600 text-base sm:text-xl mr-2 sm:mr-3 mt-0.5 sm:mt-1 flex-shrink-0"></i>
                             <span>
-                                <strong class="block mb-1 text-sm sm:text-lg">Important:</strong>
+                                <strong class="block mb-1 text-sm sm:text-base">Important:</strong>
                                 <span class="text-xs sm:text-base">Please wait for your number to be called on the display monitor.</span>
                             </span>
                         </p>
                     </div>
                     
                     <!-- Action Buttons -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 spacing-sm">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 spacing-sm">
                         <button onclick="printQueue()" 
-                                class="px-4 sm:px-8 py-3 sm:py-5 rounded-lg sm:rounded-xl font-bold shadow-xl transform hover:scale-105 hover:shadow-2xl transition-all text-white btn-text"
+                                class="px-4 sm:px-6 py-2.5 sm:py-4 rounded-lg sm:rounded-xl font-bold shadow-lg transform hover:scale-[1.02] hover:shadow-xl transition-all text-white btn-text"
                                 style="background: linear-gradient(135deg, var(--accent-color), var(--primary-color));">
-                            <i class="fas fa-print mr-2 text-base sm:text-2xl"></i>
+                            <i class="fas fa-print mr-2 text-base sm:text-xl"></i>
                             <span class="hidden sm:inline">Print Number</span>
                             <span class="sm:hidden">Print</span>
                         </button>
                         <button onclick="capturePhoto()" 
-                                class="px-4 sm:px-8 py-3 sm:py-5 rounded-lg sm:rounded-xl font-bold shadow-xl transform hover:scale-105 hover:shadow-2xl transition-all btn-text"
+                                class="px-4 sm:px-6 py-2.5 sm:py-4 rounded-lg sm:rounded-xl font-bold shadow-lg transform hover:scale-[1.02] hover:shadow-xl transition-all btn-text"
                                 style="background: linear-gradient(135deg, var(--secondary-color), var(--accent-color)); color: var(--text-color);">
-                            <i class="fas fa-camera mr-2 text-base sm:text-2xl"></i>
+                            <i class="fas fa-camera mr-2 text-base sm:text-xl"></i>
                             <span class="hidden sm:inline">Take Screenshot</span>
                             <span class="sm:hidden">Screenshot</span>
                         </button>
                     </div>
                     
                     <button onclick="finishAndReset()" 
-                            class="w-full px-4 sm:px-8 py-3 sm:py-5 rounded-xl sm:rounded-2xl font-bold shadow-xl transform hover:scale-105 hover:shadow-2xl transition-all text-white btn-text"
+                            class="w-full px-4 sm:px-6 py-2.5 sm:py-4 rounded-xl sm:rounded-2xl font-bold shadow-lg transform hover:scale-[1.02] hover:shadow-xl transition-all text-white btn-text"
                             style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: var(--text-color);">
-                        <i class="fas fa-redo mr-2 text-base sm:text-xl"></i>Get Another Number
+                        <i class="fas fa-redo mr-2 text-base sm:text-lg"></i>Get Another Number
                     </button>
                 </div>
             </div>
