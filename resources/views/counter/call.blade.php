@@ -474,6 +474,7 @@ function notifyCustomer(btnEl, event) {
             })
             .catch((err) => {
                 console.error('Notify error:', err);
+                console.log('Notify error object:', err);
                 alert('Failed to notify customer: ' + (err.message || 'Unknown error'));
                 fetchData();
             })
