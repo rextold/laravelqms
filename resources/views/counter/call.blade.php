@@ -337,8 +337,10 @@ function renderLists(data) {
     if (data.waiting_queues && Array.isArray(data.waiting_queues)) {
         data.waiting_queues.forEach(w => {
             const row = document.createElement('div');
-            row.className = 'p-3 border rounded flex justify-between items-center';
-            row.innerHTML = `<span class="font-semibold">${formatDisplayQueue(w.queue_number)}</span>`;
+            row.className = 'p-3 border rounded flex justify-between items-center cursor-pointer hover:bg-gray-50';
+            row.title = 'Transfer this queue to another counter';
+            row.onclick = () => openTransferModal(w.id);
+            row.innerHTML = `<span class="font-semibold">${formatDisplayQueue(w.queue_number)}</span><span class="text-xs text-gray-400">Tap to transfer</span>`;
             waiting.appendChild(row);
         });
     }

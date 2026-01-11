@@ -170,9 +170,18 @@ class CounterController extends Controller
 
         // Verify this queue belongs to the current counter
         if ($queue->counter_id !== $counter->id) {
+            $owner = null;
+            try {
+                $owner = $queue->counter;
+            } catch (\Throwable $e) {
+                $owner = null;
+            }
+
             return response()->json([
                 'success' => false,
-                'message' => 'This queue does not belong to your counter'
+                'message' => $owner && $owner->counter_number
+                    ? ('This queue is assigned to Counter ' . $owner->counter_number)
+                    : 'This queue does not belong to your counter'
             ], 422);
         }
 
