@@ -42,11 +42,11 @@ class QueueService
             return "{$prefix}-{$newNumber}";
         }
 
-        // Fallback: original date + counter number format
-        $date = Carbon::now()->format('Ymd');
+        // Fallback: counter number + sequence (e.g., 01-0003)
         $counterPrefix = str_pad($counter->counter_number, 2, '0', STR_PAD_LEFT);
-        
-        $lastQueue = Queue::where('queue_number', 'like', "{$date}-{$counterPrefix}-%")
+
+        $lastQueue = Queue::where('counter_id', $counter->id)
+            ->where('queue_number', 'like', "{$counterPrefix}-%")
             ->orderBy('queue_number', 'desc')
             ->first();
 
@@ -57,7 +57,7 @@ class QueueService
             $newNumber = str_pad(1, $digits, '0', STR_PAD_LEFT);
         }
 
-        return "{$date}-{$counterPrefix}-{$newNumber}";
+        return "{$counterPrefix}-{$newNumber}";
     }
 
     public function createQueue(User $counter): Queue
@@ -67,6 +67,7 @@ class QueueService
         $queue = Queue::create([
             'queue_number' => $queueNumber,
             'counter_id' => $counter->id,
+            'organization_id' => $counter->organization_id,
             'status' => 'waiting',
         ]);
 

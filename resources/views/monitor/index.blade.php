@@ -244,12 +244,14 @@
             color: rgba(255,255,255,0.6);
         }
         .queue-badge {
-            background: var(--accent);
-            color: #000;
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            font-weight: 700;
-            font-size: 0.8rem;
+            background: linear-gradient(135deg, var(--accent), var(--primary));
+            color: #0b1021;
+            padding: 0.35rem 0.9rem;
+            border-radius: 10px;
+            font-weight: 800;
+            font-size: 1.8rem;
+            letter-spacing: 0.05em;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.35), 0 0 12px rgba(16,185,129,0.35);
         }
         .counter-card {
             background: rgba(255,255,255,0.05);
@@ -424,6 +426,8 @@
         let lastDataUpdate = Date.now();
         let videoRotationIndex = 0;
         let previousServingQueues = [];
+        let recentRecallCache = [];
+        let monitorInitialized = false;
         const notificationSound = document.getElementById('notificationSound');
 
         // Update time and date
@@ -518,14 +522,18 @@
                 `;
                 previousServingQueues = [];
             } else {
-                // Detect new queue calls
+                // Detect new calls and recalls
                 const currentServingIds = servingCounters.map(item => item.queue.id);
                 const newQueues = servingCounters.filter(item => 
                     !previousServingQueues.includes(item.queue.id)
                 );
-                
-                // Play notification sound if new queue is called
-                if (newQueues.length > 0 && previousServingQueues.length > 0) {
+                const recallQueues = servingCounters.filter(item => item.recent_recall);
+                const recallIds = recallQueues.map(item => item.queue.id);
+                const hasUnseenRecall = recallIds.some(id => !recentRecallCache.includes(id));
+
+                const shouldNotify = (monitorInitialized && newQueues.length > 0) || hasUnseenRecall;
+
+                if (shouldNotify) {
                     try {
                         notificationSound.currentTime = 0;
                         notificationSound.play().catch(e => console.log('Audio play failed:', e));
@@ -533,13 +541,15 @@
                         console.log('Audio error:', e);
                     }
                 }
-                
+
                 previousServingQueues = currentServingIds;
-                
+                recentRecallCache = recallIds;
+
                 const servingHTML = servingCounters.map(item => {
                     const counter = item.counter;
                     const queue = item.queue;
-                    const isNew = newQueues.some(nq => nq.queue.id === queue.id);
+                    const isRecall = recallIds.includes(queue.id);
+                    const isNew = isRecall || newQueues.some(nq => nq.queue.id === queue.id);
                     return `
                         <div class="counter-card-small serving ${isNew ? 'notify' : ''}">
                             <div class="counter-info">
@@ -552,6 +562,8 @@
                 }).join('');
                 servingList.innerHTML = servingHTML;
             }
+
+            monitorInitialized = true;
 
             // Update Waiting section - grouped by counter
             if (waitingQueues.length === 0) {
@@ -696,7 +708,7 @@
 
         // Refresh color settings in real-time
         function updateColorSettings() {
-            fetch(`/${orgCode}/admin/organization-settings/api/get`)
+            fetch(`/${orgCode}/api/settings`)
                 .then(response => response.json())
                 .then(data => {
                     const root = document.documentElement;
