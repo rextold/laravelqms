@@ -92,7 +92,13 @@ class EnsureOrganizationContext
             return $next($request);
         }
 
-        if ($user && !$user->isSuperAdmin() && $user->organization_id && $user->organization_id !== $organization->id) {
+        // Allow: superadmin, users with null organization (legacy), or users matching the organization
+        $isUnauthorized = $user 
+            && !$user->isSuperAdmin() 
+            && $user->organization_id  // Only enforce if org_id is set
+            && $user->organization_id !== $organization->id;
+
+        if ($isUnauthorized) {
             Log::warning('403 Unauthorized access attempt', [
                 'user_id' => $user->id,
                 'user_email' => $user->email,
