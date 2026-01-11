@@ -169,6 +169,7 @@ html, body { overflow: hidden; }
 const COUNTER_NUM = {{ $counter->counter_number }};
 let currentQueueData = null;
 let onlineCounters = [];
+let selectedTransferQueueId = null;
 
 const ACTION_COOLDOWN_SECONDS = 5;
 const buttonCooldowns = new Map();
@@ -337,7 +338,10 @@ function renderLists(data) {
         data.waiting_queues.forEach(w => {
             const row = document.createElement('div');
             row.className = 'p-3 border rounded flex justify-between items-center';
-            row.innerHTML = `<span class="font-semibold">${formatDisplayQueue(w.queue_number)}</span>`;
+            row.innerHTML = `
+                <span class="font-semibold">${formatDisplayQueue(w.queue_number)}</span>
+                <button class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm" onclick="openTransferModal(${w.id})">Transfer</button>
+            `;
             waiting.appendChild(row);
         });
     }
@@ -510,8 +514,16 @@ function confirmSkip(btnEl) {
     );
 }
 
-function openTransferModal() {
-    if (!currentQueueData || onlineCounters.length === 0) {
+function openTransferModal(queueId) {
+    const idToTransfer = typeof queueId === 'number' ? queueId : (currentQueueData ? currentQueueData.id : null);
+    if (!idToTransfer) {
+        alert('No queue to transfer');
+        return;
+    }
+
+    selectedTransferQueueId = idToTransfer;
+
+    if (onlineCounters.length === 0) {
         alert('No available counters to transfer to');
         return;
     }
@@ -547,7 +559,7 @@ function closeTransferModal() {
 }
 
 function confirmTransfer(toCounterId) {
-    if (!currentQueueData) {
+    if (!selectedTransferQueueId) {
         alert('No queue to transfer');
         closeTransferModal();
         return;
@@ -563,7 +575,7 @@ function confirmTransfer(toCounterId) {
             'Accept': 'application/json'
         },
         body: JSON.stringify({
-            queue_id: currentQueueData.id,
+            queue_id: selectedTransferQueueId,
             to_counter_id: toCounterId
         })
     })
@@ -577,15 +589,18 @@ function confirmTransfer(toCounterId) {
     })
     .then(data => {
         if (data.success) {
+            selectedTransferQueueId = null;
             fetchData();
         } else {
             alert('Transfer failed: ' + (data.message || 'Unknown error'));
+            selectedTransferQueueId = null;
             fetchData();
         }
     })
     .catch(err => {
         console.error('Transfer error:', err);
         alert('Transfer failed: ' + err.message);
+        selectedTransferQueueId = null;
         fetchData();
     });
 }
