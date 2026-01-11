@@ -569,13 +569,7 @@
                 headers: { 'Accept': 'application/json' },
                 signal: monitorFetchController ? monitorFetchController.signal : undefined,
             })
-                .then(response => {
-                    if (!response.ok) {
-                        console.error(`Monitor data fetch failed: HTTP ${response.status}`);
-                        return Promise.reject(new Error(`HTTP ${response.status}`));
-                    }
-                    return response.json();
-                })
+                .then(response => response.json())
                 .then(data => {
                     updateCounters(data.counters, data.waiting_queues);
                     updateVideo(data.video_control);
@@ -830,10 +824,7 @@
         // Refresh color settings in real-time
         function updateColorSettings() {
             fetch(`/${orgCode}/admin/organization-settings/api/get`)
-                .then(response => {
-                    if (!response.ok) return Promise.reject(new Error(`HTTP ${response.status}`));
-                    return response.json();
-                })
+                .then(response => response.json())
                 .then(data => {
                     const root = document.documentElement;
                     if (data.primary_color) root.style.setProperty('--primary', data.primary_color);

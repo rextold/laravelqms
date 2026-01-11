@@ -30,56 +30,6 @@ Route::get('/kiosk', function () {
     return response('No organization found', 404);
 });
 
-// Debug endpoint to check counter organization
-Route::get('/debug/counter-org', function () {
-    if (!auth()->check()) {
-        return response('Not authenticated', 401);
-    }
-    
-    $user = auth()->user();
-    $org = $user->organization;
-    
-    return response()->json([
-        'user_id' => $user->id,
-        'user_email' => $user->email,
-        'user_role' => $user->role,
-        'user_organization_id' => $user->organization_id,
-        'user_organization' => $org ? [
-            'id' => $org->id,
-            'code' => $org->organization_code,
-            'name' => $org->organization_name
-        ] : null,
-        'message' => $org ? "Your account is assigned to: {$org->organization_name}" : 'Your account has NO organization assigned (NULL)',
-        'correct_url' => $org ? '/' . strtolower($org->organization_code) . '/counter/panel' : '/counter/panel',
-    ]);
-})->middleware('auth');
-
-// Auto-redirect counter to their organization's panel
-Route::get('/counter/panel-auto', function () {
-    if (!auth()->check()) {
-        return redirect('/login');
-    }
-    
-    $user = auth()->user();
-    
-    // If counter doesn't have an organization, use the first organization
-    if (!$user->organization_id) {
-        $org = \App\Models\Organization::first();
-        if ($org) {
-            return redirect('/' . strtolower($org->organization_code) . '/counter/panel');
-        }
-        return response('No organization found in system', 404);
-    }
-    
-    // Redirect to the counter's assigned organization panel
-    $org = $user->organization;
-    if ($org) {
-        return redirect('/' . strtolower($org->organization_code) . '/counter/panel');
-    }
-    
-    return response('Organization not found', 404);
-})->middleware('auth');
-
 // Redirect /monitor to default organization monitor
 Route::get('/monitor', function () {
     // Redirect to default organization monitor

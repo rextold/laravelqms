@@ -92,39 +92,15 @@ class EnsureOrganizationContext
             return $next($request);
         }
 
-        // Allow: superadmin, users with null organization (legacy), or users matching the organization
-        $isUnauthorized = $user 
-            && !$user->isSuperAdmin() 
-            && $user->organization_id  // Only enforce if org_id is set (allow NULL = legacy)
-            && $user->organization_id !== $organization->id;
-
-        if ($isUnauthorized) {
-            Log::warning('403 Unauthorized access attempt - Organization mismatch', [
+        if ($user && !$user->isSuperAdmin() && $user->organization_id && $user->organization_id !== $organization->id) {
+            Log::warning('403 Unauthorized access attempt', [
                 'user_id' => $user->id,
                 'user_email' => $user->email,
                 'user_role' => $user->role,
                 'user_organization_id' => $user->organization_id,
-                'user_organization_name' => $user->organization ? $user->organization->organization_name : 'N/A',
                 'requested_organization_id' => $organization->id,
                 'requested_organization_code' => $organizationCode,
-                'requested_organization_name' => $organization->organization_name,
-                'route_name' => $routeName,
-                'url' => $request->url(),
             ]);
-            
-            // Return JSON for AJAX requests
-            if ($request->expectsJson() || $request->ajax()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Access Denied: Your account is assigned to "' . 
-                        ($user->organization ? $user->organization->organization_name : 'No Organization') . 
-                        '" but you are trying to access "' . $organization->organization_name . '"',
-                    'user_org' => $user->organization ? $user->organization->organization_name : 'None',
-                    'requested_org' => $organization->organization_name,
-                    'redirect' => null
-                ], 403);
-            }
-            
             abort(403, 'Unauthorized access to this organization.');
         }
 
