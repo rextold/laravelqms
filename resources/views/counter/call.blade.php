@@ -456,7 +456,13 @@ function postJson(url, payload) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
         body: payload ? JSON.stringify(payload) : null,
-    }).then(r => r.json());
+    }).then(r => {
+        if (!r.ok) {
+            console.error(`POST to ${url} failed: HTTP ${r.status}`);
+            return Promise.reject(new Error(`HTTP ${r.status}`));
+        }
+        return r.json();
+    });
 }
 
 function notifyCustomer(btnEl) { 

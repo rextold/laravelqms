@@ -764,7 +764,10 @@
     function refreshColorSettings() {
         const orgCode = '{{ $companyCode }}';
         fetch(`/${orgCode}/api/settings`)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) return Promise.reject(new Error(`HTTP ${response.status}`));
+                return response.json();
+            })
             .then(data => {
                 const root = document.documentElement;
                 if (data.primary_color) root.style.setProperty('--primary-color', data.primary_color);
