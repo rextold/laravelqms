@@ -571,7 +571,7 @@
             })
                 .then(response => response.json())
                 .then(data => {
-                    updateCounters(data.counters);
+                    updateCounters(data.counters, data.waiting_queues);
                     updateVideo(data.video_control);
                     if (data.marquee) {
                         updateMarquee(data.marquee);
@@ -587,7 +587,7 @@
                 });
         }
 
-        function updateCounters(counters) {
+        function updateCounters(counters, waitingGroups) {
             const servingList = document.getElementById('servingList');
             const waitingList = document.getElementById('waitingList');
             
@@ -607,22 +607,15 @@
                 return;
             }
 
-            // Separate serving and waiting counters
+            // Separate serving counters
             const servingCounters = counters.filter(item => !!item.queue);
-            const waitingQueues = [];
-            
-            // Collect all waiting queues
-            counters.forEach(item => {
-                if (item.waiting_queues && item.waiting_queues.length > 0) {
-                    item.waiting_queues.forEach(q => {
-                        waitingQueues.push({
-                            queue_number: q.queue_number,
-                            counter_number: item.counter.counter_number,
-                            counter_name: item.counter.display_name
-                        });
-                    });
-                }
-            });
+
+            // Waiting queues are returned as a top-level grouped array: data.waiting_queues
+            const groups = Array.isArray(waitingGroups) ? waitingGroups : [];
+            const totalWaiting = groups.reduce((sum, g) => {
+                const count = (g && Array.isArray(g.queues)) ? g.queues.length : 0;
+                return sum + count;
+            }, 0);
 
             // Update Now Serving section with notification detection
             if (servingCounters.length === 0) {
@@ -699,7 +692,7 @@
             }
 
             // Update Waiting section - grouped by counter
-            if (waitingQueues.length === 0) {
+            if (totalWaiting === 0) {
                 waitingList.innerHTML = `
                     <div class="text-center text-gray-400 py-4">
                         <i class="fas fa-inbox text-xl opacity-50"></i>
@@ -707,37 +700,26 @@
                     </div>
                 `;
             } else {
-                // Group by counter name
-                const groupedByCounter = {};
-                waitingQueues.forEach(queue => {
-                    const counterKey = `${queue.counter_number}-${queue.counter_name}`;
-                    if (!groupedByCounter[counterKey]) {
-                        groupedByCounter[counterKey] = {
-                            counter_number: queue.counter_number,
-                            counter_name: queue.counter_name,
-                            queues: []
-                        };
-                    }
-                    groupedByCounter[counterKey].queues.push(queue);
-                });
-                
-                // Generate HTML grouped by counter
                 let waitingHTML = '';
                 let totalDisplayed = 0;
                 const maxDisplay = 10;
-                
-                Object.values(groupedByCounter).forEach(group => {
+
+                groups.forEach(group => {
                     if (totalDisplayed >= maxDisplay) return;
-                    
+
+                    const counterName = group.display_name || group.counter_name || 'Counter';
+                    const counterNumber = group.counter_number || '?';
+
                     // Counter header
                     waitingHTML += `
                         <div style="font-size: 0.7rem; color: rgba(255,255,255,0.5); font-weight: 600; margin-top: 0.5rem; padding-left: 0.25rem;">
-                            ${group.counter_name} (Counter ${group.counter_number})
+                            ${counterName} (Counter ${counterNumber})
                         </div>
                     `;
-                    
+
+                    const queues = Array.isArray(group.queues) ? group.queues : [];
                     // Queues under this counter
-                    group.queues.slice(0, maxDisplay - totalDisplayed).forEach(queue => {
+                    queues.slice(0, maxDisplay - totalDisplayed).forEach(queue => {
                         waitingHTML += `
                             <div class="counter-card-small waiting">
                                 <div class="counter-info">
@@ -750,11 +732,11 @@
                         totalDisplayed++;
                     });
                 });
-                
-                if (waitingQueues.length > maxDisplay) {
+
+                if (totalWaiting > maxDisplay) {
                     waitingHTML += `
                         <div class="counter-card-small waiting" style="justify-content: center; opacity: 0.7;">
-                            <span class="text-sm">+${waitingQueues.length - maxDisplay} more waiting...</span>
+                            <span class="text-sm">+${totalWaiting - maxDisplay} more waiting...</span>
                         </div>
                     `;
                 }

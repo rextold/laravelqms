@@ -338,10 +338,7 @@ function renderLists(data) {
         data.waiting_queues.forEach(w => {
             const row = document.createElement('div');
             row.className = 'p-3 border rounded flex justify-between items-center';
-            row.innerHTML = `
-                <span class="font-semibold">${formatDisplayQueue(w.queue_number)}</span>
-                <button class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm" onclick="openTransferModal(${w.id})">Transfer</button>
-            `;
+            row.innerHTML = `<span class="font-semibold">${formatDisplayQueue(w.queue_number)}</span>`;
             waiting.appendChild(row);
         });
     }
