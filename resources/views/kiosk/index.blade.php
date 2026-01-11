@@ -721,19 +721,45 @@
     }
 
     function refreshCounters() {
-        fetch(countersEndpoint)
-            .then(response => response.ok ? response.json() : Promise.reject('Failed'))
+        if (refreshCounters.inFlight) return;
+        refreshCounters.inFlight = true;
+
+        try {
+            if (refreshCounters.controller) {
+                refreshCounters.controller.abort();
+            }
+            refreshCounters.controller = new AbortController();
+        } catch (e) {
+            refreshCounters.controller = null;
+        }
+
+        fetch(countersEndpoint, {
+            credentials: 'same-origin',
+            cache: 'no-store',
+            headers: { 'Accept': 'application/json' },
+            signal: refreshCounters.controller ? refreshCounters.controller.signal : undefined,
+        })
+            .then(response => response.ok ? response.json() : Promise.reject(response))
             .then(data => {
                 // Update the initial counters data
                 initialCounters.splice(0, initialCounters.length, ...(data.counters || []));
-                
+
                 // Only re-render if on step 1
                 if (!document.getElementById('step1').classList.contains('hidden')) {
                     renderCounters(data.counters || []);
                 }
             })
-            .catch(error => console.error('Refresh failed:', error));
+            .catch(error => {
+                if (error && error.name === 'AbortError') return;
+                console.error('Refresh failed:', error);
+            })
+            .finally(() => {
+                refreshCounters.inFlight = false;
+            });
     }
+
+    refreshCounters.inFlight = false;
+    refreshCounters.controller = null;
 
     function refreshColorSettings() {
         const orgCode = '{{ $companyCode }}';

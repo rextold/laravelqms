@@ -27,6 +27,7 @@ class CounterController extends Controller
         $skippedQueues = $counter->getSkippedQueues();
         $onlineCounters = User::onlineCounters()
             ->where('id', '!=', $counter->id)
+            ->when($counter->organization_id, fn ($q) => $q->where('organization_id', $counter->organization_id))
             ->get();
 
         // Get analytics data for reports
@@ -55,6 +56,7 @@ class CounterController extends Controller
             $skipped = $counter->getSkippedQueues();
             $onlineCounters = User::onlineCounters()
                 ->where('id', '!=', $counter->id)
+                ->when($counter->organization_id, fn ($q) => $q->where('organization_id', $counter->organization_id))
                 ->get(['id', 'counter_number', 'display_name']);
 
             return [
@@ -171,6 +173,22 @@ class CounterController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'This queue does not belong to your counter'
+            ], 422);
+        }
+
+        // Ensure same organization (allow legacy queues with null organization_id)
+        if ($counter->organization_id && ($toCounter->organization_id !== $counter->organization_id || ($queue->organization_id !== null && $queue->organization_id !== $counter->organization_id))) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Transfer is only allowed within your organization'
+            ], 422);
+        }
+
+        // Only transfer to other counters
+        if (!$toCounter->isCounter()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Target user is not a counter'
             ], 422);
         }
 

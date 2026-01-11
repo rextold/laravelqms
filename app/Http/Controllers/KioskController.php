@@ -21,7 +21,7 @@ class KioskController extends Controller
     {
         $organization = Organization::where('organization_code', $request->route('organization_code'))->firstOrFail();
         $companyCode = $request->route('organization_code');
-        $onlineCounters = User::onlineCounters()->get();
+        $onlineCounters = User::onlineCounters()->where('organization_id', $organization->id)->get();
         $settings = OrganizationSetting::where('organization_id', $organization->id)->first();
         
         // Create default settings if none exist
@@ -41,21 +41,36 @@ class KioskController extends Controller
         return view('kiosk.index', compact('onlineCounters', 'settings', 'companyCode', 'organization'));
     }
 
-    public function counters()
+    public function counters(Request $request)
     {
-        $counters = User::onlineCounters()->get(['id', 'display_name', 'counter_number', 'short_description']);
+        $organization = Organization::where('organization_code', $request->route('organization_code'))->firstOrFail();
+
+        $counters = User::onlineCounters()
+            ->where('organization_id', $organization->id)
+            ->get(['id', 'display_name', 'counter_number', 'short_description']);
         return response()->json([
             'counters' => $counters,
-        ]);
+        ])
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
     }
 
     public function generateQueue(Request $request)
     {
+        $organization = Organization::where('organization_code', $request->route('organization_code'))->firstOrFail();
         $validated = $request->validate([
             'counter_id' => 'required|exists:users,id',
         ]);
 
         $counter = User::findOrFail($validated['counter_id']);
+
+        if ((int) $counter->organization_id !== (int) $organization->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid counter for this organization'
+            ], 422);
+        }
 
         // Verify counter is online
         if (!$counter->is_online) {
