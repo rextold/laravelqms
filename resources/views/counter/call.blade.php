@@ -434,19 +434,44 @@ function toggleMinimize(force) {
 setInterval(fetchData, 1000);
 fetchData();
 
+function getCsrfToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    return metaTag ? metaTag.getAttribute('content') : '{{ csrf_token() }}';
+}
+
 function postJson(url, payload) {
     return fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+        headers: { 
+            'Content-Type': 'application/json', 
+            'X-CSRF-TOKEN': getCsrfToken(),
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin',
         body: payload ? JSON.stringify(payload) : null,
-    }).then(r => r.json());
+    }).then(r => {
+        if (!r.ok) {
+            return r.json().catch(() => ({ success: false, message: `HTTP ${r.status}` }))
+                .then(data => Promise.reject(new Error(data.message || `HTTP ${r.status}`)));
+        }
+        return r.json();
+    });
 }
 
 function notifyCustomer(btnEl) { 
     return runActionWithCooldown(btnEl, () =>
         postJson('{{ route('counter.notify', ['organization_code' => request()->route('organization_code')]) }}')
-            .then(() => {
-                playNotificationSound();
+            .then((data) => {
+                if (data && data.success) {
+                    playNotificationSound();
+                    fetchData();
+                } else {
+                    throw new Error(data?.message || 'Notification failed');
+                }
+            })
+            .catch((err) => {
+                console.error('Notify error:', err);
+                alert('Failed to notify customer: ' + (err.message || 'Unknown error'));
                 fetchData();
             })
     );
