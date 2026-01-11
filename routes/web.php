@@ -50,13 +50,7 @@ Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 });
-Route::get('/logout', function () {
-    // If session expired or user not authenticated, redirect to login
-    if (!Auth::check()) {
-        return redirect()->route('login')->with('status', 'Session expired. Please login again.');
-    }
-    return view('auth.logout-redirect');
-});
+// Removed GET /logout route to prevent infinite logout loop. Logout is POST only.
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
 // SuperAdmin routes (no company code in URL)
