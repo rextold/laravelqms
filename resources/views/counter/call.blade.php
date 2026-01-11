@@ -99,7 +99,7 @@
                     <i class="fas fa-exchange-alt text-white text-xl"></i>
                     <h3 class="text-xl font-bold text-white">Transfer Queue</h3>
                 </div>
-                <button onclick="closeTransferModal()" class="text-white hover:text-gray-200 text-2xl leading-none">&times;</button>
+                <button type="button" onclick="closeTransferModal()" class="text-white hover:text-gray-200 text-2xl leading-none">&times;</button>
             </div>
         </div>
 
@@ -119,7 +119,7 @@
 
         <!-- Footer -->
         <div class="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3 border-t border-gray-200">
-            <button onclick="closeTransferModal()" class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold transition">Cancel</button>
+            <button type="button" onclick="closeTransferModal()" class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold transition">Cancel</button>
         </div>
     </div>
 </div>
@@ -134,7 +134,7 @@
                     <i class="fas fa-forward text-white text-xl"></i>
                     <h3 class="text-xl font-bold text-white">Skip Current Queue?</h3>
                 </div>
-                <button onclick="closeSkipModal()" class="text-white hover:text-gray-200 text-2xl leading-none">&times;</button>
+                <button type="button" onclick="closeSkipModal()" class="text-white hover:text-gray-200 text-2xl leading-none">&times;</button>
             </div>
         </div>
 
@@ -151,8 +151,8 @@
 
         <!-- Footer -->
         <div class="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3 border-t border-gray-200">
-            <button onclick="closeSkipModal()" class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold transition">Cancel</button>
-            <button onclick="confirmSkip(this)" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold transition">
+            <button type="button" onclick="closeSkipModal()" class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold transition">Cancel</button>
+            <button type="button" onclick="confirmSkip(this)" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold transition">
                 <i class="fas fa-forward mr-2"></i>Skip Queue
             </button>
         </div>
@@ -350,7 +350,7 @@ function renderLists(data) {
         const row = document.createElement('div');
         row.className = 'p-3 border rounded flex justify-between items-center bg-orange-50';
         row.innerHTML = `<span class="font-semibold text-orange-700">${formatDisplayQueue(s.queue_number)}</span>
-                         <button class="bg-blue-600 text-white px-3 py-1 rounded" onclick="recallQueue(${s.id})">Recall</button>`;
+                         <button type="button" class="bg-blue-600 text-white px-3 py-1 rounded" onclick="recallQueue(${s.id})">Recall</button>`;
         skipped.appendChild(row);
     });
 }
@@ -556,7 +556,7 @@ function openTransferModal(queueId) {
     
     // Populate counters list
     countersList.innerHTML = onlineCounters.map(counter => `
-        <button onclick="confirmTransfer(${counter.id})" class="w-full p-3 border-2 border-gray-200 hover:border-blue-500 hover:bg-blue-50 rounded-lg text-left transition">
+        <button type="button" onclick="confirmTransfer(${counter.id})" class="w-full p-3 border-2 border-gray-200 hover:border-blue-500 hover:bg-blue-50 rounded-lg text-left transition">
             <div class="font-semibold text-gray-800">Counter ${counter.counter_number}</div>
             <div class="text-sm text-gray-600">${counter.display_name}</div>
         </button>
