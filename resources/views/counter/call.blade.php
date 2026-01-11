@@ -350,7 +350,7 @@ function renderLists(data) {
         const row = document.createElement('div');
         row.className = 'p-3 border rounded flex justify-between items-center bg-orange-50';
         row.innerHTML = `<span class="font-semibold text-orange-700">${formatDisplayQueue(s.queue_number)}</span>
-                         <button class="bg-blue-600 text-white px-3 py-1 rounded" onclick="recallQueue(${s.id})">Recall</button>`;
+                         <button type="button" class="bg-blue-600 text-white px-3 py-1 rounded" onclick="recallQueue(${s.id})">Recall</button>`;
         skipped.appendChild(row);
     });
 }
