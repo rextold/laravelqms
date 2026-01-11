@@ -49,12 +49,12 @@ class EnsureOrganizationContext
         // Admin and Counter can only access their assigned organization
         // Kiosk and Monitor routes are public and don't require authorization
         $user = auth()->user();
-        
-        // Skip authorization check for public routes (kiosk, monitor)
+
+        // Skip authorization check for public routes (kiosk, monitor, public API)
         $publicRoutes = ['kiosk.', 'monitor.', 'api.settings'];
-        $routeName = $request->route()->getName();
+        $routeName = $request->route()->getName() ?? '';
         $isPublicRoute = false;
-        
+
         foreach ($publicRoutes as $prefix) {
             if (str_starts_with($routeName, $prefix)) {
                 $isPublicRoute = true;
@@ -62,7 +62,20 @@ class EnsureOrganizationContext
             }
         }
 
-        if ($user && !$user->isSuperAdmin() && $user->organization_id && $user->organization_id !== $organization->id && !$isPublicRoute) {
+        // Normalize organization_code to lowercase for routes and session storage
+        $normalizedOrgCode = strtolower($organization->organization_code ?? '');
+        $organization->organization_code = $normalizedOrgCode;
+
+        // Store organization in request and session (with normalized code)
+        $request->merge(['_organization' => $organization]);
+        session(['organization' => $organization]);
+
+        // Public routes: allow regardless of logged-in user/org mismatch
+        if ($isPublicRoute) {
+            return $next($request);
+        }
+
+        if ($user && !$user->isSuperAdmin() && $user->organization_id && $user->organization_id !== $organization->id) {
             Log::warning('403 Unauthorized access attempt', [
                 'user_id' => $user->id,
                 'user_email' => $user->email,
@@ -73,14 +86,6 @@ class EnsureOrganizationContext
             ]);
             abort(403, 'Unauthorized access to this organization.');
         }
-
-        // Normalize organization_code to lowercase for routes and session storage
-        $normalizedOrgCode = strtolower($organization->organization_code ?? '');
-        $organization->organization_code = $normalizedOrgCode;
-
-        // Store organization in request and session (with normalized code)
-        $request->merge(['_organization' => $organization]);
-        session(['organization' => $organization]);
 
         return $next($request);
     }
