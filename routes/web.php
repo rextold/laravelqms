@@ -83,6 +83,11 @@ Route::prefix('{organization_code}')->middleware('organization.context')->group(
     Route::prefix('kiosk')->name('kiosk.')->group(function () {
         Route::get('/', [KioskController::class, 'index'])->name('index');
         Route::get('/counters', [KioskController::class, 'counters'])->name('counters');
+        // Safety fallback: some clients may still navigate via GET (old cached JS/bookmarks).
+        // Queue generation must remain POST-only.
+        Route::get('/generate-queue', function () {
+            return redirect()->route('kiosk.index', ['organization_code' => request()->route('organization_code')]);
+        });
         Route::post('/generate-queue', [KioskController::class, 'generateQueue'])->name('generate');
     });
 
