@@ -468,9 +468,16 @@ function callNext(btnEl) {
 }
 function recallQueue(id) { 
     postJson('{{ route('counter.recall', ['organization_code' => request()->route('organization_code')]) }}', { queue_id: id })
-        .then(() => {
+        .then((res) => {
+            if (!res || res.success !== true) {
+                const msg = (res && res.message) ? res.message : 'Recall failed. Please try again.';
+                throw new Error(msg);
+            }
             playNotificationSound();
             fetchData();
+        })
+        .catch((err) => {
+            alert(err?.message || 'Recall failed. Please try again.');
         });
 }
 

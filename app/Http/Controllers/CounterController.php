@@ -268,17 +268,28 @@ class CounterController extends Controller
             ], 422);
         }
 
-        // Verify queue is skipped
+        // Recall is intended for skipped queues only.
         if ($queue->status !== 'skipped') {
             return response()->json([
                 'success' => false,
-                'message' => 'Queue is not in skipped status'
+                'message' => 'Only skipped queues can be recalled'
+            ], 422);
+        }
+
+        // Prevent having multiple active queues at once.
+        $currentQueue = $counter->getCurrentQueue();
+        if ($currentQueue && $currentQueue->id !== $queue->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please complete the current queue before recalling another'
             ], 422);
         }
 
         $queue->update([
             'status' => 'serving',
             'skipped_at' => null,
+            // Ensure this recalled queue becomes the active/visible one.
+            'called_at' => now(),
             'notified_at' => now(),
         ]);
         
