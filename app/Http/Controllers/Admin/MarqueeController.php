@@ -76,6 +76,14 @@ class MarqueeController extends Controller
 
         $marquee->update($validated);
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Marquee updated successfully',
+                'marquee' => $marquee->fresh(),
+            ]);
+        }
+
         return redirect()->route('admin.marquee.index', ['organization_code' => request()->route('organization_code')])
             ->with('success', 'Marquee updated successfully.');
     }
@@ -113,6 +121,13 @@ class MarqueeController extends Controller
         }
         
         $marquee->delete();
+
+        if (request()->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Marquee deleted successfully',
+            ]);
+        }
 
         return redirect()->route('admin.marquee.index', ['organization_code' => request()->route('organization_code')])
             ->with('success', 'Marquee deleted successfully.');

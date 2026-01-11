@@ -180,67 +180,59 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                 <!-- Primary Color -->
-                <div>
-                    <label class="block text-gray-700 font-semibold mb-3">Primary Color</label>
+                <div class="border border-gray-200 rounded-xl p-4 bg-gray-50">
+                    <label class="block text-gray-800 font-semibold">Primary</label>
+                    <p class="text-xs text-gray-500 mt-1">Main buttons, headers</p>
+
                     <input type="hidden" name="primary_color" id="primaryColorValue" value="{{ old('primary_color', $settings->primary_color) }}">
-                    <div class="relative cursor-pointer" onclick="document.getElementById('primaryColor').click()">
-                        <input type="color" id="primaryColor" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
-                        <div class="h-24 rounded-lg border-2 border-gray-300 hover:border-blue-500 transition" style="background: {{ $settings->primary_color }}">
-                            <div class="absolute inset-0 flex items-center justify-center">
-                                <i class="fas fa-palette text-white text-2xl drop-shadow-lg"></i>
-                            </div>
-                        </div>
+
+                    <div class="mt-4 flex items-center gap-3">
+                        <input type="color" id="primaryColor" value="{{ old('primary_color', $settings->primary_color) }}" class="h-10 w-12 p-0 border border-gray-300 rounded-lg bg-white cursor-pointer">
+                        <input type="text" id="primaryColorHex" value="{{ old('primary_color', $settings->primary_color) }}" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-white font-mono text-sm" placeholder="#1D4ED8" inputmode="text" autocomplete="off">
                     </div>
-                    <input type="text" id="primaryColorHex" value="{{ $settings->primary_color }}" class="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-center font-mono text-sm" readonly>
-                    <p class="text-xs text-gray-500 mt-1 text-center">Main buttons, headers</p>
+                    <div class="mt-3 h-10 rounded-lg border border-gray-300" id="primarySwatch" style="background: {{ old('primary_color', $settings->primary_color) }}"></div>
                 </div>
 
                 <!-- Secondary Color -->
-                <div>
-                    <label class="block text-gray-700 font-semibold mb-3">Secondary Color</label>
+                <div class="border border-gray-200 rounded-xl p-4 bg-gray-50">
+                    <label class="block text-gray-800 font-semibold">Secondary</label>
+                    <p class="text-xs text-gray-500 mt-1">Gradients, accents</p>
+
                     <input type="hidden" name="secondary_color" id="secondaryColorValue" value="{{ old('secondary_color', $settings->secondary_color) }}">
-                    <div class="relative cursor-pointer" onclick="document.getElementById('secondaryColor').click()">
-                        <input type="color" id="secondaryColor" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
-                        <div class="h-24 rounded-lg border-2 border-gray-300 hover:border-blue-500 transition" style="background: {{ $settings->secondary_color }}">
-                            <div class="absolute inset-0 flex items-center justify-center">
-                                <i class="fas fa-brush text-white text-2xl drop-shadow-lg"></i>
-                            </div>
-                        </div>
+
+                    <div class="mt-4 flex items-center gap-3">
+                        <input type="color" id="secondaryColor" value="{{ old('secondary_color', $settings->secondary_color) }}" class="h-10 w-12 p-0 border border-gray-300 rounded-lg bg-white cursor-pointer">
+                        <input type="text" id="secondaryColorHex" value="{{ old('secondary_color', $settings->secondary_color) }}" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-white font-mono text-sm" placeholder="#7C3AED" inputmode="text" autocomplete="off">
                     </div>
-                    <input type="text" id="secondaryColorHex" value="{{ $settings->secondary_color }}" class="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-center font-mono text-sm" readonly>
-                    <p class="text-xs text-gray-500 mt-1 text-center">Gradients, accents</p>
+                    <div class="mt-3 h-10 rounded-lg border border-gray-300" id="secondarySwatch" style="background: {{ old('secondary_color', $settings->secondary_color) }}"></div>
                 </div>
 
                 <!-- Accent Color -->
-                <div>
-                    <label class="block text-gray-700 font-semibold mb-3">Accent Color</label>
+                <div class="border border-gray-200 rounded-xl p-4 bg-gray-50">
+                    <label class="block text-gray-800 font-semibold">Accent</label>
+                    <p class="text-xs text-gray-500 mt-1">Highlights, badges</p>
+
                     <input type="hidden" name="accent_color" id="accentColorValue" value="{{ old('accent_color', $settings->accent_color) }}">
-                    <div class="relative cursor-pointer" onclick="document.getElementById('accentColor').click()">
-                        <input type="color" id="accentColor" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
-                        <div class="h-24 rounded-lg border-2 border-gray-300 hover:border-blue-500 transition" style="background: {{ $settings->accent_color }}">
-                            <div class="absolute inset-0 flex items-center justify-center">
-                                <i class="fas fa-star text-white text-2xl drop-shadow-lg"></i>
-                            </div>
-                        </div>
+
+                    <div class="mt-4 flex items-center gap-3">
+                        <input type="color" id="accentColor" value="{{ old('accent_color', $settings->accent_color) }}" class="h-10 w-12 p-0 border border-gray-300 rounded-lg bg-white cursor-pointer">
+                        <input type="text" id="accentColorHex" value="{{ old('accent_color', $settings->accent_color) }}" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-white font-mono text-sm" placeholder="#10B981" inputmode="text" autocomplete="off">
                     </div>
-                    <input type="text" id="accentColorHex" value="{{ $settings->accent_color }}" class="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-center font-mono text-sm" readonly>
-                    <p class="text-xs text-gray-500 mt-1 text-center">Success, highlights</p>
+                    <div class="mt-3 h-10 rounded-lg border border-gray-300" id="accentSwatch" style="background: {{ old('accent_color', $settings->accent_color) }}"></div>
                 </div>
 
                 <!-- Text Color -->
-                <div>
-                    <label class="block text-gray-700 font-semibold mb-3">Text Color</label>
+                <div class="border border-gray-200 rounded-xl p-4 bg-gray-50">
+                    <label class="block text-gray-800 font-semibold">Text</label>
+                    <p class="text-xs text-gray-500 mt-1">On colored backgrounds</p>
+
                     <input type="hidden" name="text_color" id="textColorValue" value="{{ old('text_color', $settings->text_color) }}">
-                    <div class="relative cursor-pointer" onclick="document.getElementById('textColor').click()">
-                        <input type="color" id="textColor" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
-                        <div class="h-24 rounded-lg border-2 border-gray-300 hover:border-blue-500 transition" style="background: {{ $settings->text_color }}">
-                            <div class="absolute inset-0 flex items-center justify-center">
-                                <i class="fas fa-font text-gray-800 text-2xl drop-shadow-lg"></i>
-                            </div>
-                        </div>
+
+                    <div class="mt-4 flex items-center gap-3">
+                        <input type="color" id="textColor" value="{{ old('text_color', $settings->text_color) }}" class="h-10 w-12 p-0 border border-gray-300 rounded-lg bg-white cursor-pointer">
+                        <input type="text" id="textColorHex" value="{{ old('text_color', $settings->text_color) }}" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-white font-mono text-sm" placeholder="#FFFFFF" inputmode="text" autocomplete="off">
                     </div>
-                    <input type="text" id="textColorHex" value="{{ $settings->text_color }}" class="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-center font-mono text-sm" readonly>
-                    <p class="text-xs text-gray-500 mt-1 text-center">On colored backgrounds</p>
+                    <div class="mt-3 h-10 rounded-lg border border-gray-300" id="textSwatch" style="background: {{ old('text_color', $settings->text_color) }}"></div>
                 </div>
             </div>
 
@@ -251,8 +243,8 @@
                     <h3 id="previewTitle" class="text-3xl font-bold mb-3" style="color: {{ $settings->text_color }}">{{ $organization->organization_name }}</h3>
                     <p id="previewText" class="text-lg mb-4" style="color: {{ $settings->text_color }}; opacity: 0.9;">This is how your brand colors will appear</p>
                     <div class="flex gap-3">
-                        <button type="button" class="px-6 py-3 rounded-lg font-semibold" style="background: {{ $settings->accent_color }}; color: white;">Sample Button</button>
-                        <div class="px-6 py-3 rounded-lg font-semibold bg-white bg-opacity-20" style="color: {{ $settings->text_color }}">Info Card</div>
+                        <button id="previewButton" type="button" class="px-6 py-3 rounded-lg font-semibold" style="background: {{ $settings->accent_color }}; color: white;">Sample Button</button>
+                        <div id="previewCard" class="px-6 py-3 rounded-lg font-semibold bg-white bg-opacity-20" style="color: {{ $settings->text_color }}">Info Card</div>
                     </div>
                 </div>
             </div>
@@ -291,30 +283,58 @@ function previewLogo(input) {
     }
 }
 
+function normalizeHexColor(value) {
+    if (value == null) return null;
+    const v = String(value).trim();
+    if (!v) return null;
+    const raw = v.startsWith('#') ? v.slice(1) : v;
+    if (!/^[0-9a-fA-F]{6}$/.test(raw)) return null;
+    return `#${raw.toUpperCase()}`;
+}
+
+function bindColorControl(colorInputId, hexInputId, hiddenInputId, swatchId) {
+    const colorEl = document.getElementById(colorInputId);
+    const hexEl = document.getElementById(hexInputId);
+    const hiddenEl = document.getElementById(hiddenInputId);
+    const swatchEl = document.getElementById(swatchId);
+    if (!colorEl || !hexEl || !hiddenEl) return;
+
+    const apply = (hex) => {
+        const normalized = normalizeHexColor(hex);
+        if (!normalized) return false;
+        colorEl.value = normalized;
+        hexEl.value = normalized;
+        hiddenEl.value = normalized;
+        if (swatchEl) swatchEl.style.background = normalized;
+        updatePreview();
+        return true;
+    };
+
+    colorEl.addEventListener('change', function() { apply(this.value); });
+
+    hexEl.addEventListener('blur', function() {
+        if (!apply(this.value)) {
+            // revert to last good value
+            this.value = hiddenEl.value;
+        }
+    });
+
+    hexEl.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            this.blur();
+        }
+    });
+
+    // Initialize sync
+    apply(hiddenEl.value || colorEl.value || hexEl.value);
+}
+
 // Color synchronization
-document.getElementById('primaryColor').addEventListener('change', function() {
-    document.getElementById('primaryColorValue').value = this.value;
-    document.getElementById('primaryColorHex').value = this.value;
-    updatePreview();
-});
-
-document.getElementById('secondaryColor').addEventListener('change', function() {
-    document.getElementById('secondaryColorValue').value = this.value;
-    document.getElementById('secondaryColorHex').value = this.value;
-    updatePreview();
-});
-
-document.getElementById('accentColor').addEventListener('change', function() {
-    document.getElementById('accentColorValue').value = this.value;
-    document.getElementById('accentColorHex').value = this.value;
-    updatePreview();
-});
-
-document.getElementById('textColor').addEventListener('change', function() {
-    document.getElementById('textColorValue').value = this.value;
-    document.getElementById('textColorHex').value = this.value;
-    updatePreview();
-});
+bindColorControl('primaryColor', 'primaryColorHex', 'primaryColorValue', 'primarySwatch');
+bindColorControl('secondaryColor', 'secondaryColorHex', 'secondaryColorValue', 'secondarySwatch');
+bindColorControl('accentColor', 'accentColorHex', 'accentColorValue', 'accentSwatch');
+bindColorControl('textColor', 'textColorHex', 'textColorValue', 'textSwatch');
 
 // Update preview
 function updatePreview() {
@@ -326,7 +346,10 @@ function updatePreview() {
     document.getElementById('brandPreview').style.background = `linear-gradient(135deg, ${primary}, ${secondary})`;
     document.getElementById('previewTitle').style.color = text;
     document.getElementById('previewText').style.color = text;
-    document.querySelectorAll('#brandPreview button, #brandPreview div')[0].style.background = accent;
+    const previewBtn = document.getElementById('previewButton');
+    const previewCard = document.getElementById('previewCard');
+    if (previewBtn) previewBtn.style.background = accent;
+    if (previewCard) previewCard.style.color = text;
 }
 
 // Form submission via AJAX

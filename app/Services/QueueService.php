@@ -9,68 +9,85 @@ use App\Events\QueueCreated;
 use App\Events\QueueCalled;
 use App\Events\QueueTransferred;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class QueueService
 {
-    public function generateQueueNumber(User $counter): string
+    private function shouldBroadcast(): bool
     {
-        $settings = OrganizationSetting::getSettings();
-        // Default to 4 digits if setting is missing or invalid to avoid TypeErrors
-        $digits = (int) ($settings->queue_number_digits ?? 4);
-        if ($digits <= 0) {
-            $digits = 4;
+        $broadcastDriver = (string) config('broadcasting.default');
+        $queueDriver = (string) config('queue.default');
+
+        if ($broadcastDriver === '' || $broadcastDriver === 'null') {
+            return false;
         }
 
-        // If a priority code exists on the counter, use it as the prefix (e.g., C1-1001)
-        $priorityCode = trim((string) ($counter->priority_code ?? ''));
-        if ($priorityCode !== '') {
-            $prefix = $priorityCode;
-            $lastQueue = Queue::where('queue_number', 'like', "{$prefix}-%")
-                ->orderBy('queue_number', 'desc')
-                ->first();
-
-            $base = 1; // start from 0001 for priority codes
-            if ($lastQueue) {
-                $lastNumber = (int) substr($lastQueue->queue_number, -$digits);
-                $nextNumber = $lastNumber + 1;
-            } else {
-                $nextNumber = $base;
-            }
-
-            $newNumber = str_pad($nextNumber, $digits, '0', STR_PAD_LEFT);
-
-            return "{$prefix}-{$newNumber}";
+        // If the queue driver is sync, broadcasting will happen inline and can cause noticeable UI delay.
+        // Since the app already uses polling for kiosk/monitor, we prefer fast responses here.
+        if ($queueDriver === 'sync') {
+            return false;
         }
 
-        // Fallback: original date + counter number format
-        $date = Carbon::now()->format('Ymd');
-        $counterPrefix = str_pad($counter->counter_number, 2, '0', STR_PAD_LEFT);
-        
-        $lastQueue = Queue::where('queue_number', 'like', "{$date}-{$counterPrefix}-%")
-            ->orderBy('queue_number', 'desc')
-            ->first();
-
-        if ($lastQueue) {
-            $lastNumber = (int) substr($lastQueue->queue_number, -$digits);
-            $newNumber = str_pad($lastNumber + 1, $digits, '0', STR_PAD_LEFT);
-        } else {
-            $newNumber = str_pad(1, $digits, '0', STR_PAD_LEFT);
-        }
-
-        return "{$date}-{$counterPrefix}-{$newNumber}";
+        return true;
     }
 
     public function createQueue(User $counter): Queue
     {
-        $queueNumber = $this->generateQueueNumber($counter);
-        
-        $queue = Queue::create([
-            'queue_number' => $queueNumber,
-            'counter_id' => $counter->id,
-            'status' => 'waiting',
-        ]);
+        $organizationId = $counter->organization_id;
 
-        broadcast(new QueueCreated($queue))->toOthers();
+        $queue = DB::transaction(function () use ($counter, $organizationId) {
+            // Ensure we have settings for THIS organization (do not rely on session)
+            $settingsQuery = OrganizationSetting::query();
+            if ($organizationId) {
+                $settingsQuery->where('organization_id', $organizationId);
+            }
+
+            /** @var OrganizationSetting|null $settings */
+            $settings = $settingsQuery->lockForUpdate()->first();
+
+            if (!$settings) {
+                // Fallback to singleton getter (uses session), but prefer explicit org
+                $settings = OrganizationSetting::getSettings();
+            }
+
+            $digits = (int) ($settings->queue_number_digits ?? 4);
+            if ($digits <= 0) {
+                $digits = 4;
+            }
+
+            // Initialize sequence from existing queues if needed
+            $lastSeq = (int) ($settings->last_queue_sequence ?? 0);
+            if ($organizationId && $lastSeq <= 0) {
+                // Fast path: queue numbers are now digits-only; use most recent row and parse suffix.
+                // This avoids full-table scans on large queue history.
+                $latestQueueNumber = (string) (Queue::where('organization_id', $organizationId)
+                    ->orderByDesc('id')
+                    ->value('queue_number') ?? '');
+
+                if ($latestQueueNumber !== '') {
+                    $parts = explode('-', $latestQueueNumber);
+                    $suffix = end($parts);
+                    $lastSeq = max($lastSeq, (int) $suffix);
+                }
+            }
+
+            $nextSeq = $lastSeq + 1;
+            $settings->last_queue_sequence = $nextSeq;
+            $settings->save();
+
+            $queueNumber = str_pad((string) $nextSeq, $digits, '0', STR_PAD_LEFT);
+
+            return Queue::create([
+                'queue_number' => $queueNumber,
+                'counter_id' => $counter->id,
+                'organization_id' => $organizationId,
+                'status' => 'waiting',
+            ]);
+        });
+
+        if ($this->shouldBroadcast()) {
+            broadcast(new QueueCreated($queue))->toOthers();
+        }
 
         return $queue;
     }
@@ -98,7 +115,9 @@ class QueueService
                 'called_at' => now(),
             ]);
 
-            broadcast(new QueueCalled($nextQueue))->toOthers();
+            if ($this->shouldBroadcast()) {
+                broadcast(new QueueCalled($nextQueue))->toOthers();
+            }
         }
 
         return $nextQueue;
@@ -115,7 +134,8 @@ class QueueService
             ]);
         }
 
-        return $this->callNextQueue($counter);
+        // Do NOT auto-call the next queue. Counter must explicitly press "Call Next".
+        return null;
     }
 
     public function transferQueue(Queue $queue, User $toCounter): Queue
@@ -129,7 +149,9 @@ class QueueService
             'called_at' => null,
         ]);
 
-        broadcast(new QueueTransferred($queue, $toCounter))->toOthers();
+        if ($this->shouldBroadcast()) {
+            broadcast(new QueueTransferred($queue, $toCounter))->toOthers();
+        }
 
         return $queue;
     }

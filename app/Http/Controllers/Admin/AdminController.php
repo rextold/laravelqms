@@ -56,25 +56,22 @@ class AdminController extends Controller
             $admins = collect();
             
             // Queue statistics for this organization
-            $todayQueues = \App\Models\Queue::whereHas('counter', function($q) use ($admin) {
-                $q->where('organization_id', $admin->organization_id);
-            })->whereDate('created_at', today())->count();
-            
-            $waitingQueues = \App\Models\Queue::where('status', 'waiting')
-                ->whereHas('counter', function($q) use ($admin) {
-                    $q->where('organization_id', $admin->organization_id);
-                })->count();
-            
-            $completedToday = \App\Models\Queue::where('status', 'completed')
-                ->whereHas('counter', function($q) use ($admin) {
-                    $q->where('organization_id', $admin->organization_id);
-                })
-                ->whereDate('updated_at', today())->count();
-            
-            $servingNow = \App\Models\Queue::where('status', 'serving')
-                ->whereHas('counter', function($q) use ($admin) {
-                    $q->where('organization_id', $admin->organization_id);
-                })->count();
+            $todayQueues = \App\Models\Queue::where('organization_id', $admin->organization_id)
+                ->whereDate('created_at', today())
+                ->count();
+
+            $waitingQueues = \App\Models\Queue::where('organization_id', $admin->organization_id)
+                ->where('status', 'waiting')
+                ->count();
+
+            $completedToday = \App\Models\Queue::where('organization_id', $admin->organization_id)
+                ->where('status', 'completed')
+                ->whereDate('updated_at', today())
+                ->count();
+
+            $servingNow = \App\Models\Queue::where('organization_id', $admin->organization_id)
+                ->where('status', 'serving')
+                ->count();
             
             // Get organization info
             $organization = $admin->organization;

@@ -44,6 +44,13 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             z-index: 100;
         }
+        .header-center {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            padding: 0 1rem;
+            pointer-events: none;
+        }
         .header-left {
             display: flex;
             align-items: center;
@@ -222,9 +229,61 @@
         .counter-card-small.serving.notify {
             animation: blink 1.5s ease-in-out infinite;
         }
+        .queue-badge.callout {
+            animation: calloutPulse 1.2s ease-in-out infinite;
+            transform-origin: center;
+        }
         @keyframes blink {
             0%, 100% { opacity: 1; border-color: rgba(16, 185, 129, 0.8); }
             50% { opacity: 0.5; border-color: rgba(16, 185, 129, 0.3); }
+        }
+        @keyframes calloutPulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 rgba(0,0,0,0); }
+            50% { transform: scale(1.12); box-shadow: 0 0 18px rgba(0,0,0,0.6); }
+        }
+
+        /* Temporary non-blocking banner to highlight the called queue number */
+        .call-overlay {
+            display: none;
+            pointer-events: none;
+        }
+        .call-overlay.show {
+            display: block;
+            animation: overlayFadeIn 180ms ease-out;
+        }
+        @keyframes overlayFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .call-overlay-card {
+            width: min(820px, 52vw);
+            border-radius: 14px;
+            padding: 0.55rem 0.9rem;
+            background: rgba(0,0,0,0.55);
+            border: 2px solid var(--accent);
+            box-shadow: 0 14px 40px rgba(0,0,0,0.55);
+            text-align: center;
+            color: #fff;
+        }
+        .call-overlay-title {
+            font-weight: 800;
+            letter-spacing: 1px;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            opacity: 0.95;
+        }
+        .call-overlay-number {
+            margin-top: 0.25rem;
+            font-weight: 900;
+            font-size: clamp(1.35rem, 2.6vw, 2.05rem);
+            line-height: 1;
+            text-shadow: 0 8px 22px rgba(0,0,0,0.55);
+        }
+        .call-overlay-counter {
+            margin-top: 0.25rem;
+            font-size: 0.9rem;
+            font-weight: 700;
+            opacity: 0.9;
         }
         .counter-card-small.waiting {
             border-color: rgba(245, 158, 11, 0.3);
@@ -360,6 +419,18 @@
                     <p data-org-name>{{ $organization->organization_name }}</p>
                 </div>
             </div>
+
+            <div class="header-center">
+                <!-- Call Banner (high-visibility, non-blocking, inside header) -->
+                <div id="callOverlay" class="call-overlay" aria-hidden="true">
+                    <div class="call-overlay-card">
+                        <div class="call-overlay-title">Now Calling</div>
+                        <div id="callOverlayNumber" class="call-overlay-number">---</div>
+                        <div id="callOverlayCounter" class="call-overlay-counter">Please proceed to the counter</div>
+                    </div>
+                </div>
+            </div>
+
             <div class="header-time">
                 <div id="currentTime">00:00:00</div>
                 <div class="header-date" id="currentDate">Jan 01, 2026</div>
@@ -423,8 +494,27 @@
         let refreshInterval = null;
         let lastDataUpdate = Date.now();
         let videoRotationIndex = 0;
-        let previousServingQueues = [];
+        let previousServingState = new Map();
+        let overlayHideTimer = null;
         const notificationSound = document.getElementById('notificationSound');
+
+        function showCallOverlay(queueNumber, counterNumber) {
+            const overlay = document.getElementById('callOverlay');
+            const numberEl = document.getElementById('callOverlayNumber');
+            const counterEl = document.getElementById('callOverlayCounter');
+            if (!overlay || !numberEl || !counterEl) return;
+
+            numberEl.textContent = queueNumber || '---';
+            counterEl.textContent = counterNumber ? `Please proceed to Counter ${counterNumber}` : 'Please proceed to the counter';
+            overlay.classList.add('show');
+            overlay.setAttribute('aria-hidden', 'false');
+
+            if (overlayHideTimer) clearTimeout(overlayHideTimer);
+            overlayHideTimer = setTimeout(() => {
+                overlay.classList.remove('show');
+                overlay.setAttribute('aria-hidden', 'true');
+            }, 6000);
+        }
 
         // Update time and date
         function updateTime() {
@@ -457,8 +547,28 @@
         initializeMarquee();
 
         // Fetch and update data with high frequency
+        let monitorFetchInFlight = false;
+        let monitorFetchController = null;
         function refreshMonitorData() {
-            fetch(`/${orgCode}/monitor/data`)
+            // Prevent stacking requests when the server/network is slow
+            if (monitorFetchInFlight) return;
+            monitorFetchInFlight = true;
+
+            try {
+                if (monitorFetchController) {
+                    monitorFetchController.abort();
+                }
+                monitorFetchController = new AbortController();
+            } catch (e) {
+                monitorFetchController = null;
+            }
+
+            fetch(`/${orgCode}/monitor/data`, {
+                cache: 'no-store',
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' },
+                signal: monitorFetchController ? monitorFetchController.signal : undefined,
+            })
                 .then(response => response.json())
                 .then(data => {
                     updateCounters(data.counters);
@@ -468,7 +578,13 @@
                     }
                     lastDataUpdate = Date.now();
                 })
-                .catch(error => console.error('Refresh failed:', error));
+                .catch(error => {
+                    if (error && error.name === 'AbortError') return;
+                    console.error('Refresh failed:', error);
+                })
+                .finally(() => {
+                    monitorFetchInFlight = false;
+                });
         }
 
         function updateCounters(counters) {
@@ -516,16 +632,39 @@
                         <p class="text-sm mt-1">No active service</p>
                     </div>
                 `;
-                previousServingQueues = [];
+                previousServingState = new Map();
             } else {
-                // Detect new queue calls
-                const currentServingIds = servingCounters.map(item => item.queue.id);
-                const newQueues = servingCounters.filter(item => 
-                    !previousServingQueues.includes(item.queue.id)
-                );
-                
-                // Play notification sound if new queue is called
-                if (newQueues.length > 0 && previousServingQueues.length > 0) {
+                // Detect alert-worthy changes: new called queue, notify pressed, or recall
+                const alerts = [];
+                const nextState = new Map();
+
+                servingCounters.forEach(item => {
+                    const queue = item.queue;
+                    const queueId = queue?.id;
+                    if (!queueId) return;
+
+                    const queueKey = String(queueId);
+
+                    const current = {
+                        called_at: queue.called_at || null,
+                        notified_at: queue.notified_at || null,
+                        recent_recall: !!item.recent_recall,
+                    };
+
+                    const prev = previousServingState.get(queueKey);
+                    const isNew = !prev;
+                    const notifyChanged = !!prev && prev.notified_at !== current.notified_at && !!current.notified_at;
+                    const recallTriggered = !!current.recent_recall && (!prev || !prev.recent_recall);
+
+                    if (isNew || notifyChanged || recallTriggered) {
+                        alerts.push(item);
+                    }
+
+                    nextState.set(queueKey, current);
+                });
+
+                // Play sound when something new/notify/recall happens (avoid initial load blast)
+                if (alerts.length > 0 && previousServingState.size > 0) {
                     try {
                         notificationSound.currentTime = 0;
                         notificationSound.play().catch(e => console.log('Audio play failed:', e));
@@ -533,20 +672,26 @@
                         console.log('Audio error:', e);
                     }
                 }
+
+                // Overlay for the first alert item
+                if (alerts.length > 0) {
+                    const first = alerts[0];
+                    showCallOverlay(first.queue?.queue_number, first.counter?.counter_number);
+                }
                 
-                previousServingQueues = currentServingIds;
+                previousServingState = nextState;
                 
                 const servingHTML = servingCounters.map(item => {
                     const counter = item.counter;
                     const queue = item.queue;
-                    const isNew = newQueues.some(nq => nq.queue.id === queue.id);
+                    const isAlert = alerts.some(a => String(a.queue?.id) === String(queue?.id));
                     return `
-                        <div class="counter-card-small serving ${isNew ? 'notify' : ''}">
+                        <div class="counter-card-small serving ${isAlert ? 'notify' : ''}">
                             <div class="counter-info">
                                 <div class="counter-info-name">Counter ${counter.counter_number}</div>
                                 <div class="counter-info-queue">${counter.display_name}</div>
                             </div>
-                            <div class="queue-badge">#${queue.queue_number}</div>
+                            <div class="queue-badge ${isAlert ? 'callout' : ''}">${queue.queue_number}</div>
                         </div>
                     `;
                 }).join('');
@@ -596,7 +741,7 @@
                         waitingHTML += `
                             <div class="counter-card-small waiting">
                                 <div class="counter-info">
-                                    <div class="counter-info-name">Queue #${queue.queue_number}</div>
+                                    <div class="counter-info-name">${queue.queue_number}</div>
                                     <div class="counter-info-queue">Waiting</div>
                                 </div>
                                 <i class="fas fa-clock text-yellow-500 opacity-70"></i>
@@ -711,19 +856,8 @@
         // Initial load
         refreshMonitorData();
 
-        // Aggressive real-time refresh: 1 second for counters, 2 seconds for everything
+        // Aggressive real-time refresh
         let counterRefresh = setInterval(refreshMonitorData, 1000);
-
-        // Refresh video and marquee every 3 seconds
-        let videoRefresh = setInterval(() => {
-            fetch(`/${orgCode}/monitor/data`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.video_control) updateVideo(data.video_control);
-                    if (data.marquee) updateMarquee(data.marquee);
-                })
-                .catch(error => console.error('Video/Marquee refresh failed:', error));
-        }, 3000);
 
         // Refresh colors every 5 seconds
         let colorRefresh = setInterval(updateColorSettings, 5000);

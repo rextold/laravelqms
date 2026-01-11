@@ -32,6 +32,7 @@ class OrganizationSetting extends Model
         'company_email',
         'email',
         'queue_number_digits',
+        'last_queue_sequence',
         'is_active',
     ];
 
@@ -139,26 +140,40 @@ class OrganizationSetting extends Model
      */
     public static function getSettings()
     {
-        // Get organization from session or use first active organization
-        $organization = session('organization');
-        
-        if (!$organization) {
-            $organization = Organization::where('is_active', true)->first();
+        // Get organization context from session or use first active organization
+        $orgFromSession = session('organization');
+        $organizationId = null;
+        $organizationCode = null;
+
+        if ($orgFromSession instanceof Organization) {
+            $organizationId = $orgFromSession->id;
+            $organizationCode = $orgFromSession->organization_code;
+        } elseif (is_array($orgFromSession)) {
+            $organizationId = $orgFromSession['id'] ?? null;
+            $organizationCode = $orgFromSession['code'] ?? null;
         }
-        
-        if (!$organization) {
+
+        if (!$organizationId) {
+            $organization = Organization::where('is_active', true)->first();
+            if ($organization) {
+                $organizationId = $organization->id;
+                $organizationCode = $organization->organization_code;
+            }
+        }
+
+        if (!$organizationId) {
             // No organization found, return null or throw exception
             return null;
         }
         
         // Get settings for this organization
-        $settings = self::where('organization_id', $organization->id)->first();
+        $settings = self::where('organization_id', $organizationId)->first();
         
         if (!$settings) {
             // Create default settings for this organization
             $settings = self::create([
-                'organization_id' => $organization->id,
-                'code' => $organization->organization_code,
+                'organization_id' => $organizationId,
+                'code' => $organizationCode,
                 'primary_color' => '#3b82f6',
                 'secondary_color' => '#8b5cf6',
                 'accent_color' => '#10b981',

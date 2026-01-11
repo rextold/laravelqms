@@ -51,7 +51,7 @@
                             if (!$queueNumber) return 'None';
                             $parts = explode('-', $queueNumber);
                             $suffix = count($parts) ? end($parts) : $queueNumber;
-                            return $counterNumber . '-' . ($suffix ?: $queueNumber);
+                            return $suffix ?: $queueNumber;
                         };
                     @endphp
                     <div class="text-3xl font-bold text-white" id="currentQueue">
@@ -124,6 +124,8 @@ document.getElementById('onlineForm').addEventListener('submit', function(e) {
 // Periodically refresh dashboard numbers without manual reload
 const REFRESH_MS = 3000;
 let refreshTimer = null;
+let dashboardFetchInFlight = false;
+let dashboardFetchController = null;
 
 function startAutoRefresh() {
     refreshDashboardData();
@@ -131,9 +133,22 @@ function startAutoRefresh() {
 }
 
 function refreshDashboardData() {
+    if (dashboardFetchInFlight) return;
+    dashboardFetchInFlight = true;
+
+    try {
+        if (dashboardFetchController) {
+            dashboardFetchController.abort();
+        }
+        dashboardFetchController = new AbortController();
+    } catch (e) {
+        dashboardFetchController = null;
+    }
+
     fetch('{{ route('counter.data', ['organization_code' => request()->route('organization_code')]) }}', {
         credentials: 'same-origin',
-        headers: { 'Accept': 'application/json' }
+        headers: { 'Accept': 'application/json' },
+        signal: dashboardFetchController ? dashboardFetchController.signal : undefined,
     })
     .then(res => res.ok ? res.json() : Promise.reject(res))
     .then(data => {
@@ -148,6 +163,9 @@ function refreshDashboardData() {
     })
     .catch(() => {
         // swallow errors to avoid breaking the interval
+    })
+    .finally(() => {
+        dashboardFetchInFlight = false;
     });
 }
 
@@ -190,7 +208,7 @@ function formatDisplayQueue(queueNumber) {
     if (!queueNumber) return 'None';
     const parts = String(queueNumber).split('-');
     const suffix = parts.length ? (parts[parts.length - 1] || queueNumber) : queueNumber;
-    return `${COUNTER_NUM}-${suffix}`;
+    return suffix;
 }
 
 function updateOnlineButton() {

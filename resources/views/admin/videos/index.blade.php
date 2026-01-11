@@ -358,7 +358,7 @@ function loadPlaylist() {
     if (isLoadingPlaylist) return;
     isLoadingPlaylist = true;
     
-    fetch(`/${orgCode}/admin/playlist`)
+    fetch(`/${orgCode}/admin/playlist`, { cache: 'no-store', credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
         .then(r => r.json())
         .then(d => {
             if (d.success) {
@@ -380,7 +380,8 @@ function loadPlaylist() {
 
 function syncPlaylistAndControl() {
     if (isLoadingPlaylist) return;
-    fetch(`/${orgCode}/admin/playlist`)
+    isLoadingPlaylist = true;
+    fetch(`/${orgCode}/admin/playlist`, { cache: 'no-store', credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
         .then(r => r.json())
         .then(d => {
             if (d.success) {
@@ -399,7 +400,8 @@ function syncPlaylistAndControl() {
                 }
             }
         })
-        .catch(() => {});
+        .catch(() => {})
+        .finally(() => { isLoadingPlaylist = false; });
 }
 
 function syncPlaylistQuick() {

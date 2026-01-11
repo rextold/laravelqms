@@ -5,7 +5,7 @@
 @section('content')
 <div class="min-h-screen flex flex-col p-4 bg-gray-50 overflow-hidden">
     <!-- Header with Logo and Organization Name -->
-    <div class="w-full mb-4">
+    <div id="panelHeader" class="w-full mb-4">
         <div class="bg-white rounded-lg shadow-md p-4">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-4">
@@ -17,35 +17,40 @@
                         <p class="text-sm text-gray-600">Counter {{ $counter->counter_number }} - {{ $counter->display_name }}</p>
                     </div>
                 </div>
-                <div class="text-right">
-                    <div class="text-lg font-semibold text-gray-700" id="headerTime"></div>
-                    <div class="text-xs text-gray-500" id="headerDate"></div>
+                <div class="flex items-start space-x-3">
+                    <div class="text-right">
+                        <div class="text-lg font-semibold text-gray-700" id="headerTime"></div>
+                        <div class="text-xs text-gray-500" id="headerDate"></div>
+                    </div>
+                    <button id="btnToggleMinimize" type="button" onclick="toggleMinimize()" class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition" title="Minimize">
+                        <i class="fas fa-window-minimize"></i>
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Main Content -->
-    <div class="flex-1 flex items-center justify-center">
+    <div id="panelMain" class="flex-1 flex items-center justify-center">
         <div class="w-full max-w-3xl">
             <div class="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-xl p-6 border-2 border-white">
             <div class="text-center">
                 <p class="text-white text-sm mb-2">NOW SERVING</p>
                 <div id="currentNumber" class="responsive-queue-number font-extrabold text-white drop-shadow-2xl">---</div>
                 <div class="grid grid-cols-5 gap-2 mt-6 max-w-xl mx-auto">
-                    <button id="btnNotify" onclick="notifyCustomer()" class="bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-3 py-2 rounded-lg font-semibold text-sm transition" disabled>
+                    <button id="btnNotify" onclick="notifyCustomer(this)" class="bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-3 py-2 rounded-lg font-semibold text-sm transition" disabled>
                         <i class="fas fa-bell mr-2"></i>Notify
                     </button>
                     <button id="btnSkip" onclick="skipCurrent()" class="bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-3 py-2 rounded-lg font-semibold text-sm transition" disabled>
                         <i class="fas fa-forward mr-2"></i>Skip
                     </button>
-                    <button id="btnComplete" onclick="moveToNext()" class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-3 py-2 rounded-lg font-semibold text-sm transition" disabled>
+                    <button id="btnComplete" onclick="moveToNext(this)" class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-3 py-2 rounded-lg font-semibold text-sm transition" disabled>
                         <i class="fas fa-check-circle mr-2"></i>Complete
                     </button>
                     <button id="btnTransfer" onclick="openTransferModal()" class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-3 py-2 rounded-lg font-semibold text-sm transition" disabled>
                         <i class="fas fa-exchange-alt mr-2"></i>Transfer
                     </button>
-                    <button id="btnCallNext" onclick="callNext()" class="bg-white text-indigo-700 hover:bg-gray-100 disabled:bg-gray-400 disabled:text-gray-600 disabled:cursor-not-allowed px-3 py-2 rounded-lg font-semibold text-sm transition" disabled>
+                    <button id="btnCallNext" onclick="callNext(this)" class="bg-white text-indigo-700 hover:bg-gray-100 disabled:bg-gray-400 disabled:text-gray-600 disabled:cursor-not-allowed px-3 py-2 rounded-lg font-semibold text-sm transition" disabled>
                         <i class="fas fa-bell mr-2"></i>Call Next
                     </button>
                 </div>
@@ -64,6 +69,18 @@
     </div>
 </div>
 </div>
+
+    <!-- Minimized dock bar (for easy corner docking) -->
+    <div id="panelDock" class="hidden fixed bottom-4 right-4 bg-white rounded-lg shadow-md px-4 py-3 flex items-center space-x-4 z-40">
+        <div class="text-sm font-semibold text-gray-700">Counter {{ $counter->counter_number }}</div>
+        <div class="flex items-baseline space-x-2">
+            <div class="text-xs text-gray-500">Now</div>
+            <div id="dockCurrentNumber" class="text-xl font-extrabold text-gray-900">---</div>
+        </div>
+        <button type="button" onclick="toggleMinimize(false)" class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition" title="Restore">
+            <i class="fas fa-window-restore"></i>
+        </button>
+    </div>
 
 <style>
 .responsive-queue-number { font-size: 6rem; }
@@ -135,7 +152,7 @@
         <!-- Footer -->
         <div class="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3 border-t border-gray-200">
             <button onclick="closeSkipModal()" class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold transition">Cancel</button>
-            <button onclick="confirmSkip()" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold transition">
+            <button onclick="confirmSkip(this)" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold transition">
                 <i class="fas fa-forward mr-2"></i>Skip Queue
             </button>
         </div>
@@ -152,6 +169,81 @@ html, body { overflow: hidden; }
 const COUNTER_NUM = {{ $counter->counter_number }};
 let currentQueueData = null;
 let onlineCounters = [];
+
+const ACTION_COOLDOWN_SECONDS = 5;
+const buttonCooldowns = new Map();
+
+function isButtonCooling(btnEl) {
+    if (!btnEl) return false;
+    const until = buttonCooldowns.get(btnEl.id);
+    return typeof until === 'number' && Date.now() < until;
+}
+
+function getCooldownRemainingSeconds(btnEl) {
+    if (!btnEl) return 0;
+    const until = buttonCooldowns.get(btnEl.id);
+    if (typeof until !== 'number') return 0;
+    return Math.max(0, Math.ceil((until - Date.now()) / 1000));
+}
+
+function startButtonCooldown(btnEl, seconds) {
+    if (!btnEl || !btnEl.id) return;
+
+    const existing = buttonCooldowns.get(btnEl.id);
+    if (typeof existing === 'number' && Date.now() < existing) return;
+
+    const until = Date.now() + (seconds * 1000);
+    buttonCooldowns.set(btnEl.id, until);
+
+    if (!btnEl.dataset.originalHtml) {
+        btnEl.dataset.originalHtml = btnEl.innerHTML;
+    }
+
+    btnEl.disabled = true;
+
+    const tick = () => {
+        const remaining = getCooldownRemainingSeconds(btnEl);
+        if (remaining <= 0) {
+            buttonCooldowns.delete(btnEl.id);
+            if (btnEl.dataset.originalHtml) btnEl.innerHTML = btnEl.dataset.originalHtml;
+            delete btnEl.dataset.originalHtml;
+            // Let the next poll decide enabled/disabled state
+            return;
+        }
+
+        const baseHtml = btnEl.dataset.originalHtml || btnEl.innerHTML;
+        btnEl.innerHTML = `${baseHtml} <span class="ml-2 text-xs opacity-90">(${remaining}s)</span>`;
+    };
+
+    tick();
+    const timer = setInterval(() => {
+        const remaining = getCooldownRemainingSeconds(btnEl);
+        if (remaining <= 0) {
+            clearInterval(timer);
+            tick();
+            return;
+        }
+        tick();
+    }, 250);
+}
+
+function runActionWithCooldown(btnEl, actionFn, seconds = ACTION_COOLDOWN_SECONDS) {
+    if (btnEl && isButtonCooling(btnEl)) return;
+    if (btnEl) startButtonCooldown(btnEl, seconds);
+
+    return Promise.resolve()
+        .then(actionFn)
+        .catch(err => {
+            // On error, stop cooldown early so user can retry
+            if (btnEl && btnEl.id) {
+                buttonCooldowns.delete(btnEl.id);
+                if (btnEl.dataset.originalHtml) btnEl.innerHTML = btnEl.dataset.originalHtml;
+                delete btnEl.dataset.originalHtml;
+            }
+            console.error(err);
+            alert(err?.message || 'Action failed. Please try again.');
+        });
+}
 
 // Update header time display
 function updateHeaderTime() {
@@ -172,12 +264,11 @@ function updateHeaderTime() {
     document.getElementById('headerDate').textContent = dateStr;
 }
 
-// Format queue display as sequence only
-function formatDisplayQueue(queueNumber, counterNum = COUNTER_NUM) {
-    if (!queueNumber) return '';
-    const parts = queueNumber.split('-');
-    const sequence = parts[parts.length - 1];
-    return sequence;
+// Format queue display as sequence only (digits-only)
+function formatDisplayQueue(queueNumber) {
+    if (!queueNumber) return '---';
+    const parts = String(queueNumber).split('-');
+    return parts.length ? (parts[parts.length - 1] || String(queueNumber)) : String(queueNumber);
 }
 
 // Default notification sound - Train Station Lobby chime
@@ -216,20 +307,28 @@ function renderLists(data) {
     currentQueueData = data.current_queue;
     const current = data.current_queue ? formatDisplayQueue(data.current_queue.queue_number) : '---';
     document.getElementById('currentNumber').textContent = current;
+    const dockEl = document.getElementById('dockCurrentNumber');
+    if (dockEl) dockEl.textContent = current;
     
     // Store online counters for transfer
     onlineCounters = data.online_counters || [];
     
     // Enable/disable action buttons based on whether there's a current queue
     const hasCurrentQueue = !!data.current_queue;
-    document.getElementById('btnNotify').disabled = !hasCurrentQueue;
-    document.getElementById('btnSkip').disabled = !hasCurrentQueue;
-    document.getElementById('btnComplete').disabled = !hasCurrentQueue;
-    document.getElementById('btnTransfer').disabled = !hasCurrentQueue || onlineCounters.length === 0;
+    const btnNotify = document.getElementById('btnNotify');
+    const btnSkip = document.getElementById('btnSkip');
+    const btnComplete = document.getElementById('btnComplete');
+    const btnTransfer = document.getElementById('btnTransfer');
+    const btnCallNext = document.getElementById('btnCallNext');
+
+    if (btnNotify) btnNotify.disabled = !hasCurrentQueue || isButtonCooling(btnNotify);
+    if (btnSkip) btnSkip.disabled = !hasCurrentQueue || isButtonCooling(btnSkip);
+    if (btnComplete) btnComplete.disabled = !hasCurrentQueue || isButtonCooling(btnComplete);
+    if (btnTransfer) btnTransfer.disabled = !hasCurrentQueue || onlineCounters.length === 0 || isButtonCooling(btnTransfer);
     
     // Disable Call Next if no waiting queues OR if still serving current queue
     const hasWaitingQueues = data.waiting_queues && data.waiting_queues.length > 0;
-    document.getElementById('btnCallNext').disabled = !hasWaitingQueues || hasCurrentQueue;
+    if (btnCallNext) btnCallNext.disabled = !hasWaitingQueues || hasCurrentQueue || isButtonCooling(btnCallNext);
 
     // Waiting
     const waiting = document.getElementById('waitingList');
@@ -255,22 +354,83 @@ function renderLists(data) {
     });
 }
 
-// Format display as {counter}-{sequence}, e.g., 1-0001
-function formatDisplayQueue(queueNumber) {
-    if (!queueNumber) return '---';
-    const parts = String(queueNumber).split('-');
-    const suffix = parts.length ? (parts[parts.length - 1] || queueNumber) : queueNumber;
-    return `${COUNTER_NUM}-${suffix}`;
-}
 
+
+let counterFetchInFlight = false;
+let counterFetchController = null;
 function fetchData() {
-    fetch('{{ route('counter.data', ['organization_code' => request()->route('organization_code')]) }}')
+    // Prevent stacking requests when server/network is slow
+    if (counterFetchInFlight) return;
+    counterFetchInFlight = true;
+
+    try {
+        if (counterFetchController) {
+            counterFetchController.abort();
+        }
+        counterFetchController = new AbortController();
+    } catch (e) {
+        counterFetchController = null;
+    }
+
+    fetch('{{ route('counter.data', ['organization_code' => request()->route('organization_code')]) }}', {
+        cache: 'no-store',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin',
+        signal: counterFetchController ? counterFetchController.signal : undefined,
+    })
         .then(r => r.json())
-        .then(d => { if (d.success) renderLists(d); });
+        .then(d => { if (d.success) renderLists(d); })
+        .catch(err => {
+            if (err && err.name === 'AbortError') return;
+            console.error('Counter refresh failed:', err);
+        })
+        .finally(() => {
+            counterFetchInFlight = false;
+        });
 }
 
-// Increase polling interval to 2 seconds (from 1s) to reduce server load while maintaining responsiveness
-setInterval(fetchData, 2000);
+let isMinimized = false;
+
+function setMinimized(minimized) {
+    isMinimized = !!minimized;
+    const header = document.getElementById('panelHeader');
+    const main = document.getElementById('panelMain');
+    const dock = document.getElementById('panelDock');
+    const btn = document.getElementById('btnToggleMinimize');
+
+    if (isMinimized) {
+        if (header) header.classList.add('hidden');
+        if (main) main.classList.add('hidden');
+        if (dock) dock.classList.remove('hidden');
+        // Ensure modals don't block the screen while minimized
+        try { closeSkipModal(); } catch (e) {}
+        try { closeTransferModal(); } catch (e) {}
+    } else {
+        if (header) header.classList.remove('hidden');
+        if (main) main.classList.remove('hidden');
+        if (dock) dock.classList.add('hidden');
+    }
+
+    if (btn) {
+        btn.title = isMinimized ? 'Restore' : 'Minimize';
+        btn.innerHTML = isMinimized ? '<i class="fas fa-window-restore"></i>' : '<i class="fas fa-window-minimize"></i>';
+    }
+
+    try {
+        localStorage.setItem('counterPanelMinimized', isMinimized ? '1' : '0');
+    } catch (e) {}
+}
+
+function toggleMinimize(force) {
+    if (typeof force === 'boolean') {
+        setMinimized(force);
+        return;
+    }
+    setMinimized(!isMinimized);
+}
+
+// Rapid polling for real-time counter updates
+setInterval(fetchData, 1000);
 fetchData();
 
 function postJson(url, payload) {
@@ -281,21 +441,30 @@ function postJson(url, payload) {
     }).then(r => r.json());
 }
 
-function notifyCustomer() { 
-    postJson('{{ route('counter.notify', ['organization_code' => request()->route('organization_code')]) }}')
-        .then(() => {
-            playNotificationSound();
-            fetchData();
-        });
+function notifyCustomer(btnEl) { 
+    return runActionWithCooldown(btnEl, () =>
+        postJson('{{ route('counter.notify', ['organization_code' => request()->route('organization_code')]) }}')
+            .then(() => {
+                playNotificationSound();
+                fetchData();
+            })
+    );
 }
 function skipCurrent() { openSkipModal(); }
-function moveToNext() { postJson('{{ route('counter.move-next', ['organization_code' => request()->route('organization_code')]) }}').then(() => fetchData()); }
-function callNext() { 
-    postJson('{{ route('counter.call-next', ['organization_code' => request()->route('organization_code')]) }}')
-        .then(() => {
-            playNotificationSound();
-            fetchData();
-        });
+function moveToNext(btnEl) {
+    return runActionWithCooldown(btnEl, () =>
+        postJson('{{ route('counter.move-next', ['organization_code' => request()->route('organization_code')]) }}')
+            .then(() => fetchData())
+    );
+}
+function callNext(btnEl) { 
+    return runActionWithCooldown(btnEl, () =>
+        postJson('{{ route('counter.call-next', ['organization_code' => request()->route('organization_code')]) }}')
+            .then(() => {
+                playNotificationSound();
+                fetchData();
+            })
+    );
 }
 function recallQueue(id) { 
     postJson('{{ route('counter.recall', ['organization_code' => request()->route('organization_code')]) }}', { queue_id: id })
@@ -326,9 +495,12 @@ function closeSkipModal() {
     }, 300);
 }
 
-function confirmSkip() {
+function confirmSkip(btnEl) {
     closeSkipModal();
-    postJson('{{ route('counter.skip', ['organization_code' => request()->route('organization_code')]) }}').then(() => fetchData());
+    return runActionWithCooldown(btnEl, () =>
+        postJson('{{ route('counter.skip', ['organization_code' => request()->route('organization_code')]) }}')
+            .then(() => fetchData())
+    );
 }
 
 function openTransferModal() {
@@ -415,6 +587,12 @@ function confirmTransfer(toCounterId) {
 document.addEventListener('DOMContentLoaded', function() {
     updateHeaderTime();
     setInterval(updateHeaderTime, 1000);
+
+    // Restore minimized state if user left it minimized
+    try {
+        const saved = localStorage.getItem('counterPanelMinimized');
+        if (saved === '1') setMinimized(true);
+    } catch (e) {}
 });
 </script>
 @endpush

@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $organization->organization_name }} - Queue Kiosk</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -373,7 +374,7 @@
     </style>
 </head>
 <body>
-    <div class="bg-particles"></div>
+    <!-- Background particles removed for cleaner kiosk look -->
     
     <!-- Settings Button -->
     <button onclick="showSettings()" 
@@ -421,7 +422,7 @@
                     @endif
                     <h1 class="title-size font-black spacing-sm drop-shadow-2xl animate-fadeInScale" 
                         style="color: var(--text-color); text-shadow: 2px 4px 8px rgba(0,0,0,0.2);">
-                        Welcome!
+                        Queue Kiosk
                     </h1>
                     <p class="subtitle-size font-bold spacing-sm drop-shadow-lg" 
                        style="color: var(--text-color); opacity: 0.95;" data-org-name>
@@ -429,7 +430,7 @@
                     </p>
                     <div class="inline-block glass-card px-4 sm:px-8 py-2 sm:py-4 rounded-xl sm:rounded-2xl">
                         <p class="btn-text font-semibold flex items-center justify-center" style="color: var(--text-color); opacity: 0.9;">
-                            <i class="fas fa-hand-pointer mr-2 sm:mr-3 animate-bounce"></i>
+                            <i class="fas fa-hand-pointer mr-2 sm:mr-3"></i>
                             <span class="hidden sm:inline">Select a counter to get your queue number</span>
                             <span class="sm:hidden">Tap to select counter</span>
                         </p>
@@ -680,12 +681,12 @@
 
         counters.forEach(counter => {
             const button = document.createElement('button');
-            button.className = 'counter-btn relative bg-white border-2 border-gray-200 rounded-xl sm:rounded-2xl counter-card-padding text-left shadow-lg hover:shadow-2xl transition-all transform';
+            button.className = 'counter-btn relative bg-white border-2 border-gray-200 rounded-xl sm:rounded-2xl counter-card-padding text-left shadow-lg hover:shadow-xl transition-all';
             button.onclick = () => selectCounter(counter.id, counter.counter_number, counter.display_name);
             button.innerHTML = `
                 <div class="flex items-start justify-between mb-2 sm:mb-4">
                     <div class="flex items-center space-x-2 sm:space-x-3">
-                        <div class="w-10 h-10 sm:w-14 sm:h-14 rounded-lg sm:rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-base sm:text-xl font-black text-white shadow-lg">
+                        <div class="w-10 h-10 sm:w-14 sm:h-14 rounded-lg sm:rounded-xl flex items-center justify-center text-base sm:text-xl font-black text-white shadow-lg" style="background: linear-gradient(135deg, var(--accent-color), var(--primary-color));">
                             ${counter.counter_number}
                         </div>
                         <div>
@@ -743,43 +744,95 @@
     setInterval(refreshCounters, 5000);
     setInterval(refreshColorSettings, 5000);
 
+    // Queue generation optimizations
+    let isGenerating = false;
+    let csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    let csrfRefreshInFlight = null;
+
+    function setCsrfToken(token) {
+        if (!token) return;
+        csrfToken = token;
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        if (meta) meta.setAttribute('content', token);
+    }
+
+    function refreshCsrfToken() {
+        if (csrfRefreshInFlight) return csrfRefreshInFlight;
+        csrfRefreshInFlight = fetch('/refresh-csrf', {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        })
+        .then(res => res.ok ? res.json() : Promise.reject(res))
+        .then(data => {
+            if (data && data.token) setCsrfToken(data.token);
+            return csrfToken;
+        })
+        .catch(() => csrfToken)
+        .finally(() => { csrfRefreshInFlight = null; });
+        return csrfRefreshInFlight;
+    }
+
     function selectCounter(counterId, counterNumber, counterName) {
+        if (isGenerating) return;
+        isGenerating = true;
         moveToStep(2);
         document.querySelectorAll('.counter-btn').forEach(btn => btn.disabled = true);
 
-        fetch('{{ route('kiosk.generate', ['organization_code' => $companyCode]) }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            },
-            body: JSON.stringify({ counter_id: counterId })
-        })
-        .then(async response => {
-            const status = response.status;
-            let data;
+        const attemptGenerate = async (didRetry = false) => {
+            await refreshCsrfToken();
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
+
             try {
-                data = await response.json();
-            } catch (e) {
-                data = { success: false, message: `Server error (status ${status})` };
+                const response = await fetch('{{ route('kiosk.generate', ['organization_code' => $companyCode]) }}', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    signal: controller.signal,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': csrfToken
+                    },
+                    body: JSON.stringify({ counter_id: counterId })
+                });
+
+                const status = response.status;
+                let data;
+                try {
+                    data = await response.json();
+                } catch (e) {
+                    data = { success: false, message: `Server error (status ${status})` };
+                }
+
+                // Retry once on CSRF/session expiry
+                if (!response.ok && (status === 419 || status === 403) && !didRetry) {
+                    await refreshCsrfToken();
+                    return attemptGenerate(true);
+                }
+
+                if (!response.ok) {
+                    throw new Error(data.message || `Request failed with status ${status}`);
+                }
+
+                if (data.success && data.queue) {
+                    currentQueue = data.queue;
+                    showQueueDisplay(data.queue);
+                } else {
+                    throw new Error(data.message || 'Failed to generate queue number');
+                }
+            } catch (error) {
+                console.error('Generate failed:', error);
+                const msg = (error && error.name === 'AbortError')
+                    ? 'Request timed out. Please try again.'
+                    : (error.message || 'Error generating queue number. Please try again.');
+                showError(msg);
+            } finally {
+                clearTimeout(timeoutId);
             }
-            if (!response.ok) {
-                throw new Error(data.message || `Request failed with status ${status}`);
-            }
-            return data;
-        })
-        .then(data => {
-            if (data.success && data.queue) {
-                currentQueue = data.queue;
-                setTimeout(() => showQueueDisplay(data.queue), 1500);
-            } else {
-                showError(data.message || 'Failed to generate queue number');
-            }
-        })
-        .catch(error => {
-            console.error('Generate failed:', error);
-            showError(error.message || 'Error generating queue number. Please try again.');
-        });
+        };
+
+        attemptGenerate();
     }
 
     function moveToStep(stepNumber) {
@@ -820,18 +873,21 @@
         document.getElementById('queueTime').textContent = `Generated at ${timeString}`;
         
         moveToStep(3);
+        isGenerating = false;
     }
 
     function showError(message) {
         alert(message);
         document.querySelectorAll('.counter-btn').forEach(btn => btn.disabled = false);
         moveToStep(1);
+        isGenerating = false;
     }
 
     function finishAndReset() {
         currentQueue = null;
         moveToStep(1);
         document.querySelectorAll('.counter-btn').forEach(btn => btn.disabled = false);
+        isGenerating = false;
     }
 
     function showSettings() {

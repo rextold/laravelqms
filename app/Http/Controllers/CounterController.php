@@ -47,48 +47,56 @@ class CounterController extends Controller
     public function getData()
     {
         $counter = auth()->user();
-        
-        // Use cache key specific to this counter to reduce database hits
-        $cacheKey = "counter.data.{$counter->id}";
-        $cacheTTL = 3; // Cache for 3 seconds (less than polling interval)
 
-        return response()->json(
-            \Illuminate\Support\Facades\Cache::remember($cacheKey, $cacheTTL, function () use ($counter) {
-                $stats = $this->queueService->getCounterStats($counter);
-                $current = $counter->getCurrentQueue();
-                $waiting = $counter->getWaitingQueues();
-                $skipped = $counter->getSkippedQueues();
-                $onlineCounters = User::onlineCounters()
-                    ->where('id', '!=', $counter->id)
-                    ->get(['id', 'counter_number', 'display_name']);
+        $buildPayload = function () use ($counter) {
+            $stats = $this->queueService->getCounterStats($counter);
+            $current = $counter->getCurrentQueue();
+            $waiting = $counter->getWaitingQueues();
+            $skipped = $counter->getSkippedQueues();
+            $onlineCounters = User::onlineCounters()
+                ->where('id', '!=', $counter->id)
+                ->get(['id', 'counter_number', 'display_name']);
 
-                return [
-                    'success' => true,
-                    'is_online' => (bool) $counter->is_online,
-                    'stats' => [
-                        'waiting' => $stats['waiting'],
-                        'completed_today' => $stats['completed_today'],
-                    ],
-                    'current_queue' => $current ? [
-                        'id' => $current->id,
-                        'queue_number' => $current->queue_number,
-                        'status' => $current->status,
-                        'called_at' => optional($current->called_at)->toDateTimeString(),
-                        'notified_at' => optional($current->notified_at)->toDateTimeString(),
-                    ] : null,
-                    'waiting_queues' => $waiting->map(fn($q) => [
-                        'id' => $q->id,
-                        'queue_number' => $q->queue_number,
-                    ])->values(),
-                    'skipped' => $skipped->map(fn($q) => [
-                        'id' => $q->id,
-                        'queue_number' => $q->queue_number,
-                        'skipped_at' => optional($q->skipped_at)->toDateTimeString(),
-                    ])->values(),
-                    'online_counters' => $onlineCounters,
-                ];
-            })
-        );
+            return [
+                'success' => true,
+                'is_online' => (bool) $counter->is_online,
+                'stats' => [
+                    'waiting' => $stats['waiting'],
+                    'completed_today' => $stats['completed_today'],
+                ],
+                'current_queue' => $current ? [
+                    'id' => $current->id,
+                    'queue_number' => $current->queue_number,
+                    'status' => $current->status,
+                    'called_at' => optional($current->called_at)->toDateTimeString(),
+                    'notified_at' => optional($current->notified_at)->toDateTimeString(),
+                ] : null,
+                'waiting_queues' => $waiting->map(fn($q) => [
+                    'id' => $q->id,
+                    'queue_number' => $q->queue_number,
+                ])->values(),
+                'skipped' => $skipped->map(fn($q) => [
+                    'id' => $q->id,
+                    'queue_number' => $q->queue_number,
+                    'skipped_at' => optional($q->skipped_at)->toDateTimeString(),
+                ])->values(),
+                'online_counters' => $onlineCounters,
+            ];
+        };
+
+        // Database-backed cache can be slower/stale for real-time polling; only cache on fast stores.
+        $cacheStore = (string) config('cache.default');
+        if ($cacheStore !== 'database') {
+            $cacheKey = "counter.data.{$counter->id}";
+            $payload = Cache::remember($cacheKey, 1, $buildPayload);
+        } else {
+            $payload = $buildPayload();
+        }
+
+        return response()->json($payload)
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
     }
 
     public function toggleOnline(Request $request)
@@ -137,7 +145,8 @@ class CounterController extends Controller
 
         return response()->json([
             'success' => true,
-            'queue' => $queue
+            'queue' => $queue,
+            'message' => 'Completed. Press Call Next to serve the next customer.'
         ]);
     }
 

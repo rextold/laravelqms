@@ -6,6 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use App\Models\Organization;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
 class EnsureOrganizationContext
 {
@@ -38,7 +39,10 @@ class EnsureOrganizationContext
             return redirect()->to($redirectPath, 301);
         }
 
-        $organization = Organization::findByCode($organizationCode);
+        $cacheKey = 'org.active.by_code.' . $normalizedCode;
+        $organization = Cache::remember($cacheKey, 300, function () use ($normalizedCode) {
+            return Organization::findByCode($normalizedCode);
+        });
 
         if (!$organization) {
             Log::warning('Organization not found for code: ' . $organizationCode);
@@ -66,9 +70,22 @@ class EnsureOrganizationContext
         $normalizedOrgCode = strtolower($organization->organization_code ?? '');
         $organization->organization_code = $normalizedOrgCode;
 
-        // Store organization in request and session (with normalized code)
-        $request->merge(['_organization' => $organization]);
-        session(['organization' => $organization]);
+        // Store organization on the request (not in input) and keep session payload lightweight.
+        $request->attributes->set('organization', $organization);
+
+        $orgContext = [
+            'id' => $organization->id,
+            'code' => $normalizedOrgCode,
+            'name' => $organization->organization_name,
+        ];
+
+        $existing = session('organization');
+        $needsWrite = !is_array($existing)
+            || ($existing['id'] ?? null) !== $orgContext['id']
+            || ($existing['code'] ?? null) !== $orgContext['code'];
+        if ($needsWrite) {
+            session(['organization' => $orgContext]);
+        }
 
         // Public routes: allow regardless of logged-in user/org mismatch
         if ($isPublicRoute) {

@@ -50,7 +50,9 @@ class MonitorController extends Controller
     {
         $organization = Organization::where('organization_code', $request->route('organization_code'))->firstOrFail();
         
-        $onlineCounters = User::onlineCounters()->where('organization_id', $organization->id)->get();
+        $onlineCounters = User::onlineCounters()
+            ->where('organization_id', $organization->id)
+            ->get(['id', 'organization_id', 'counter_number', 'display_name', 'short_description']);
         $videoControl = VideoControl::getCurrent();
         $marquee = MarqueeSetting::getActiveForOrganization($organization->id);
 
@@ -62,9 +64,16 @@ class MonitorController extends Controller
                 'counter' => $counter->only(['id', 'counter_number', 'display_name', 'short_description']),
                 'queue' => $currentQueue ? [
                     'id' => $currentQueue->id,
-                    'queue_number' => $currentQueue->queue_number,
+                    // Display digits-only (strip any legacy prefix like 898979-1-0001)
+                    'queue_number' => (function () use ($currentQueue) {
+                        $value = (string) ($currentQueue->queue_number ?? '');
+                        $pos = strrpos($value, '-');
+                        return $pos === false ? $value : substr($value, $pos + 1);
+                    })(),
                     'status' => $currentQueue->status,
-                    'created_at' => $currentQueue->created_at,
+                    'created_at' => optional($currentQueue->created_at)->toDateTimeString(),
+                    'called_at' => optional($currentQueue->called_at)->toDateTimeString(),
+                    'notified_at' => optional($currentQueue->notified_at)->toDateTimeString(),
                 ] : null,
                 'recent_recall' => $recentRecall,
             ];
@@ -73,9 +82,11 @@ class MonitorController extends Controller
         // Get waiting queues grouped by counter for clearer display
         $waitingQueues = \App\Models\Queue::where('organization_id', $organization->id)
             ->where('status', 'waiting')
+            ->select(['id', 'queue_number', 'counter_id', 'updated_at'])
             ->with('counter:id,counter_number,display_name')
             ->orderBy('counter_id')
             ->orderBy('updated_at')
+            ->limit(200)
             ->get()
             ->groupBy('counter_id')
             ->map(function ($queues) {
@@ -85,7 +96,11 @@ class MonitorController extends Controller
                     'display_name' => $counter->display_name ?? 'Counter',
                     'queues' => $queues->take(5)->map(function ($queue) {
                         return [
-                            'queue_number' => $queue->queue_number,
+                            'queue_number' => (function () use ($queue) {
+                                $value = (string) ($queue->queue_number ?? '');
+                                $pos = strrpos($value, '-');
+                                return $pos === false ? $value : substr($value, $pos + 1);
+                            })(),
                         ];
                     })->values(),
                 ];
@@ -97,6 +112,9 @@ class MonitorController extends Controller
             'video_control' => $videoControl,
             'marquee' => $marquee,
             'waiting_queues' => $waitingQueues,
-        ]);
+        ])
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
     }
 }

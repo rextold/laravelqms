@@ -12,6 +12,15 @@ use App\Models\User;
 
 class AuthController extends Controller
 {
+    protected function putOrganizationContextInSession(Request $request, Organization $organization): void
+    {
+        $request->session()->put('organization', [
+            'id' => $organization->id,
+            'code' => strtolower($organization->organization_code ?? ''),
+            'name' => $organization->organization_name,
+        ]);
+    }
+
     public function showLogin()
     {
         // If already authenticated, send user to their dashboard
@@ -114,14 +123,7 @@ class AuthController extends Controller
                 ])->onlyInput('username');
             }
 
-            $request->session()->put('organization', $organization);
-
-            // Log resolved organization and attempt to build dashboard URL
-            Log::debug('Admin login redirect - resolved organization', [
-                'user_id' => $user->id ?? null,
-                'organization_id' => $organization->id ?? null,
-                'organization_code' => $orgCode,
-            ]);
+            $this->putOrganizationContextInSession($request, $organization);
 
             // Always send admins to their dashboard to prevent cross-role redirect loops
             try {
@@ -134,8 +136,6 @@ class AuthController extends Controller
                     'username' => 'Unable to determine dashboard URL. Please contact administrator.',
                 ])->onlyInput('username');
             }
-
-            Log::debug('Admin login redirect - redirecting to dashboard', ['user_id' => $user->id ?? null, 'url' => $url]);
 
             return redirect()->to($url);
         }
@@ -150,9 +150,10 @@ class AuthController extends Controller
             }
             // Set counter online on login
             $user->update(['is_online' => true]);
-            $request->session()->put('organization', $organization);
+            $this->putOrganizationContextInSession($request, $organization);
             // Counters go straight to their dashboard; skip intended URLs to avoid role-mismatch 403s
-            return redirect()->to(route('counter.dashboard', ['organization_code' => $organization->organization_code]));
+            $orgCode = strtolower($organization->organization_code ?? '');
+            return redirect()->to(route('counter.dashboard', ['organization_code' => $orgCode]));
         }
 
         // Fallback
