@@ -22,7 +22,8 @@
         }
         
         html, body {
-            height: 100vh;
+            height: 100%;
+            min-height: 100dvh;
             width: 100vw;
             overflow: hidden;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -221,10 +222,18 @@
         
         /* Viewport-based responsive sizing */
         .main-container {
-            height: 100vh;
+            height: 100dvh;
+            min-height: 100dvh;
             display: flex;
             flex-direction: column;
             overflow: hidden;
+        }
+
+        /* Let the grid area truly fill available height */
+        .counter-grid-height {
+            flex: 1;
+            min-height: 0;
+            max-height: none;
         }
         
         .step-header {
@@ -245,7 +254,7 @@
             .title-size { font-size: 1.5rem !important; }
             .subtitle-size { font-size: 1rem !important; }
             .section-title { font-size: 1.25rem !important; }
-            .counter-grid-height { max-height: 35vh !important; }
+            .counter-grid-height { max-height: none !important; }
             .queue-number-size { font-size: 3rem !important; }
             .step-indicator-text { font-size: 0.75rem !important; }
             .step-indicator-number { font-size: 1rem !important; }
@@ -263,7 +272,7 @@
             .title-size { font-size: 2.5rem !important; }
             .subtitle-size { font-size: 1.25rem !important; }
             .section-title { font-size: 1.5rem !important; }
-            .counter-grid-height { max-height: 40vh !important; }
+            .counter-grid-height { max-height: none !important; }
             .queue-number-size { font-size: 4rem !important; }
             .step-indicator-text { font-size: 0.875rem !important; }
             .step-indicator-number { font-size: 1.5rem !important; }
@@ -281,7 +290,7 @@
             .title-size { font-size: 3rem !important; }
             .subtitle-size { font-size: 1.5rem !important; }
             .section-title { font-size: 1.75rem !important; }
-            .counter-grid-height { max-height: 45vh !important; }
+            .counter-grid-height { max-height: none !important; }
             .queue-number-size { font-size: 5rem !important; }
             .step-indicator-text { font-size: 0.875rem !important; }
             .step-indicator-number { font-size: 1.75rem !important; }
@@ -299,7 +308,7 @@
             .title-size { font-size: 4rem !important; }
             .subtitle-size { font-size: 2rem !important; }
             .section-title { font-size: 2rem !important; }
-            .counter-grid-height { max-height: 50vh !important; }
+            .counter-grid-height { max-height: none !important; }
             .queue-number-size { font-size: 6rem !important; }
             .step-indicator-text { font-size: 1rem !important; }
             .step-indicator-number { font-size: 2rem !important; }
@@ -343,7 +352,7 @@
             .title-size { font-size: 1.25rem !important; }
             .subtitle-size { font-size: 0.875rem !important; }
             .section-title { font-size: 1rem !important; }
-            .counter-grid-height { max-height: 50vh !important; }
+            .counter-grid-height { max-height: none !important; }
             .queue-number-size { font-size: 2rem !important; }
             .step-indicator-text { font-size: 0.625rem !important; }
             .step-indicator-number { font-size: 0.875rem !important; }
@@ -440,7 +449,7 @@
                 <!-- Counters Grid -->
                 <div class="flex-1 min-h-0 flex flex-col">
                     <div class="glass-card rounded-2xl sm:rounded-3xl shadow-2xl padding-md flex-1 min-h-0 flex flex-col">
-                        <h2 class="section-title font-bold spacing-sm text-center bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent flex-shrink-0">
+                        <h2 class="section-title font-bold spacing-sm text-center flex-shrink-0" style="color: var(--primary-color);">
                             <i class="fas fa-desktop mr-2"></i>
                             <span class="hidden sm:inline">Available Service Counters</span>
                             <span class="sm:hidden">Select Counter</span>
@@ -472,10 +481,10 @@
             <div class="flex items-center justify-center h-full">
                 <div class="glass-card rounded-2xl sm:rounded-3xl shadow-2xl padding-md text-center max-w-2xl w-full">
                     <div class="spacing-md">
-                        <div class="inline-block p-6 sm:p-8 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 rounded-full spacing-sm shadow-2xl">
+                        <div class="inline-block p-6 sm:p-8 rounded-full spacing-sm shadow-2xl" style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));">
                             <i class="fas fa-spinner fa-spin text-white text-5xl sm:text-7xl"></i>
                         </div>
-                        <h2 class="section-title sm:text-4xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent spacing-sm">
+                        <h2 class="section-title sm:text-4xl font-bold spacing-sm" style="color: var(--primary-color);">
                             Processing Your Request
                         </h2>
                         <p class="btn-text text-gray-600 font-medium">Generating your queue number...</p>
@@ -493,10 +502,10 @@
             <div class="flex items-center justify-center h-full overflow-y-auto custom-scrollbar">
                 <div class="glass-card rounded-2xl sm:rounded-3xl shadow-2xl padding-md text-center max-w-3xl w-full" id="queueContent">
                     <div class="spacing-md">
-                        <div class="inline-block p-4 sm:p-6 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full spacing-sm shadow-2xl">
+                        <div class="inline-block p-4 sm:p-6 rounded-full spacing-sm shadow-2xl" style="background: linear-gradient(135deg, var(--accent-color), var(--primary-color));">
                             <i class="fas fa-check-circle text-white text-5xl sm:text-7xl"></i>
                         </div>
-                        <h2 class="section-title sm:text-5xl font-bold spacing-sm bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                        <h2 class="section-title sm:text-5xl font-bold spacing-sm" style="color: var(--accent-color);">
                             Success!
                         </h2>
                         <p class="btn-text text-gray-600 font-semibold">Your queue number is ready</p>
@@ -681,6 +690,7 @@
 
         counters.forEach(counter => {
             const button = document.createElement('button');
+            button.type = 'button';
             button.className = 'counter-btn relative bg-white border-2 border-gray-200 rounded-xl sm:rounded-2xl counter-card-padding text-left shadow-lg hover:shadow-xl transition-all';
             button.onclick = () => selectCounter(counter.id, counter.counter_number, counter.display_name);
             button.innerHTML = `
@@ -784,17 +794,20 @@
             const timeoutId = setTimeout(() => controller.abort(), 15000);
 
             try {
+                const body = new URLSearchParams();
+                body.set('counter_id', String(counterId));
+
                 const response = await fetch('{{ route('kiosk.generate', ['organization_code' => $companyCode]) }}', {
                     method: 'POST',
                     credentials: 'same-origin',
                     signal: controller.signal,
                     headers: {
-                        'Content-Type': 'application/json',
+                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
                         'Accept': 'application/json',
                         'X-Requested-With': 'XMLHttpRequest',
                         'X-CSRF-TOKEN': csrfToken
                     },
-                    body: JSON.stringify({ counter_id: counterId })
+                    body
                 });
 
                 const status = response.status;
