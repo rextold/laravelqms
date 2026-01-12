@@ -129,6 +129,11 @@ class OrganizationSettingsController extends Controller
             ]);
         }
 
+        // Update organization_logo if new logo was uploaded
+        if ($logoPath) {
+            $settings->organization_logo = $logoPath;
+        }
+        
         // Update settings using actual database column names
         $settings->organization_phone = $validated['organization_phone'] ?? null;
         $settings->organization_email = $validated['organization_email'] ?? null;
@@ -138,11 +143,6 @@ class OrganizationSettingsController extends Controller
         $settings->accent_color = $validated['accent_color'];
         $settings->text_color = $validated['text_color'];
         $settings->queue_number_digits = $validated['queue_number_digits'];
-        
-        // Update organization_logo if new logo was uploaded
-        if ($logoPath) {
-            $settings->organization_logo = $logoPath;
-        }
         
         $settings->save();
 
@@ -216,6 +216,23 @@ class OrganizationSettingsController extends Controller
             'organization_phone' => $settings->organization_phone,
             'organization_email' => $settings->organization_email,
             'organization_address' => $settings->organization_address,
+        ]);
+    }
+
+    // API endpoint for organization settings (used by monitor)
+    public function getSettingsApi(Request $request)
+    {
+        $organization_code = $request->route('organization_code') ?? $request->query('organization_code');
+        $organization = Organization::where('organization_code', $organization_code)->first();
+
+        if (!$organization) {
+            return response()->json(['error' => 'Organization not found'], 404);
+        }
+
+        $settings = $organization->setting ?? new OrganizationSetting(['organization_id' => $organization->id]);
+        return response()->json([
+            'organization' => $organization,
+            'settings' => $settings,
         ]);
     }
 }
