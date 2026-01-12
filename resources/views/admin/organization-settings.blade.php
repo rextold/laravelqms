@@ -38,67 +38,63 @@
     @endif
 
     <!-- AJAX Messages (Client-side) -->
-    document.addEventListener('DOMContentLoaded', function() {
-        var orgForm = document.getElementById('organizationSettingsForm');
-        if (!orgForm) return;
-        orgForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const formData = new FormData(this);
-            // ...existing code...
-            let didRetry = false;
-            async function submitWithCsrfRetry() {
-                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-                const response = await fetch(
-                    `/${orgCode}/admin/organization-settings`,
-                    {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': csrfToken,
-                            'Accept': 'application/json',
-                        },
-                        body: formData
-                    }
-                );
-                const data = await response.json();
-                if ((response.status === 403 || response.status === 419) && !didRetry) {
-                    // Try to refresh CSRF token and retry once
-                    const meta = document.querySelector('meta[name="csrf-token"]');
-                    if (meta) meta.setAttribute('content', '{{ csrf_token() }}');
-                    didRetry = true;
-                    return submitWithCsrfRetry();
-                }
-                return { response, data };
-            }
-            const submitBtn = this.querySelector('button[type="submit"]');
-            const originalText = submitBtn.innerHTML;
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
-            try {
-                const { response, data } = await submitWithCsrfRetry();
-                console.log('Server response:', data);
-                if (response.ok && data.success) {
-                    showAjaxMessage('success', data.message);
-                    if (window.settingsSync) {
-                        window.settingsSync.broadcastUpdate(data.settings);
-                        window.settingsSync.fetchAndApply();
-                    }
-                } else {
-                    if (data.errors) {
-                        const errorList = Object.values(data.errors).flat().join(' ');
-                        showAjaxMessage('error', errorList);
-                    } else {
-                        showAjaxMessage('error', data.message || 'Failed to update settings');
-                    }
-                }
-            } catch (error) {
-                showAjaxMessage('error', 'Network error: ' + error.message);
-                console.error('Submit error:', error);
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
-            }
-        });
-    });
+    document.getElementById('organizationSettingsForm').addEventListener('submit', async function(e) {
+
+    <!-- Main Form -->
+    <form id="organizationSettingsForm" method="POST">
+        @csrf
+        @method('PUT')
+
+        <!-- Organization Information -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="border-b border-gray-200 pb-4 mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">
+                    <i class="fas fa-building text-blue-600 mr-2"></i>Organization Information
+                </h2>
+                <p class="text-gray-600 mt-1 text-sm">Basic information about your organization</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Organization Name (Required) -->
+                <div class="md:col-span-2">
+                    <label class="block text-gray-700 font-semibold mb-2">
+                        Organization Name <span class="text-red-500">*</span>
+                    </label>
+                    <input 
+                        type="text" 
+                        name="organization_name" 
+                        id="organizationName"
+                        value="{{ old('organization_name', $organization->organization_name) }}" 
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" 
+                        required>
+                </div>
+
+                <!-- Phone Number (Optional) -->
+                <div>
+                    <label class="block text-gray-700 font-semibold mb-2">Phone Number</label>
+                    <input 
+                        type="text" 
+                        name="organization_phone" 
+                        id="organizationPhone"
+                        value="{{ old('organization_phone', $settings->organization_phone) }}" 
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                        placeholder="+1 (555) 123-4567">
+                </div>
+
+                <!-- Email Address (Optional) -->
+                <div>
+                    <label class="block text-gray-700 font-semibold mb-2">Email Address</label>
+                    <input 
+                        type="email" 
+                        name="organization_email" 
+                        id="organizationEmail"
+                        value="{{ old('organization_email', $settings->organization_email) }}" 
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                        placeholder="contact@example.com">
+                </div>
+
+                <!-- Address (Optional) -->
+                <div class="md:col-span-2">
                     <label class="block text-gray-700 font-semibold mb-2">Address</label>
                     <textarea 
                         name="organization_address" 
