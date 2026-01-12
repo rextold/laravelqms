@@ -38,6 +38,7 @@
                 <p class="text-white text-sm mb-2">NOW SERVING</p>
                 <div id="currentNumber" class="responsive-queue-number font-extrabold text-white drop-shadow-2xl">---</div>
                 <form onsubmit="return false;" autocomplete="off">
+                    @csrf
                 <div class="grid grid-cols-5 gap-2 mt-6 max-w-xl mx-auto">
                     <button type="button" id="btnNotify" onclick="return notifyCustomer(this, event);" class="bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-3 py-2 rounded-lg font-semibold text-sm transition" disabled>
                         <i class="fas fa-bell mr-2"></i>Notify
