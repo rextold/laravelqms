@@ -197,15 +197,10 @@
             width: 100%;
             min-height: 0;
             max-height: none;
-            overflow-x: hidden;
+            overflow-x: auto;
             overflow-y: hidden;
             font-size: 2.5rem;
             padding: 1.5rem 0;
-            scrollbar-width: none; /* Firefox */
-            -ms-overflow-style: none; /* IE and Edge */
-        }
-        .waiting-list::-webkit-scrollbar {
-            display: none; /* Chrome, Safari, Opera */
         }
         .waiting-list::-webkit-scrollbar {
             width: 4px;
@@ -711,8 +706,8 @@
                     </div>
                 `;
             } else {
-                // Each counter group is inline-flex, small font, single line
-                let waitingHTML = `<div style="display: inline-flex; flex-wrap: nowrap; align-items: center; gap: 2.5rem; width: 100%; overflow-x: auto;">`;
+                // Each counter group is inline-flex, small font, single line, no vertical scroll
+                let waitingHTML = `<div style="display: inline-flex; flex-wrap: nowrap; align-items: center; gap: 2.5rem; width: 100%; overflow-x: auto; overflow-y: hidden; max-height: 100%;">`;
                 waitingHTML += groups.map(group => {
                     const counterName = group.display_name || `Counter ${group.counter_number}`;
                     const queues = Array.isArray(group.queues) ? group.queues : [];
