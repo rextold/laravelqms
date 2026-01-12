@@ -282,7 +282,7 @@
                                 <span class="hidden md:inline font-medium">{{ auth()->user()->display_name ?? auth()->user()->username }}</span>
                                 <i class="fas fa-chevron-down text-sm hidden md:inline"></i>
                             </button>
-                            
+
                             <!-- Dropdown Menu -->
                             <div class="absolute right-0 mt-0 w-48 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                                 <!-- Account Settings -->
@@ -292,11 +292,11 @@
                                         <span>Account Settings</span>
                                     </a>
                                 @endif
-                                
+
                                 <!-- Logout -->
-                                <form id="logoutForm" action="{{ route('logout') }}" method="POST" class="block">
+                                <form id="logoutForm" action="{{ route('logout') }}" method="POST">
                                     @csrf
-                                    <button type="submit" class="w-full flex items-center px-4 py-3 text-gray-700 hover:bg-red-50 rounded-b-lg transition-colors" onclick="handleLogout(event)">
+                                    <button type="submit" class="w-full flex items-center px-4 py-3 text-gray-700 hover:bg-red-50 rounded-b-lg transition-colors">
                                         <i class="fas fa-sign-out-alt w-4 mr-3 text-red-600"></i>
                                         <span>Logout</span>
                                     </button>
