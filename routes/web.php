@@ -165,6 +165,11 @@ Route::prefix('{organization_code}')->middleware('organization.context')->group(
             Route::post('/move-next', [CounterController::class, 'moveToNext'])->name('move-next');
             Route::post('/transfer', [CounterController::class, 'transferQueue'])->name('transfer');
             Route::post('/notify', [CounterController::class, 'notifyCustomer'])->name('notify');
+            // Fallback for accidental GET requests to /notify
+            Route::get('/notify', function () {
+                return redirect()->to(route('counter.panel', ['organization_code' => request()->route('organization_code')]))
+                    ->with('error', 'Notify action must use POST.');
+            });
             Route::post('/skip', [CounterController::class, 'skipQueue'])->name('skip');
             Route::post('/recall', [CounterController::class, 'recallQueue'])->name('recall');
         });
