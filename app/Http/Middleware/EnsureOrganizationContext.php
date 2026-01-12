@@ -65,10 +65,6 @@ class EnsureOrganizationContext
                 break;
             }
         }
-        // Explicitly allow /counter/data by URI if route name is missing
-        if (str_contains($path, '/counter/data')) {
-            $isPublicRoute = true;
-        }
         // Explicitly allow all /kiosk and /api/settings routes by URI if route name is missing
         $path = $request->getPathInfo();
         if (str_contains($path, '/kiosk') || str_contains($path, '/api/settings')) {
