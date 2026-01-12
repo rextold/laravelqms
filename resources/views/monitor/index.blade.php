@@ -697,7 +697,7 @@
                 servingList.innerHTML = servingHTML;
             }
 
-            // Update Waiting section - grouped by counter
+            // Update Waiting section - grouped by counter, fit to one line
             if (totalWaiting === 0) {
                 waitingList.innerHTML = `
                     <div class="text-center text-gray-400 py-4">
@@ -706,20 +706,22 @@
                     </div>
                 `;
             } else {
-                // Grouped by counter name
-                let waitingHTML = groups.map(group => {
+                // Each counter group is inline-flex, small font, single line
+                let waitingHTML = `<div style="display: inline-flex; flex-wrap: nowrap; align-items: center; gap: 2.5rem; width: 100%; overflow-x: auto;">`;
+                waitingHTML += groups.map(group => {
                     const counterName = group.display_name || `Counter ${group.counter_number}`;
                     const queues = Array.isArray(group.queues) ? group.queues : [];
                     const queueNumbers = queues.map(queue =>
-                        `<span class="waiting-queue-number">${queue.queue_number}</span>`
-                    ).join(' ');
+                        `<span class=\"waiting-queue-number\" style=\"background: #f59e0b; color: #fff; border-radius: 4px; padding: 0.15em 0.5em; margin: 0 0.15em; font-size: 1.2rem;\">${queue.queue_number}</span>`
+                    ).join('');
                     return `
-                        <div style="margin: 0 1.5rem; text-align: center;">
-                            <div style="font-weight: 600; color: #f59e0b; margin-bottom: 0.5rem;">${counterName}</div>
-                            <div>${queueNumbers || '<span style="color: #bbb;">No waiting</span>'}</div>
+                        <div style=\"display: flex; flex-direction: row; align-items: center; gap: 0.5em; font-size: 1.1rem;\">
+                            <span style=\"font-weight: 600; color: #f59e0b; margin-right: 0.4em; white-space: nowrap;\">${counterName}:</span>
+                            <span>${queueNumbers || '<span style=\\"color: #bbb;\\">No waiting</span>'}</span>
                         </div>
                     `;
                 }).join('');
+                waitingHTML += `</div>`;
                 waitingList.innerHTML = waitingHTML;
             }
         }
