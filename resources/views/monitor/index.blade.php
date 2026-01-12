@@ -706,18 +706,23 @@
                     </div>
                 `;
             } else {
-                // Show all waiting queue numbers in a single line, grouped by counter
-                let waitingNumbers = [];
-                groups.forEach(group => {
+                // Grouped by counter name
+                let waitingHTML = groups.map(group => {
+                    const counterName = group.display_name || `Counter ${group.counter_number}`;
                     const queues = Array.isArray(group.queues) ? group.queues : [];
-                    queues.forEach(queue => {
-                        waitingNumbers.push(`<span class="waiting-queue-number">${queue.queue_number}</span>`);
-                    });
-                });
-                waitingList.innerHTML = waitingNumbers.length ? waitingNumbers.join('') : '';
+                    const queueNumbers = queues.map(queue =>
+                        `<span class="waiting-queue-number">${queue.queue_number}</span>`
+                    ).join(' ');
+                    return `
+                        <div style="margin: 0 1.5rem; text-align: center;">
+                            <div style="font-weight: 600; color: #f59e0b; margin-bottom: 0.5rem;">${counterName}</div>
+                            <div>${queueNumbers || '<span style="color: #bbb;">No waiting</span>'}</div>
+                        </div>
+                    `;
+                }).join('');
+                waitingList.innerHTML = waitingHTML;
             }
         }
-
         function updateVideo(videoControl) {
             const player = document.getElementById('videoPlayer');
             

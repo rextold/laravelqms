@@ -30,6 +30,16 @@ class RoleMiddleware
         if (str_starts_with($routeName, 'kiosk.') || str_contains($request->getPathInfo(), '/kiosk')) {
             return $next($request);
         }
+
+        // Allow counter routes if user is counter and organization matches
+        if (str_starts_with($routeName, 'counter.') || str_contains($request->getPathInfo(), '/counter')) {
+            $user = $request->user();
+            $org = $request->attributes->get('organization');
+            if ($userRole === 'counter' && $org && $user->organization_id == $org->id) {
+                return $next($request);
+            }
+        }
+
         if (!in_array($userRole, $allowedRoles, true)) {
             abort(403, 'Unauthorized action.');
         }
