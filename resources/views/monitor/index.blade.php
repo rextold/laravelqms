@@ -189,12 +189,18 @@
         }
         .waiting-list {
             display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-            flex: 1;
+            flex-direction: row;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
             min-height: 0;
-            max-height: 200px;
-            overflow-y: auto;
+            max-height: none;
+            overflow-x: auto;
+            overflow-y: hidden;
+            font-size: 2.5rem;
+            padding: 1.5rem 0;
         }
         .waiting-list::-webkit-scrollbar {
             width: 4px;
@@ -700,48 +706,15 @@
                     </div>
                 `;
             } else {
-                let waitingHTML = '';
-                let totalDisplayed = 0;
-                const maxDisplay = 10;
-
+                // Show all waiting queue numbers in a single line, grouped by counter
+                let waitingNumbers = [];
                 groups.forEach(group => {
-                    if (totalDisplayed >= maxDisplay) return;
-
-                    const counterName = group.display_name || group.counter_name || 'Counter';
-                    const counterNumber = group.counter_number || '?';
-
-                    // Counter header
-                    waitingHTML += `
-                        <div style="font-size: 0.7rem; color: rgba(255,255,255,0.5); font-weight: 600; margin-top: 0.5rem; padding-left: 0.25rem;">
-                            ${counterName} (Counter ${counterNumber})
-                        </div>
-                    `;
-
                     const queues = Array.isArray(group.queues) ? group.queues : [];
-                    // Queues under this counter
-                    queues.slice(0, maxDisplay - totalDisplayed).forEach(queue => {
-                        waitingHTML += `
-                            <div class="counter-card-small waiting">
-                                <div class="counter-info">
-                                    <div class="counter-info-name">${queue.queue_number}</div>
-                                    <div class="counter-info-queue">Waiting</div>
-                                </div>
-                                <i class="fas fa-clock text-yellow-500 opacity-70"></i>
-                            </div>
-                        `;
-                        totalDisplayed++;
+                    queues.forEach(queue => {
+                        waitingNumbers.push(`<span class="waiting-queue-number">${queue.queue_number}</span>`);
                     });
                 });
-
-                if (totalWaiting > maxDisplay) {
-                    waitingHTML += `
-                        <div class="counter-card-small waiting" style="justify-content: center; opacity: 0.7;">
-                            <span class="text-sm">+${totalWaiting - maxDisplay} more waiting...</span>
-                        </div>
-                    `;
-                }
-                
-                waitingList.innerHTML = waitingHTML;
+                waitingList.innerHTML = waitingNumbers.length ? waitingNumbers.join('') : '';
             }
         }
 
