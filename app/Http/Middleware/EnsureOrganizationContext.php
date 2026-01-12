@@ -69,14 +69,7 @@ class EnsureOrganizationContext
         if (!isset($path)) {
             $path = $request->getPathInfo();
         }
-        if (
-            str_contains($path, '/kiosk')
-            || preg_match('#/[a-z0-9_-]+/api/settings#i', $path)
-            || preg_match('#/[a-z0-9_-]+/monitor($|/|/data)#i', $path)
-            || str_contains($path, '/api/settings')
-            || str_contains($path, '/monitor/data')
-            || str_contains($path, '/monitor')
-        ) {
+        if (str_contains($path, '/kiosk') || str_contains($path, '/api/settings')) {
             $isPublicRoute = true;
         }
 
@@ -103,10 +96,6 @@ class EnsureOrganizationContext
 
         // Public routes: allow regardless of logged-in user/org mismatch
         if ($isPublicRoute) {
-            // Remove any user from the request/session for public monitor access
-            if (auth()->check()) {
-                auth()->logout();
-            }
             return $next($request);
         }
 
