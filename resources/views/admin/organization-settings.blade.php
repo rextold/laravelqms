@@ -41,7 +41,7 @@
     document.getElementById('organizationSettingsForm').addEventListener('submit', async function(e) {
 
     <!-- Main Form -->
-    <form id="settingsForm" method="POST">
+    <form id="organizationSettingsForm" method="POST">
         @csrf
         @method('PUT')
 
