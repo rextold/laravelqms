@@ -442,7 +442,7 @@ function getCsrfToken() {
     return metaTag ? metaTag.getAttribute('content') : '{{ csrf_token() }}';
 }
 
-function postJson(url, payload) {
+function postJson(url, payload, retry) {
     return fetch(url, {
         method: 'POST',
         headers: { 
@@ -452,7 +452,13 @@ function postJson(url, payload) {
         },
         credentials: 'same-origin',
         body: payload ? JSON.stringify(payload) : null,
-    }).then(r => {
+    }).then(async r => {
+        if (r.status === 403 && !retry) {
+            // Try to refresh CSRF token and retry once
+            const meta = document.querySelector('meta[name="csrf-token"]');
+            if (meta) meta.setAttribute('content', '{{ csrf_token() }}');
+            return postJson(url, payload, true);
+        }
         if (!r.ok) {
             return r.json().catch(() => ({ success: false, message: `HTTP ${r.status}` }))
                 .then(data => Promise.reject(new Error(data.message || `HTTP ${r.status}`)));

@@ -38,7 +38,7 @@
     @endif
 
     <!-- AJAX Messages (Client-side) -->
-    <div id="ajaxMessage"></div>
+    document.getElementById('organizationSettingsForm').addEventListener('submit', async function(e) {
 
     <!-- Main Form -->
     <form id="settingsForm" method="POST">

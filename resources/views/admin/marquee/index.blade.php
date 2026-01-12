@@ -287,7 +287,7 @@ function updatePreviewFromForm() {
     if (textCount) textCount.textContent = String(Math.min(1000, txt.length));
 }
 
-function createMarquee(event) {
+function createMarquee(event, retry) {
     event.preventDefault();
 
     setError('marqueeFormError', null);
@@ -314,6 +314,12 @@ function createMarquee(event) {
         body: JSON.stringify({ text, speed })
     })
     .then(async response => {
+        if (response.status === 403 && !retry) {
+            // Try to refresh CSRF token and retry once
+            const meta = document.querySelector('meta[name="csrf-token"]');
+            if (meta) meta.setAttribute('content', '{{ csrf_token() }}');
+            return createMarquee(event, true);
+        }
         const data = await response.json().catch(() => null);
         if (!response.ok) {
             if (data && typeof data === 'object') {
