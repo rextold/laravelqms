@@ -54,8 +54,7 @@ class EnsureOrganizationContext
         // Kiosk and Monitor routes are public and don't require authorization
         $user = auth()->user();
 
-        // Skip authorization check for public routes (kiosk, monitor, public API)
-        // Add kiosk routes to public routes to always allow
+        // Always allow kiosk and api.settings routes for public access
         $publicRoutes = ['kiosk.', 'monitor.', 'api.settings'];
         $routeName = $request->route()->getName() ?? '';
         $isPublicRoute = false;
@@ -66,8 +65,9 @@ class EnsureOrganizationContext
                 break;
             }
         }
-        // Explicitly allow all /kiosk routes by URI if route name is missing
-        if (str_contains($request->getPathInfo(), '/kiosk')) {
+        // Explicitly allow all /kiosk and /api/settings routes by URI if route name is missing
+        $path = $request->getPathInfo();
+        if (str_contains($path, '/kiosk') || str_contains($path, '/api/settings')) {
             $isPublicRoute = true;
         }
 
