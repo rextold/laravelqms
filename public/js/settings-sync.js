@@ -24,26 +24,41 @@ class SettingsSync {
         this.setupBroadcastListener();
     }
 
-    fetchSettings() {
-        fetch(this.settingsUrl)
-            .then(response => {
-                if (!response.ok) {
-                    console.warn('Failed to fetch settings, status:', response.status);
-                    return null;
+    async fetchSettings(retryCount = 0) {
+        // Warn if orgCode is 'default'
+        if (this.orgCode === 'default') {
+            console.warn('Organization code is "default". This may not be valid for API access.');
+        }
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            const response = await fetch(this.settingsUrl, {
+                method: 'GET',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken || '',
+                    'Accept': 'application/json',
+                },
+            });
+            if (response.status === 403 && retryCount < 2) {
+                // Try to refresh CSRF token and retry
+                console.warn('403 Forbidden on settings fetch, retrying...');
+                setTimeout(() => this.fetchSettings(retryCount + 1), 1000);
+                return;
+            }
+            if (!response.ok) {
+                console.warn('Failed to fetch settings, status:', response.status);
+                return;
+            }
+            const data = await response.json();
+            if (data) {
+                if (JSON.stringify(data) !== JSON.stringify(this.cachedSettings)) {
+                    this.applySettings(data);
+                    this.cachedSettings = { ...data };
+                    console.log('Settings updated:', data);
                 }
-                return response.json();
-            })
-            .then(data => {
-                if (data) {
-                    // Check if settings have actually changed before applying
-                    if (JSON.stringify(data) !== JSON.stringify(this.cachedSettings)) {
-                        this.applySettings(data);
-                        this.cachedSettings = { ...data };
-                        console.log('Settings updated:', data);
-                    }
-                }
-            })
-            .catch(error => console.warn('Settings sync error:', error.message));
+            }
+        } catch (error) {
+            console.warn('Settings sync error:', error.message);
+        }
     }
 
     applySettings(settings) {
