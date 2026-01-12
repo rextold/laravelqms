@@ -38,7 +38,7 @@
     @endif
 
     <!-- AJAX Messages (Client-side) -->
-    document.getElementById('organizationSettingsForm').addEventListener('submit', async function(e) {
+    <div id="ajaxMessage"></div>
 
     <!-- Main Form -->
     <form id="organizationSettingsForm" method="POST">
@@ -353,7 +353,7 @@ function updatePreview() {
 }
 
 // Form submission via AJAX
-document.getElementById('settingsForm').addEventListener('submit', async function(e) {
+document.getElementById('organizationSettingsForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     
     const orgCode = '{{ request()->route("organization_code") }}';
