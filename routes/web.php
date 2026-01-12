@@ -151,6 +151,11 @@ Route::prefix('{organization_code}')->middleware('organization.context')->group(
         });
         
         // Counter routes
+        // Make /counter/data public
+        Route::prefix('counter')->name('counter.')->group(function () {
+            Route::get('/data', [CounterController::class, 'getData'])->name('data');
+        });
+        // All other counter routes require role:counter
         Route::middleware('role:counter')->prefix('counter')->name('counter.')->group(function () {
             Route::get('/dashboard', [CounterController::class, 'dashboard'])->name('dashboard');
             // Counter single-frame calling view now at /counter/panel
@@ -159,7 +164,6 @@ Route::prefix('{organization_code}')->middleware('organization.context')->group(
             Route::get('/view', function () {
                 return redirect()->to(route('counter.panel', ['organization_code' => request()->route('organization_code')]));
             })->name('view');
-            Route::get('/data', [CounterController::class, 'getData'])->name('data');
             Route::post('/toggle-online', [CounterController::class, 'toggleOnline'])->name('toggle-online');
             Route::post('/call-next', [CounterController::class, 'callNext'])->name('call-next');
             Route::post('/move-next', [CounterController::class, 'moveToNext'])->name('move-next');
