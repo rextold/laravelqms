@@ -55,6 +55,7 @@ class EnsureOrganizationContext
         $user = auth()->user();
 
         // Skip authorization check for public routes (kiosk, monitor, public API)
+        // Add kiosk routes to public routes to always allow
         $publicRoutes = ['kiosk.', 'monitor.', 'api.settings'];
         $routeName = $request->route()->getName() ?? '';
         $isPublicRoute = false;
@@ -64,6 +65,10 @@ class EnsureOrganizationContext
                 $isPublicRoute = true;
                 break;
             }
+        }
+        // Explicitly allow all /kiosk routes by URI if route name is missing
+        if (str_contains($request->getPathInfo(), '/kiosk')) {
+            $isPublicRoute = true;
         }
 
         // Normalize organization_code to lowercase for routes and session storage

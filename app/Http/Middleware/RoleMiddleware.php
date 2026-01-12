@@ -25,6 +25,11 @@ class RoleMiddleware
             return $normalized === 'teller' ? 'counter' : $normalized;
         }, $roles);
 
+        // Always allow kiosk routes
+        $routeName = $request->route()->getName() ?? '';
+        if (str_starts_with($routeName, 'kiosk.') || str_contains($request->getPathInfo(), '/kiosk')) {
+            return $next($request);
+        }
         if (!in_array($userRole, $allowedRoles, true)) {
             abort(403, 'Unauthorized action.');
         }
