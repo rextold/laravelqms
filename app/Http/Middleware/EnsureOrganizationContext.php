@@ -55,7 +55,7 @@ class EnsureOrganizationContext
         $user = auth()->user();
 
         // Always allow kiosk and api.settings routes for public access
-        $publicRoutes = ['kiosk.', 'monitor.', 'api.settings'];
+        $publicRoutes = ['kiosk.', 'monitor.', 'api.settings', 'counter.data'];
         $routeName = $request->route()->getName() ?? '';
         $isPublicRoute = false;
 
@@ -64,6 +64,10 @@ class EnsureOrganizationContext
                 $isPublicRoute = true;
                 break;
             }
+        }
+        // Explicitly allow /counter/data by URI if route name is missing
+        if (str_contains($path, '/counter/data')) {
+            $isPublicRoute = true;
         }
         // Explicitly allow all /kiosk and /api/settings routes by URI if route name is missing
         $path = $request->getPathInfo();
