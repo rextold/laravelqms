@@ -69,7 +69,13 @@ class EnsureOrganizationContext
         if (!isset($path)) {
             $path = $request->getPathInfo();
         }
-        if (str_contains($path, '/kiosk') || str_contains($path, '/api/settings') || str_contains($path, '/monitor')) {
+        if (
+            str_contains($path, '/kiosk')
+            || preg_match('#/[a-z0-9_-]+/api/settings#i', $path)
+            || preg_match('#/[a-z0-9_-]+/monitor/data#i', $path)
+            || str_contains($path, '/api/settings')
+            || str_contains($path, '/monitor')
+        ) {
             $isPublicRoute = true;
         }
 
