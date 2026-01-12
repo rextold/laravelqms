@@ -331,15 +331,17 @@ function createMarquee(event, retry) {
         return data || {};
     })
     .then(data => {
-        if (data.success) {
+        if (data && typeof data === 'object' && data.success) {
             form.reset();
             document.getElementById('marqueeSpeed').value = '50';
             document.getElementById('marqueeSpeedNumber').value = '50';
             updatePreviewFromForm();
             loadMarquees();
             showToast('success', 'Marquee created successfully');
-        } else {
+        } else if (data && typeof data === 'object') {
             throw new Error(data.message || 'Failed to create marquee.');
+        } else {
+            throw new Error('Server error: invalid response. Please refresh and try again.');
         }
     })
     .catch(error => {
