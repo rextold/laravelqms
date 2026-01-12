@@ -609,6 +609,7 @@ function togglePlay() {
 function updatePlayButton() {
     const btn = document.getElementById('playBtn');
     const icon = document.getElementById('playIcon');
+    if (!btn || !icon) return;
     if (isPlaying) {
         icon.className = 'fas fa-pause text-lg';
         btn.classList.add('bg-blue-600', 'hover:bg-blue-700');
