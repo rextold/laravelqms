@@ -66,7 +66,9 @@ class EnsureOrganizationContext
             }
         }
         // Explicitly allow all /kiosk and /api/settings routes by URI if route name is missing
-        $path = $request->getPathInfo();
+        if (!isset($path)) {
+            $path = $request->getPathInfo();
+        }
         if (str_contains($path, '/kiosk') || str_contains($path, '/api/settings')) {
             $isPublicRoute = true;
         }
