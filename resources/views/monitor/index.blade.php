@@ -628,18 +628,18 @@
                 servingList.innerHTML = `
                     <div class="text-center text-gray-400 py-4">
                         <i class="fas fa-hourglass-end text-xl opacity-50"></i>
+                servingList.innerHTML = `
+                    <div class="text-center text-gray-400 py-4">
+                        <i class="fas fa-hourglass-end text-xl opacity-50"></i>
                         <p class="text-sm mt-1">No active service</p>
                     </div>
                 `;
-                previousServingState = new Map();
-            } else {
-                // Detect alert-worthy changes: new called queue, notify pressed, or recall
-                const alerts = [];
-                const nextState = new Map();
-
-                servingCounters.forEach(item => {
-                    const queue = item.queue;
-                    const queueId = queue?.id;
+                waitingList.innerHTML = `
+                    <div class="text-center text-gray-400 py-4">
+                        <i class="fas fa-inbox text-xl opacity-50"></i>
+                        <p class="text-sm mt-1">No waiting customers</p>
+                    </div>
+                `;
                     if (!queueId) return;
 
                     const queueKey = String(queueId);
@@ -736,7 +736,7 @@
                     </div>
                 `;
                 return;
-            }
+                let waitingHTML = `<div style="display: flex; flex-wrap: nowrap; align-items: center; gap: 2.5rem; width: 100%; overflow-x: hidden;">`;
 
             const videos = @json($videos);
             if (!videos || videos.length === 0) {
