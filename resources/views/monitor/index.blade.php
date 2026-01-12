@@ -197,10 +197,15 @@
             width: 100%;
             min-height: 0;
             max-height: none;
-            overflow-x: auto;
+            overflow-x: hidden;
             overflow-y: hidden;
             font-size: 2.5rem;
             padding: 1.5rem 0;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE and Edge */
+        }
+        .waiting-list::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
         }
         .waiting-list::-webkit-scrollbar {
             width: 4px;
@@ -628,18 +633,18 @@
                 servingList.innerHTML = `
                     <div class="text-center text-gray-400 py-4">
                         <i class="fas fa-hourglass-end text-xl opacity-50"></i>
-                servingList.innerHTML = `
-                    <div class="text-center text-gray-400 py-4">
-                        <i class="fas fa-hourglass-end text-xl opacity-50"></i>
                         <p class="text-sm mt-1">No active service</p>
                     </div>
                 `;
-                waitingList.innerHTML = `
-                    <div class="text-center text-gray-400 py-4">
-                        <i class="fas fa-inbox text-xl opacity-50"></i>
-                        <p class="text-sm mt-1">No waiting customers</p>
-                    </div>
-                `;
+                previousServingState = new Map();
+            } else {
+                // Detect alert-worthy changes: new called queue, notify pressed, or recall
+                const alerts = [];
+                const nextState = new Map();
+
+                servingCounters.forEach(item => {
+                    const queue = item.queue;
+                    const queueId = queue?.id;
                     if (!queueId) return;
 
                     const queueKey = String(queueId);
@@ -736,7 +741,7 @@
                     </div>
                 `;
                 return;
-                let waitingHTML = `<div style="display: flex; flex-wrap: nowrap; align-items: center; gap: 2.5rem; width: 100%; overflow-x: hidden;">`;
+            }
 
             const videos = @json($videos);
             if (!videos || videos.length === 0) {
