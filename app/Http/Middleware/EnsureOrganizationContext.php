@@ -76,6 +76,8 @@ class EnsureOrganizationContext
             || str_contains($path, '/api/settings')
             || str_contains($path, '/monitor/data')
             || str_contains($path, '/monitor')
+            || preg_match('#/[a-z0-9_-]+/kiosk/counters#i', $path)
+            || str_contains($path, '/kiosk/counters')
         ) {
             $isPublicRoute = true;
         }
