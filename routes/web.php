@@ -30,14 +30,14 @@ Route::get('/kiosk', function () {
     return response('No organization found', 404);
 });
 
-// Redirect /monitor to default organization monitor, or show fallback view if none exists
+// Redirect /monitor to default organization monitor
 Route::get('/monitor', function () {
+    // Redirect to default organization monitor
     $defaultOrg = \App\Models\Organization::first();
     if ($defaultOrg) {
         return redirect('/' . strtolower($defaultOrg->organization_code) . '/monitor');
     }
-    // Show a simple fallback monitor view if no organization exists
-    return view('monitor.fallback');
+    return response('No organization found', 404);
 });
 
 // CSRF Token Refresh Route
