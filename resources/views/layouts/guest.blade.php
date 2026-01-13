@@ -12,8 +12,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     @stack('styles')
 </head>
-<body class="bg-gray-50 min-h-screen">
-    @yield('content')
+<body class="bg-gray-50 min-h-screen">    @yield('content')
+    
+    <!-- Authentication Error Modal -->
+    @include('components.auth-error-modal')
+    
     @stack('scripts')
     
     <script>

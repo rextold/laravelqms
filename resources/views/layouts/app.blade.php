@@ -422,7 +422,8 @@
     <main>
         @yield('content')
     </main>
-    @endif
+    @endif    <!-- Authentication Error Modal -->
+    @include('components.auth-error-modal')
 
     @stack('scripts')
 </body>
