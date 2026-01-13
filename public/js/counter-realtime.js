@@ -22,11 +22,19 @@ echo.channel('organization.' + orgCode + '.counters')
     });
 
 function addCounterToDisplay(counterId) {
-    // Implement DOM logic to show counter
     // Example: fetch counter data and append to grid
+    if (document.getElementById('counter-' + counterId)) return; // Already exists
+    // Optionally fetch more info via AJAX if needed
+    const el = document.createElement('div');
+    el.id = 'counter-' + counterId;
+    el.className = 'counter-card';
+    el.innerHTML = `<div>Counter #${counterId} <span class="text-green-500">Online</span></div>`;
+    // Try to append to .monitor-grid or .kiosk-counters
+    let grid = document.querySelector('.monitor-grid') || document.querySelector('.kiosk-counters');
+    if (grid) grid.appendChild(el);
 }
 
 function removeCounterFromDisplay(counterId) {
-    // Implement DOM logic to remove counter
-    // Example: remove element from grid
+    const el = document.getElementById('counter-' + counterId);
+    if (el && el.parentNode) el.parentNode.removeChild(el);
 }

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $organization->organization_name }} - Queue Kiosk</title>
+    <script src="/js/counter-realtime.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -1178,6 +1179,5 @@
     }
     </script>
     <script src="{{ asset('js/settings-sync.js') }}"></script>
-    <script src="/js/counter-realtime.js"></script>
 </body>
 </html>
