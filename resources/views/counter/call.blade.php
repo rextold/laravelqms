@@ -650,15 +650,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (saved === '1') setMinimized(true);
     } catch (e) {}
 });
-
-window.addEventListener('unload', function() {
-    // Auto logout counter on browser/tab close
-    try {
-        var orgCode = '{{ $organization->organization_code }}';
-        var url = '/' + orgCode + '/counter/auto-logout';
-        navigator.sendBeacon(url);
-    } catch (e) {}
-});
 </script>
 @endpush
 @endsection
