@@ -130,10 +130,10 @@ Route::prefix('{organization_code}')->group(function () {
             Route::put('/videos/{video}', [VideoController::class, 'update'])->name('videos.update')->whereNumber('video');
             Route::post('/videos/order', [VideoController::class, 'updateOrder'])->name('videos.order');
             Route::post('/videos/{video}/toggle', [VideoController::class, 'toggleActive'])->name('videos.toggle')->whereNumber('video');
-            Route::delete('/videos/{video}', [VideoController::class, 'destroy'])->name('videos.destroy')->whereNumber('video');
-            Route::post('/videos/control', [VideoController::class, 'updateControl'])->name('videos.control');
+            Route::delete('/videos/{video}', [VideoController::class, 'destroy'])->name('videos.destroy')->whereNumber('video');            Route::post('/videos/control', [VideoController::class, 'updateControl'])->name('videos.control');
             Route::post('/videos/upload-bell', [VideoController::class, 'uploadBellSound'])->name('videos.upload-bell');
             Route::post('/videos/reset-bell', [VideoController::class, 'resetBellSound'])->name('videos.reset-bell');
+            Route::post('/videos/set-now-playing', [VideoController::class, 'setNowPlaying'])->name('videos.set-now-playing');
             
             // Playlist management
             Route::get('/playlist', [VideoController::class, 'getPlaylist'])->name('playlist.get');

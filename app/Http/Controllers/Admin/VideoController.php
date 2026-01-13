@@ -210,9 +210,7 @@ class VideoController extends Controller
             
             return redirect()->back()->with('error', 'Failed to delete video: ' . $e->getMessage());
         }
-    }
-
-    public function updateControl(Request $request)
+    }    public function updateControl(Request $request)
     {
         $validated = $request->validate([
             'is_playing' => 'required|boolean',
@@ -225,6 +223,36 @@ class VideoController extends Controller
         $control->update($validated);
 
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * Set specific video to play now on monitor
+     */
+    public function setNowPlaying(Request $request)
+    {
+        $validated = $request->validate([
+            'video_id' => 'required|exists:videos,id',
+        ]);
+
+        $orgCode = $request->route('organization_code');
+        $organization = \App\Models\Organization::where('organization_code', $orgCode)->firstOrFail();
+        
+        // Verify video belongs to this organization
+        $video = Video::where('id', $validated['video_id'])
+                     ->where('organization_id', $organization->id)
+                     ->firstOrFail();
+
+        $control = VideoControl::getCurrent();
+        $control->update([
+            'current_video_id' => $video->id,
+            'is_playing' => true, // Auto-start when manually selected
+        ]);
+
+        return response()->json([
+            'success' => true, 
+            'message' => 'Now playing: ' . $video->title,
+            'video' => $video
+        ]);
     }
 
     public function update(Request $request, Video $video)
@@ -456,20 +484,5 @@ class VideoController extends Controller
                 'is_sequence' => $control->is_sequence,
             ]
         ]);
-    }
-
-    /**
-     * Set now playing video
-     */
-    public function setNowPlaying(Request $request)
-    {
-        $validated = $request->validate([
-            'video_id' => 'required|exists:videos,id',
-        ]);
-
-        $control = VideoControl::getCurrent();
-        $control->update(['current_video_id' => $validated['video_id']]);
-
-        return response()->json(['success' => true, 'message' => 'Now playing updated.']);
     }
 }
