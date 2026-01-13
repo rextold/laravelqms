@@ -75,12 +75,11 @@ Route::middleware(['auth', 'role:superadmin'])->prefix('superadmin')->name('supe
 });
 
 // Organization-based routes (with organization_code prefix)
-Route::prefix('{organization_code}')->middleware('organization.context')->group(function () {
-    
-    // Kiosk (public)
+Route::prefix('{organization_code}')->middleware('organization.context')->group(function () {    // Kiosk (public)
     Route::prefix('kiosk')->name('kiosk.')->group(function () {
         Route::get('/', [KioskController::class, 'index'])->name('index');
         Route::get('/counters', [KioskController::class, 'counters'])->name('counters');
+        Route::get('/queue-status', [KioskController::class, 'getQueueStatus'])->name('queue-status');
         // Safety fallback: some clients may still navigate via GET (old cached JS/bookmarks).
         // Queue generation must remain POST-only.
         Route::get('/generate-queue', function () {

@@ -103,10 +103,8 @@ class EnsureOrganizationContext
 
         // Public routes: allow regardless of logged-in user/org mismatch
         if ($isPublicRoute) {
-            // Remove any user from the request/session for public monitor access
-            if (auth()->check()) {
-                auth()->logout();
-            }
+            // Allow public access without logging out authenticated users
+            // This prevents admin/counter users from being logged out when making AJAX calls
             return $next($request);
         }
 

@@ -39,9 +39,7 @@ class KioskController extends Controller
         }
         
         return view('kiosk.index', compact('onlineCounters', 'settings', 'companyCode', 'organization'));
-    }
-
-    public function counters(Request $request)
+    }    public function counters(Request $request)
     {
         $organization = Organization::where('organization_code', $request->route('organization_code'))->firstOrFail();
 
@@ -50,6 +48,64 @@ class KioskController extends Controller
             ->get(['id', 'display_name', 'counter_number', 'short_description']);
         return response()->json([
             'counters' => $counters,
+            'timestamp' => now()->toISOString(),
+            'status' => 'success'
+        ])
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
+    }
+
+    public function getQueueStatus(Request $request)
+    {
+        $organization = Organization::where('organization_code', $request->route('organization_code'))->firstOrFail();
+        $queueId = $request->query('queue_id');
+        
+        if (!$queueId) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Queue ID is required'
+            ], 400);
+        }
+
+        $queue = \App\Models\Queue::where('id', $queueId)
+            ->where('organization_id', $organization->id)
+            ->with('counter:id,counter_number,display_name')
+            ->first();
+
+        if (!$queue) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Queue not found'
+            ], 404);
+        }
+
+        // Get position in queue for waiting status
+        $position = null;
+        if ($queue->status === 'waiting') {
+            $position = \App\Models\Queue::where('counter_id', $queue->counter_id)
+                ->where('status', 'waiting')
+                ->where('created_at', '<', $queue->created_at)
+                ->count() + 1;
+        }
+
+        // Get estimated wait time (rough calculation: 3 minutes per person ahead)
+        $estimatedWaitMinutes = $position ? ($position - 1) * 3 : 0;
+
+        return response()->json([
+            'status' => 'success',
+            'queue' => [
+                'id' => $queue->id,
+                'queue_number' => $queue->queue_number,
+                'status' => $queue->status,
+                'position' => $position,
+                'estimated_wait_minutes' => $estimatedWaitMinutes,
+                'counter' => $queue->counter,
+                'created_at' => $queue->created_at->toISOString(),
+                'called_at' => $queue->called_at?->toISOString(),
+                'served_at' => $queue->served_at?->toISOString(),
+            ],
+            'timestamp' => now()->toISOString()
         ])
             ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
             ->header('Pragma', 'no-cache')

@@ -186,31 +186,100 @@
             gap: 0.5rem;
             flex: 1;
             min-height: 0;
-        }
-        .waiting-list {
+        }        .waiting-list {
             display: flex;
-            flex-direction: row;
-            gap: 1.5rem;
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
+            flex-direction: column;
+            gap: 0.75rem;
+            flex: 1;
             min-height: 0;
-            max-height: none;
-            overflow-x: auto;
-            overflow-y: hidden;
-            font-size: 2.5rem;
-            padding: 1.5rem 0;
+            max-height: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 0.5rem;
         }
         .waiting-list::-webkit-scrollbar {
             width: 4px;
         }
         .waiting-list::-webkit-scrollbar-track {
             background: rgba(255,255,255,0.02);
-        }
-        .waiting-list::-webkit-scrollbar-thumb {
+        }        .waiting-list::-webkit-scrollbar-thumb {
             background: rgba(255,255,255,0.15);
             border-radius: 4px;
+        }
+        
+        /* New waiting list styles */
+        .waiting-counter-group {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            border-radius: 8px;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .waiting-counter-group:hover {
+            background: rgba(255,255,255,0.05);
+            border-color: rgba(245, 158, 11, 0.3);
+        }
+        
+        .waiting-counter-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.25rem;
+            border-bottom: 1px solid rgba(245, 158, 11, 0.2);
+        }
+        
+        .waiting-counter-name {
+            font-weight: 600;
+            color: #f59e0b;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .waiting-counter-count {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+            padding: 0.2rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .waiting-queue-numbers {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            align-items: center;
+        }
+        
+        .waiting-queue-badge {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #fff;
+            padding: 0.3rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
+            transition: all 0.2s ease;
+            min-width: 2.5rem;
+            text-align: center;
+        }
+        
+        .waiting-queue-badge:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(245, 158, 11, 0.4);
+        }
+        
+        .waiting-empty-state {
+            text-align: center;
+            color: rgba(255,255,255,0.4);
+            font-size: 0.8rem;
+            font-style: italic;
+            padding: 1rem;
         }
         .counter-card-small {
             background: rgba(255,255,255,0.05);

@@ -116,11 +116,6 @@
 let isOnline = {{ $counter->is_online ? 'true' : 'false' }};
 const COUNTER_NUM = {{ $counter->counter_number }};
 
-document.getElementById('onlineForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    toggleOnline();
-});
-
 // Periodically refresh dashboard numbers without manual reload
 const REFRESH_MS = 3000;
 let refreshTimer = null;
@@ -209,6 +204,15 @@ function updateOnlineButton() {
 // Initialize Charts
 document.addEventListener('DOMContentLoaded', function() {
     startAutoRefresh();
+    
+    // Prevent form submission and use AJAX instead
+    const onlineForm = document.getElementById('onlineForm');
+    if (onlineForm) {
+        onlineForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            toggleOnline();
+        });
+    }
     // Hourly Completions Chart
     const hourlyCtx = document.getElementById('hourlyChart').getContext('2d');
     new Chart(hourlyCtx, {

@@ -10,12 +10,14 @@ class RoleMiddleware
 {
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
-        if (!$request->user()) {
+        $user = $request->user();
+        
+        if (!$user) {
             return redirect('/login');
         }
 
         // Normalize roles to be case-insensitive and allow aliases (e.g., teller == counter)
-        $userRole = strtolower(trim($request->user()->role));
+        $userRole = strtolower(trim($user->role));
         if ($userRole === 'teller') {
             $userRole = 'counter';
         }
@@ -25,23 +27,24 @@ class RoleMiddleware
             return $normalized === 'teller' ? 'counter' : $normalized;
         }, $roles);
 
-        // Always allow kiosk routes
         $routeName = $request->route()->getName() ?? '';
-        if (str_starts_with($routeName, 'kiosk.') || str_contains($request->getPathInfo(), '/kiosk')) {
+        $pathInfo = $request->getPathInfo();
+
+        // Allow public/monitored routes without role checking
+        if (str_starts_with($routeName, 'kiosk.') || str_contains($pathInfo, '/kiosk')
+            || str_starts_with($routeName, 'monitor.') || str_contains($pathInfo, '/monitor')) {
             return $next($request);
         }
 
-        // Allow counter routes if user is counter and organization matches
-        if (str_starts_with($routeName, 'counter.') || str_contains($request->getPathInfo(), '/counter')) {
-            $user = $request->user();
-            $org = $request->attributes->get('organization');
-            if ($userRole === 'counter' && $org && $user->organization_id == $org->id) {
-                return $next($request);
-            }
+        // Check if user has the required role
+        if (!in_array($userRole, $allowedRoles, true)) {
+            abort(403, 'Unauthorized: Your role (' . $user->role . ') does not have access to this resource.');
         }
 
-        if (!in_array($userRole, $allowedRoles, true)) {
-            abort(403, 'Unauthorized action.');
+        // For organization-based routes, verify user organization matches
+        $org = $request->attributes->get('organization');
+        if ($org && $user->organization_id && $user->organization_id != $org->id) {
+            abort(403, 'Unauthorized: You do not have access to this organization.');
         }
 
         return $next($request);

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Toggle Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
+        <h1 class="text-2xl font-bold mb-6 text-center">Online Toggle Test</h1>
+        
+        <div class="mb-4">
+            <h2 class="text-lg font-semibold mb-2">Test Results:</h2>
+            <div id="testResults" class="space-y-2"></div>
+        </div>
+        
+        <div class="mb-4">
+            <h2 class="text-lg font-semibold mb-2">Simulated Button:</h2>
+            <form id="testForm">
+                <button type="submit" id="testBtn" class="px-4 py-2 rounded bg-green-600 hover:bg-green-700 text-white flex items-center">
+                    <i class="fas fa-power-off mr-2"></i>
+                    <span id="testText">Go Online</span>
+                    <span id="testSpinner" class="hidden ml-2"><i class="fas fa-spinner fa-spin"></i></span>
+                </button>
+            </form>
+        </div>
+        
+        <div class="text-sm text-gray-600">
+            <p><strong>Expected Behavior:</strong></p>
+            <ul class="list-disc list-inside mt-2">
+                <li>Form submission should be prevented</li>
+                <li>Button should show spinner during "request"</li>
+                <li>Button text should toggle between "Go Online" and "Go Offline"</li>
+                <li>Button color should change (green/red)</li>
+                <li>No page reload should occur</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        let isOnline = false;
+        let testCount = 0;
+        
+        function addTestResult(message, success = true) {
+            const results = document.getElementById('testResults');
+            const div = document.createElement('div');
+            div.className = `p-2 rounded ${success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`;
+            div.innerHTML = `<i class="fas fa-${success ? 'check' : 'times'} mr-2"></i>${message}`;
+            results.appendChild(div);
+        }
+        
+        function simulateToggle() {
+            const btn = document.getElementById('testBtn');
+            const spinner = document.getElementById('testSpinner');
+            const text = document.getElementById('testText');
+            
+            btn.disabled = true;
+            spinner.classList.remove('hidden');
+            
+            // Simulate AJAX request delay
+            setTimeout(() => {
+                isOnline = !isOnline;
+                updateButton();
+                
+                btn.disabled = false;
+                spinner.classList.add('hidden');
+                
+                testCount++;
+                addTestResult(`Test ${testCount}: Toggle successful - Status: ${isOnline ? 'Online' : 'Offline'}`);
+            }, 1000);
+        }
+        
+        function updateButton() {
+            const btn = document.getElementById('testBtn');
+            const text = document.getElementById('testText');
+            const base = 'px-4 py-2 rounded text-white flex items-center';
+            
+            if (isOnline) {
+                btn.className = `${base} bg-red-600 hover:bg-red-700`;
+                text.textContent = 'Go Offline';
+            } else {
+                btn.className = `${base} bg-green-600 hover:bg-green-700`;
+                text.textContent = 'Go Online';
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('testForm');
+            
+            // This is the key fix - prevent form submission and use AJAX instead
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                addTestResult('Form submission prevented successfully');
+                simulateToggle();
+            });
+            
+            addTestResult('Test initialized - Click the button to test');
+        });
+    </script>
+</body>
+</html>

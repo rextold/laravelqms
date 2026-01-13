@@ -50,8 +50,8 @@ class AuthController extends Controller
 
         // Try to authenticate with username and password only
         if (Auth::attempt($credentials)) {
-            $request->session()->regenerate();
             $user = Auth::user();
+            
             // Verify account is active only if the column exists
             $attributes = method_exists($user, 'getAttributes') ? $user->getAttributes() : [];
             if (array_key_exists('is_active', $attributes)) {
@@ -64,6 +64,14 @@ class AuthController extends Controller
                         'username' => 'This account is inactive. Please contact the administrator.',
                     ])->onlyInput('username');
                 }
+            }
+
+            // Regenerate session AFTER auth check succeeds
+            $request->session()->regenerate();
+            
+            // Ensure CSRF token is available
+            if (!$request->session()->has('_token')) {
+                $request->session()->put('_token', csrf_token());
             }
 
             RateLimiter::clear($throttleKey);
