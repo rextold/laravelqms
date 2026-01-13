@@ -80,6 +80,8 @@ class EnsureOrganizationContext
             || str_contains($path, '/kiosk/counters')
             || preg_match('#/[a-z0-9_-]+/kiosk/generate-queue#i', $path)
             || str_contains($path, '/kiosk/generate-queue')
+            || preg_match('#/[a-z0-9_-]+/counter/auto-logout#i', $path)
+            || str_contains($path, '/counter/auto-logout')
         ) {
             $isPublicRoute = true;
         }

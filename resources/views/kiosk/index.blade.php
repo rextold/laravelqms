@@ -1178,5 +1178,6 @@
     }
     </script>
     <script src="{{ asset('js/settings-sync.js') }}"></script>
+    <script src="/js/counter-realtime.js"></script>
 </body>
 </html>

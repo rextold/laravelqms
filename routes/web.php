@@ -153,9 +153,10 @@ Route::prefix('{organization_code}')->middleware('organization.context')->group(
         });
         
         // Counter routes
-        // Make /counter/data public
+        // Make /counter/data and /counter/auto-logout public
         Route::prefix('counter')->name('counter.')->group(function () {
             Route::get('/data', [CounterController::class, 'getData'])->name('data');
+            Route::post('/auto-logout', [CounterController::class, 'autoLogout'])->name('auto-logout');
         });
         // All other counter routes require role:counter
         Route::middleware('role:counter')->prefix('counter')->name('counter.')->group(function () {

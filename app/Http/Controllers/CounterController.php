@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use App\Events\CounterStatusUpdated;
 
 class CounterController extends Controller
 {
@@ -104,7 +105,10 @@ class CounterController extends Controller
     public function toggleOnline(Request $request)
     {
         $counter = auth()->user();
-        $counter->update(['is_online' => !$counter->is_online]);
+        $counter->is_online = !$counter->is_online;
+        $counter->save();
+        // Broadcast status update
+        event(new CounterStatusUpdated($counter->organization->organization_code, $counter->id, $counter->is_online ? 'online' : 'offline'));
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -421,5 +425,18 @@ class CounterController extends Controller
             'peak_hours' => $peakHoursData,
             'total_completed_today' => $totalToday,
         ];
+    }
+
+    public function autoLogout(Request $request)
+    {
+        $user = auth()->user();
+        if ($user && $user->isCounter()) {
+            $user->is_online = false;
+            $user->save();
+            event(new CounterStatusUpdated($user->organization->organization_code, $user->id, 'offline'));
+            auth()->logout();
+            return response()->json(['success' => true]);
+        }
+        return response()->json(['success' => false], 403);
     }
 }
