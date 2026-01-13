@@ -20,116 +20,24 @@ Route::get('/', function () {
     return redirect('/login');
 });
 
-// Redirect /kiosk to default organization kiosk with better error handling
+// Redirect /kiosk to default organization kiosk
 Route::get('/kiosk', function () {
-    try {
-        // Redirect to default organization kiosk
-        $defaultOrg = \App\Models\Organization::where('is_active', true)->first();
-        if ($defaultOrg) {
-            return redirect('/' . strtolower($defaultOrg->organization_code) . '/kiosk');
-        }
-        
-        // If no active organization exists, redirect to login with error
-        return redirect('/login')->with('error', 'No active organization found. Please contact administrator.');
-    } catch (\Exception $e) {
-        \Illuminate\Support\Facades\Log::error('Error in /kiosk redirect: ' . $e->getMessage());
-        return redirect('/login')->with('error', 'System error. Please try again later.');
+    // Redirect to default organization kiosk
+    $defaultOrg = \App\Models\Organization::first();
+    if ($defaultOrg) {
+        return redirect('/' . strtolower($defaultOrg->organization_code) . '/kiosk');
     }
+    return response('No organization found', 404);
 });
 
-// Redirect /monitor to default organization monitor with better error handling
+// Redirect /monitor to default organization monitor, or show fallback view if none exists
 Route::get('/monitor', function () {
-    try {
-        $defaultOrg = \App\Models\Organization::where('is_active', true)->first();
-        if ($defaultOrg) {
-            return redirect('/' . strtolower($defaultOrg->organization_code) . '/monitor');
-        }
-        
-        // Show a simple fallback monitor view if no organization exists
-        return view('monitor.fallback');
-    } catch (\Exception $e) {
-        \Illuminate\Support\Facades\Log::error('Error in /monitor redirect: ' . $e->getMessage());
-        return view('monitor.fallback');
+    $defaultOrg = \App\Models\Organization::first();
+    if ($defaultOrg) {
+        return redirect('/' . strtolower($defaultOrg->organization_code) . '/monitor');
     }
-});
-
-// Add fallback routes for common access patterns
-Route::get('/admin', function () {
-    try {
-        $user = auth()->user();
-        if (!$user) {
-            return redirect('/login');
-        }
-        
-        if ($user->isSuperAdmin()) {
-            return redirect('/superadmin/dashboard');
-        }
-        
-        if ($user->role === 'admin' && $user->organization_id) {
-            $org = \App\Models\Organization::find($user->organization_id);
-            if ($org && $org->is_active) {
-                return redirect('/' . strtolower($org->organization_code) . '/admin/dashboard');
-            }
-        }
-        
-        return redirect('/login')->with('error', 'Unable to determine your admin dashboard.');
-    } catch (\Exception $e) {
-        \Illuminate\Support\Facades\Log::error('Error in /admin redirect: ' . $e->getMessage());
-        return redirect('/login')->with('error', 'System error. Please try again later.');
-    }
-});
-
-Route::get('/counter', function () {
-    try {
-        $user = auth()->user();
-        if (!$user) {
-            return redirect('/login');
-        }
-        
-        if ($user->role === 'counter' && $user->organization_id) {
-            $org = \App\Models\Organization::find($user->organization_id);
-            if ($org && $org->is_active) {
-                return redirect('/' . strtolower($org->organization_code) . '/counter/dashboard');
-            }
-        }
-        
-        return redirect('/login')->with('error', 'Unable to determine your counter dashboard.');
-    } catch (\Exception $e) {
-        \Illuminate\Support\Facades\Log::error('Error in /counter redirect: ' . $e->getMessage());
-        return redirect('/login')->with('error', 'System error. Please try again later.');
-    }
-});
-
-// Generic organization redirect for users who access root with auth
-Route::get('/dashboard', function () {
-    try {
-        $user = auth()->user();
-        if (!$user) {
-            return redirect('/login');
-        }
-        
-        if ($user->isSuperAdmin()) {
-            return redirect('/superadmin/dashboard');
-        }
-        
-        if ($user->organization_id) {
-            $org = \App\Models\Organization::find($user->organization_id);
-            if ($org && $org->is_active) {
-                $orgCode = strtolower($org->organization_code);
-                
-                if ($user->role === 'admin') {
-                    return redirect('/' . $orgCode . '/admin/dashboard');
-                } elseif ($user->role === 'counter') {
-                    return redirect('/' . $orgCode . '/counter/dashboard');
-                }
-            }
-        }
-        
-        return redirect('/login')->with('error', 'Unable to determine your dashboard.');
-    } catch (\Exception $e) {
-        \Illuminate\Support\Facades\Log::error('Error in /dashboard redirect: ' . $e->getMessage());
-        return redirect('/login')->with('error', 'System error. Please try again later.');
-    }
+    // Show a simple fallback monitor view if no organization exists
+    return view('monitor.fallback');
 });
 
 // CSRF Token Refresh Route
