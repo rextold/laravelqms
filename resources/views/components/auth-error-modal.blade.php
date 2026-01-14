@@ -1,4 +1,49 @@
 <!-- Authentication Error Modal Component -->
+<div id="auth-error-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 transform transition-all duration-300 scale-95 opacity-0" id="auth-error-modal-content">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-red-500 to-red-600 px-6 py-4 rounded-t-2xl">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-exclamation-triangle text-white text-xl"></i>
+                    <h3 class="text-xl font-bold text-white">Authentication Error</h3>
+                </div>
+                <button onclick="closeAuthErrorModal()" class="text-white hover:text-gray-200 text-2xl leading-none">
+                    &times;
+                </button>
+            </div>
+        </div>
+
+        <!-- Body -->
+        <div class="px-6 py-6">
+            <div class="text-center">
+                <div class="mb-4">
+                    <i class="fas fa-user-times text-red-500 text-4xl mb-3"></i>
+                </div>
+                <h4 class="text-lg font-semibold text-gray-800 mb-2">Session Expired</h4>
+                <p class="text-gray-600 mb-4">
+                    Your session has expired or you are not authenticated. Please refresh the page to continue.
+                </p>
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                    <div class="flex items-center">
+                        <i class="fas fa-info-circle text-yellow-600 mr-2"></i>
+                        <p class="text-sm text-yellow-800">
+                            This usually happens after being inactive for a while or when your login session expires.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-center space-x-3 border-t border-gray-200">
+            <button onclick="refreshPage()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition flex items-center">
+                <i class="fas fa-sync-alt mr-2"></i>
+                Refresh Page
+            </button>
+        </div>
+    </div>
+</div>
 
 <script>
 // Authentication Error Modal Functions
