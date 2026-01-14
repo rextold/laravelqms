@@ -79,7 +79,7 @@ class EnsureOrganizationContext
 
     private function isPublicRoute(string $routeName, string $path): bool
     {
-        $publicRoutes = ['kiosk.', 'monitor.', 'api.settings'];
+        $publicRoutes = ['kiosk.', 'monitor.', 'api.settings', 'counter.data'];
         
         foreach ($publicRoutes as $prefix) {
             if (str_starts_with($routeName, $prefix)) {
@@ -91,6 +91,7 @@ class EnsureOrganizationContext
             preg_match('#/[a-z0-9_-]+/kiosk(/|/counters)?#i', $path)
             || preg_match('#/[a-z0-9_-]+/api/settings#i', $path)
             || preg_match('#/[a-z0-9_-]+/monitor($|/|/data)#i', $path)
+            || preg_match('#/[a-z0-9_-]+/counter/data#i', $path)
         ) {
             return true;
         }
