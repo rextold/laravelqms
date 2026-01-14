@@ -416,49 +416,8 @@
             // Submit the form
             form.submit();
         };
-
-        // Gracefully handle visibility changes and network disconnections
-        document.addEventListener('visibilitychange', function() {
-            if (!document.hidden) {
-                console.log('Admin display restored from hidden state');
-                // Refresh CSRF token when user returns to page
-                refreshCSRFToken();
-            }
-        });
-
-        // Add online/offline event handlers for network resilience
-        window.addEventListener('online', function() {
-            console.log('Network restored, CSRF token and page state intact');
-            refreshCSRFToken();
-        });
-
-        window.addEventListener('offline', function() {
-            console.warn('Network disconnected, page will attempt automatic recovery when online');
-        });
-
-        // Prevent 403 errors from causing modals - add global fetch interceptor
-        const originalFetch = window.fetch;
-        window.fetch = function(...args) {
-            return originalFetch.apply(this, args).catch(error => {
-                console.error('Fetch error:', error);
-                throw error;
-            }).then(response => {
-                // If 403 on non-critical endpoints, suppress modals and keep page alive
-                if (response && response.status === 403) {
-                    const url = args[0] ? String(args[0]) : '';
-                    const isCritical = url.includes('/api/') && !url.includes('/admin/') && !url.includes('/monitor/');
-                    
-                    if (!isCritical) {
-                        console.warn('403 Forbidden suppressed for non-critical endpoint:', url);
-                    }
-                }
-                return response;
-            });
-        };
     </script>
     <script src="{{ asset('js/settings-sync.js') }}"></script>
-    <script src="{{ asset('js/error-handler.js') }}"></script>
-    <script src="{{ asset('js/global-resilience.js') }}"></script>
     @else
     <main>
         @yield('content')

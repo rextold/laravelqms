@@ -721,51 +721,43 @@
         });
     }
 
-        function refreshCounters() {
-            if (refreshCounters.inFlight) return;
-            refreshCounters.inFlight = true;
+    function refreshCounters() {
+        if (refreshCounters.inFlight) return;
+        refreshCounters.inFlight = true;
 
-            try {
-                if (refreshCounters.controller) {
-                    refreshCounters.controller.abort();
-                }
-                refreshCounters.controller = new AbortController();
-            } catch (e) {
-                refreshCounters.controller = null;
+        try {
+            if (refreshCounters.controller) {
+                refreshCounters.controller.abort();
             }
-
-            fetch(countersEndpoint, {
-                credentials: 'same-origin',
-                cache: 'no-store',
-                headers: { 'Accept': 'application/json' },
-                signal: refreshCounters.controller ? refreshCounters.controller.signal : undefined,
-            })
-                .then(response => {
-                    // Suppress 403 errors gracefully - don't crash the display
-                    if (response.status === 403) {
-                        console.warn('Access denied to counters endpoint (403)');
-                        return Promise.resolve({ counters: initialCounters });
-                    }
-                    return response.ok ? response.json() : Promise.reject(response);
-                })
-                .then(data => {
-                    // Update the initial counters data
-                    initialCounters.splice(0, initialCounters.length, ...(data.counters || []));
-
-                    // Only re-render if on step 1
-                    if (!document.getElementById('step1').classList.contains('hidden')) {
-                        renderCounters(data.counters || []);
-                    }
-                })
-                .catch(error => {
-                    if (error && error.name === 'AbortError') return;
-                    console.error('Refresh failed:', error);
-                    // Keep displaying existing counters on error
-                })
-                .finally(() => {
-                    refreshCounters.inFlight = false;
-                });
+            refreshCounters.controller = new AbortController();
+        } catch (e) {
+            refreshCounters.controller = null;
         }
+
+        fetch(countersEndpoint, {
+            credentials: 'same-origin',
+            cache: 'no-store',
+            headers: { 'Accept': 'application/json' },
+            signal: refreshCounters.controller ? refreshCounters.controller.signal : undefined,
+        })
+            .then(response => response.ok ? response.json() : Promise.reject(response))
+            .then(data => {
+                // Update the initial counters data
+                initialCounters.splice(0, initialCounters.length, ...(data.counters || []));
+
+                // Only re-render if on step 1
+                if (!document.getElementById('step1').classList.contains('hidden')) {
+                    renderCounters(data.counters || []);
+                }
+            })
+            .catch(error => {
+                if (error && error.name === 'AbortError') return;
+                console.error('Refresh failed:', error);
+            })
+            .finally(() => {
+                refreshCounters.inFlight = false;
+            });
+    }
 
     refreshCounters.inFlight = false;
     refreshCounters.controller = null;
@@ -773,16 +765,8 @@
     function refreshColorSettings() {
         const orgCode = '{{ $companyCode }}';
         fetch(`/${orgCode}/api/settings`)
-            .then(response => {
-                // Silently ignore 403/404 errors for color settings
-                if (response.status === 403 || response.status === 404) {
-                    console.warn(`Settings endpoint returned ${response.status} - using current colors`);
-                    return { success: false };
-                }
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
-                if (!data || !data.primary_color) return;
                 const root = document.documentElement;
                 if (data.primary_color) root.style.setProperty('--primary-color', data.primary_color);
                 if (data.secondary_color) root.style.setProperty('--secondary-color', data.secondary_color);
@@ -796,28 +780,6 @@
     renderCounters(initialCounters);
     setInterval(refreshCounters, 5000);
     setInterval(refreshColorSettings, 5000);
-
-    // Handle visibility changes - keep kiosk alive when hidden
-    document.addEventListener('visibilitychange', function() {
-        if (!document.hidden) {
-            console.log('Kiosk display restored, refreshing data...');
-            refreshCounters();
-            refreshColorSettings();
-        } else {
-            console.log('Kiosk display hidden but remaining active');
-        }
-    });
-
-    // Handle network changes gracefully
-    window.addEventListener('online', function() {
-        console.log('Network restored, resuming normal kiosk operation');
-        refreshCounters();
-        refreshColorSettings();
-    });
-
-    window.addEventListener('offline', function() {
-        console.warn('Network disconnected, but kiosk display remains operational with cached data');
-    });
 
     // Queue generation optimizations
     let isGenerating = false;
@@ -837,14 +799,7 @@
             credentials: 'same-origin',
             headers: { 'Accept': 'application/json' }
         })
-        .then(res => {
-            // Gracefully handle 403 - continue with current token
-            if (res.status === 403) {
-                console.warn('CSRF refresh returned 403, using current token');
-                return { token: csrfToken };
-            }
-            return res.ok ? res.json() : Promise.reject(res);
-        })
+        .then(res => res.ok ? res.json() : Promise.reject(res))
         .then(data => {
             if (data && data.token) setCsrfToken(data.token);
             return csrfToken;
@@ -896,13 +851,6 @@
                     return attemptGenerate(true);
                 }
 
-                // Gracefully handle 403 errors without interrupting the display
-                if (status === 403) {
-                    console.warn('Queue generation returned 403 - access denied');
-                    // Don't throw - let user try again
-                    throw new Error('Access denied. Please refresh and try again.');
-                }
-
                 if (!response.ok) {
                     throw new Error(data.message || `Request failed with status ${status}`);
                 }
@@ -915,14 +863,6 @@
                 }
             } catch (error) {
                 console.error('Generate failed:', error);
-                // Suppress 403 errors to prevent modal interruptions
-                if (error.message && error.message.includes('403')) {
-                    console.warn('Suppressing 403 error alert to prevent display interruption');
-                    moveToStep(1);
-                    isGenerating = false;
-                    document.querySelectorAll('.counter-btn').forEach(btn => btn.disabled = false);
-                    return;
-                }
                 const msg = (error && error.name === 'AbortError')
                     ? 'Request timed out. Please try again.'
                     : (error.message || 'Error generating queue number. Please try again.');
@@ -1239,6 +1179,5 @@
     }
     </script>
     <script src="{{ asset('js/settings-sync.js') }}"></script>
-    <script src="{{ asset('js/error-handler.js') }}"></script>
 </body>
 </html>

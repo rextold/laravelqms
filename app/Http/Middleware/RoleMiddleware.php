@@ -38,20 +38,12 @@ class RoleMiddleware
 
         // Check if user has the required role
         if (!in_array($userRole, $allowedRoles, true)) {
-            // For public displays (kiosk, monitor), don't abort - allow graceful degradation
-            if (str_contains($pathInfo, '/kiosk') || str_contains($pathInfo, '/monitor')) {
-                return $next($request);
-            }
             abort(403, 'Unauthorized: Your role (' . $user->role . ') does not have access to this resource.');
         }
 
         // For organization-based routes, verify user organization matches
         $org = $request->attributes->get('organization');
         if ($org && $user->organization_id && $user->organization_id != $org->id) {
-            // For public displays (kiosk, monitor), don't abort - allow graceful degradation
-            if (str_contains($pathInfo, '/kiosk') || str_contains($pathInfo, '/monitor')) {
-                return $next($request);
-            }
             abort(403, 'Unauthorized: You do not have access to this organization.');
         }
 
