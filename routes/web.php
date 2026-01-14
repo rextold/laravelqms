@@ -40,11 +40,6 @@ Route::get('/monitor', function () {
     return view('monitor.fallback');
 });
 
-// CSRF Token Refresh Route
-Route::get('/refresh-csrf', function () {
-    return response()->json(['token' => csrf_token()]);
-})->middleware('web');
-
 // Login & Auth (no company code in URL)
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -96,7 +91,9 @@ Route::prefix('{organization_code}')->group(function () {
     });
     
     // Public API for settings sync (used by Monitor, Kiosk, and Admin)
-    Route::get('/api/settings', [OrganizationSettingsController::class, 'getSettings'])->name('api.settings')->middleware(['organization.context', 'allow.public']);
+    Route::middleware(['organization.context', 'allow.public', 'throttle:1,60'])->group(function () {
+        Route::get('/api/settings', [OrganizationSettingsController::class, 'getSettings'])->name('api.settings');
+    });
 
     // Protected routes - auth middleware runs FIRST, then organization context
     Route::middleware(['auth', 'organization.context'])->group(function () {
