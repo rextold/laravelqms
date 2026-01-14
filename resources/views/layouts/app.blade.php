@@ -319,13 +319,10 @@
                                 @endif
 
                                 <!-- Logout -->
-                                <form id="logoutForm" action="{{ route('logout') }}" method="POST">
-                                    @csrf
-                                    <button type="submit" class="w-full flex items-center px-4 py-3 text-gray-700 hover:bg-red-50 rounded-b-lg transition-colors">
-                                        <i class="fas fa-sign-out-alt w-4 mr-3 text-red-600"></i>
-                                        <span>Logout</span>
-                                    </button>
-                                </form>
+                                <a href="#" onclick="handleLogout(event)" class="w-full flex items-center px-4 py-3 text-gray-700 hover:bg-red-50 rounded-b-lg transition-colors">
+                                    <i class="fas fa-sign-out-alt w-4 mr-3 text-red-600"></i>
+                                    <span>Logout</span>
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -404,27 +401,35 @@
         });
 
         // Handle logout with CSRF token refresh
-        window.handleLogout = async function(event) {
+        async function handleLogout(event) {
             event.preventDefault();
-            const form = document.getElementById('logoutForm');
             
+            let csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
             try {
                 // Refresh CSRF token before logout
                 const response = await fetch('/refresh-csrf');
                 const data = await response.json();
-                
-                // Update CSRF token in form
-                const csrfInput = form.querySelector('input[name="_token"]');
-                if (csrfInput && data.token) {
-                    csrfInput.value = data.token;
+                if (data.token) {
+                    csrfToken = data.token;
                 }
             } catch (error) {
                 console.log('CSRF refresh failed, proceeding with existing token:', error);
             }
+
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{{ route('logout') }}';
             
-            // Submit the form
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = '_token';
+            csrfInput.value = csrfToken;
+            
+            form.appendChild(csrfInput);
+            document.body.appendChild(form);
             form.submit();
-        };
+        }
     </script>
     <script src="{{ asset('js/settings-sync.js') }}"></script>
     @else
