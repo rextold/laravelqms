@@ -24,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'organization.context' => \App\Http\Middleware\EnsureOrganizationContext::class,
             'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
+            'allow.public' => \App\Http\Middleware\AllowPublicAccess::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

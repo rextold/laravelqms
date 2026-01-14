@@ -78,7 +78,7 @@ Route::middleware(['auth', 'role:superadmin'])->prefix('superadmin')->name('supe
 Route::prefix('{organization_code}')->group(function () {
     
     // Kiosk (public) - no auth or org context validation needed
-    Route::prefix('kiosk')->name('kiosk.')->middleware('organization.context')->group(function () {
+    Route::prefix('kiosk')->name('kiosk.')->middleware(['organization.context', 'allow.public'])->group(function () {
         Route::get('/', [KioskController::class, 'index'])->name('index');
         Route::get('/counters', [KioskController::class, 'counters'])->name('counters');
         // Safety fallback: some clients may still navigate via GET (old cached JS/bookmarks).
@@ -90,13 +90,13 @@ Route::prefix('{organization_code}')->group(function () {
     });
 
     // Monitor Display (public, read-only)
-    Route::prefix('monitor')->name('monitor.')->middleware('organization.context')->group(function () {
+    Route::prefix('monitor')->name('monitor.')->middleware(['organization.context', 'allow.public'])->group(function () {
         Route::get('/', [MonitorController::class, 'index'])->name('index');
         Route::get('/data', [MonitorController::class, 'getData'])->name('data');
     });
     
     // Public API for settings sync (used by Monitor, Kiosk, and Admin)
-    Route::get('/api/settings', [OrganizationSettingsController::class, 'getSettings'])->name('api.settings')->middleware('organization.context');
+    Route::get('/api/settings', [OrganizationSettingsController::class, 'getSettings'])->name('api.settings')->middleware(['organization.context', 'allow.public']);
 
     // Protected routes - auth middleware runs FIRST, then organization context
     Route::middleware(['auth', 'organization.context'])->group(function () {

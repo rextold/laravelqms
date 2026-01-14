@@ -59,7 +59,7 @@ class EnsureOrganizationContext
         $routeName = $request->route()->getName() ?? '';
         $path = $request->getPathInfo();
 
-        if ($user && !$this->isPublicRoute($routeName, $path)) {
+        if ($user && !$this->isPublicRoute($request)) {
             // SuperAdmin can access any organization; regular users must match their assigned organization
             if (!$user->isSuperAdmin() && $user->organization_id && $user->organization_id !== $organization->id) {
                 Log::warning('403 Unauthorized organization access attempt', [
@@ -77,26 +77,9 @@ class EnsureOrganizationContext
         return $next($request);
     }
 
-    private function isPublicRoute(string $routeName, string $path): bool
+    private function isPublicRoute(Request $request): bool
     {
-        $publicRoutes = ['kiosk.', 'monitor.', 'api.settings', 'counter.data'];
-        
-        foreach ($publicRoutes as $prefix) {
-            if (str_starts_with($routeName, $prefix)) {
-                return true;
-            }
-        }
-
-        if (
-            preg_match('#/[a-z0-9_-]+/kiosk(/|/counters)?#i', $path)
-            || preg_match('#/[a-z0-9_-]+/api/settings#i', $path)
-            || preg_match('#/[a-z0-9_-]+/monitor($|/|/data)#i', $path)
-            || preg_match('#/[a-z0-9_-]+/counter/data#i', $path)
-        ) {
-            return true;
-        }
-
-        return false;
+        return in_array('allow.public', $request->route()->middleware());
     }
 
     private function setOrganizationContext(Request $request, Organization $organization): void
