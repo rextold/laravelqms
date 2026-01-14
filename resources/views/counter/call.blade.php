@@ -177,49 +177,6 @@ let selectedTransferQueueId = null;
 const ACTION_COOLDOWN_SECONDS = 5;
 const buttonCooldowns = new Map();
 
-function isButtonCooling(btnEl) {
-    if (!btnEl) return false;
-    const until = buttonCooldowns.get(btnEl.id);
-    return typeof until === 'number' && Date.now() < until;
-}
-
-function getCooldownRemainingSeconds(btnEl) {
-    if (!btnEl) return 0;
-    const until = buttonCooldowns.get(btnEl.id);
-    if (typeof until !== 'number') return 0;
-    return Math.max(0, Math.ceil((until - Date.now()) / 1000));
-}
-
-function startButtonCooldown(btnEl, seconds) {
-    if (!btnEl || !btnEl.id) return;
-
-    const existing = buttonCooldowns.get(btnEl.id);
-    if (typeof existing === 'number' && Date.now() < existing) return;
-
-    const until = Date.now() + (seconds * 1000);
-    buttonCooldowns.set(btnEl.id, until);
-
-    if (!btnEl.dataset.originalHtml) {
-        btnEl.dataset.originalHtml = btnEl.innerHTML;
-    }
-
-    btnEl.disabled = true;
-
-    const tick = () => {
-        const remaining = getCooldownRemainingSeconds(btnEl);
-        if (remaining <= 0) {
-            buttonCooldowns.delete(btnEl.id);
-            if (btnEl.dataset.originalHtml) btnEl.innerHTML = btnEl.dataset.originalHtml;
-            delete btnEl.dataset.originalHtml;
-            // Let the next poll decide enabled/disabled state
-            return;
-        }
-
-        const baseHtml = btnEl.dataset.originalHtml || btnEl.innerHTML;
-        btnEl.innerHTML = `${baseHtml} <span class="ml-2 text-xs opacity-90">(${remaining}s)</span>`;
-    };
-
-    tick();
     const timer = setInterval(() => {
         const remaining = getCooldownRemainingSeconds(btnEl);
         if (remaining <= 0) {
