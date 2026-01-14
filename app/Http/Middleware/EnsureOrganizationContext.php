@@ -54,10 +54,12 @@ class EnsureOrganizationContext
         // Set organization context for all routes
         $this->setOrganizationContext($request, $organization);
 
-        // For protected routes with authenticated users, verify organization access
+        // For authenticated users, verify organization access unless it's a public route
         $user = auth()->user();
-        
-        if ($user) {
+        $routeName = $request->route()->getName() ?? '';
+        $path = $request->getPathInfo();
+
+        if ($user && !$this->isPublicRoute($routeName, $path)) {
             // SuperAdmin can access any organization; regular users must match their assigned organization
             if (!$user->isSuperAdmin() && $user->organization_id && $user->organization_id !== $organization->id) {
                 Log::warning('403 Unauthorized organization access attempt', [
