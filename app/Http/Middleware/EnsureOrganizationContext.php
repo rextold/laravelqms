@@ -58,6 +58,12 @@ class EnsureOrganizationContext
         $user = auth()->user();
         
         if ($user) {
+            // Public routes like Kiosk and Monitor do not require this check
+            $routeName = $request->route()->getName();
+            if ($this->isPublicRoute($routeName, $request->path())) {
+                return $next($request);
+            }
+
             // SuperAdmin can access any organization; regular users must match their assigned organization
             if (!$user->isSuperAdmin() && $user->organization_id && $user->organization_id !== $organization->id) {
                 Log::warning('403 Unauthorized organization access attempt', [
