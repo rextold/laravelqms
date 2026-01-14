@@ -199,27 +199,21 @@ class OrganizationSettingsController extends Controller
     public function getSettings($organization_code)
     {
         $organization = Organization::where('organization_code', $organization_code)->firstOrFail();
-        
-        $settings = OrganizationSetting::where('organization_id', $organization->id)->first();
-        
-        if (!$settings) {
-            return response()->json(['error' => 'Settings not found'], 404);
-        }
+        $settings = $organization->setting ?? new OrganizationSetting();
 
         return response()->json([
             'organization_name' => $organization->organization_name,
+            'organization_logo' => $settings->organization_logo ? asset('storage/' . $settings->organization_logo) : null,
             'primary_color' => $settings->primary_color,
             'secondary_color' => $settings->secondary_color,
             'accent_color' => $settings->accent_color,
             'text_color' => $settings->text_color,
-            'organization_logo' => $settings->organization_logo ? asset('storage/' . $settings->organization_logo) : null,
-            'organization_phone' => $settings->organization_phone,
-            'organization_email' => $settings->organization_email,
-            'organization_address' => $settings->organization_address,
         ]);
     }
 
-    // API endpoint for organization settings (used by monitor)
+    /**
+     * Get organization settings as JSON for admin panel (more detailed)
+     */
     public function getSettingsApi(Request $request)
     {
         $organization_code = $request->route('organization_code') ?? $request->query('organization_code');
