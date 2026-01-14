@@ -155,7 +155,7 @@ Route::prefix('{organization_code}')->group(function () {
         // Counter routes
         // Make /counter/data public
         Route::prefix('counter')->name('counter.')->group(function () {
-            Route::get('/data', [CounterController::class, 'getData'])->name('data');
+            Route::get('/data', [CounterController::class, 'getData'])->name('data')->middleware('allow.public');
         });
         // All other counter routes require role:counter
         Route::middleware('role:counter')->prefix('counter')->name('counter.')->group(function () {
