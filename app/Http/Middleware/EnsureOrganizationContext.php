@@ -88,7 +88,7 @@ class EnsureOrganizationContext
         }
 
         if (
-            preg_match('#/[a-z0-9_-]+/kiosk#i', $path)
+            preg_match('#/[a-z0-9_-]+/kiosk(/|/counters)?#i', $path)
             || preg_match('#/[a-z0-9_-]+/api/settings#i', $path)
             || preg_match('#/[a-z0-9_-]+/monitor($|/|/data)#i', $path)
         ) {
