@@ -382,8 +382,21 @@ function fetchData() {
         credentials: 'same-origin',
         signal: counterFetchController ? counterFetchController.signal : undefined,
     })
-        .then(r => r.json())
-        .then(d => { if (d.success) renderLists(d); })
+        .then(r => {
+            // Gracefully handle 403 errors - display stays alive
+            if (r.status === 403) {
+                console.warn('Counter data returned 403 - access denied');
+                return { success: false, message: 'Access denied' };
+            }
+            return r.json();
+        })
+        .then(d => { 
+            if (d && d.success) {
+                renderLists(d);
+            } else if (d && d.status === 403) {
+                console.warn('Suppressing 403 error for counter display');
+            }
+        })
         .catch(err => {
             if (err && err.name === 'AbortError') return;
             console.error('Counter refresh failed:', err);
@@ -459,6 +472,11 @@ function postJson(url, payload, retry) {
             if (meta) meta.setAttribute('content', '{{ csrf_token() }}');
             return postJson(url, payload, true);
         }
+        // Suppress 403 errors to prevent display interruption
+        if (r.status === 403) {
+            console.warn('Action returned 403 - suppressing error to keep display alive');
+            return { success: false, message: 'Access denied', suppressed: true };
+        }
         if (!r.ok) {
             return r.json().catch(() => ({ success: false, message: `HTTP ${r.status}` }))
                 .then(data => Promise.reject(new Error(data.message || `HTTP ${r.status}`)));
@@ -472,6 +490,12 @@ function notifyCustomer(btnEl, event) {
     return runActionWithCooldown(btnEl, () =>
         postJson('{{ route('counter.notify', ['organization_code' => request()->route('organization_code')]) }}')
             .then((data) => {
+                // Suppress 403 errors silently
+                if (data?.suppressed) {
+                    console.warn('Suppressing 403 error alert');
+                    fetchData();
+                    return;
+                }
                 if (data && data.success) {
                     playNotificationSound();
                     fetchData();
@@ -481,7 +505,6 @@ function notifyCustomer(btnEl, event) {
             })
             .catch((err) => {
                 console.error('Notify error:', err);
-                console.log('Notify error object:', err);
                 alert('Failed to notify customer: ' + (err.message || 'Unknown error'));
                 fetchData();
             })
@@ -594,7 +617,6 @@ function closeTransferModal() {
 
 function confirmTransfer(toCounterId) {
     if (!selectedTransferQueueId) {
-        alert('No queue to transfer');
         closeTransferModal();
         return;
     }
@@ -614,6 +636,11 @@ function confirmTransfer(toCounterId) {
         })
     })
     .then(response => {
+        // Gracefully handle 403 errors without showing alerts
+        if (response.status === 403) {
+            console.warn('Transfer returned 403 - suppressing alert');
+            return { success: false, suppressed: true };
+        }
         if (!response.ok) {
             return response.json().then(data => {
                 throw new Error(data.message || `HTTP ${response.status}`);
@@ -622,18 +649,24 @@ function confirmTransfer(toCounterId) {
         return response.json();
     })
     .then(data => {
+        if (data && data.suppressed) {
+            console.warn('Suppressing transfer error alert');
+            selectedTransferQueueId = null;
+            fetchData();
+            return;
+        }
         if (data.success) {
             selectedTransferQueueId = null;
             fetchData();
         } else {
-            alert('Transfer failed: ' + (data.message || 'Unknown error'));
+            console.warn('Transfer failed: ' + (data.message || 'Unknown error'));
             selectedTransferQueueId = null;
             fetchData();
         }
     })
     .catch(err => {
         console.error('Transfer error:', err);
-        alert('Transfer failed: ' + err.message);
+        console.warn('Suppressing transfer error alert to keep display alive');
         selectedTransferQueueId = null;
         fetchData();
     });
@@ -651,5 +684,6 @@ document.addEventListener('DOMContentLoaded', function() {
     } catch (e) {}
 });
 </script>
+<script src="{{ asset('js/error-handler.js') }}"></script>
 @endpush
 @endsection

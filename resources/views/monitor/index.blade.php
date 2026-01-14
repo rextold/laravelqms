@@ -644,12 +644,22 @@
                 headers: { 'Accept': 'application/json' },
                 signal: monitorFetchController ? monitorFetchController.signal : undefined,
             })
-                .then(response => response.json())
+                .then(response => {
+                    // Gracefully handle 403 errors - display stays alive without crashing
+                    if (response.status === 403) {
+                        console.warn('Monitor data returned 403 - access denied, keeping display alive');
+                        return { success: false, message: 'Access denied' };
+                    }
+                    return response.json();
+                })
                 .then(data => {
-                    updateCounters(data.counters, data.waiting_queues);
-                    updateVideo(data.video_control);
-                    if (data.marquee) {
-                        updateMarquee(data.marquee);
+                    // Only update if we have valid data, otherwise keep showing previous state
+                    if (data && data.counters) {
+                        updateCounters(data.counters, data.waiting_queues);
+                        updateVideo(data.video_control);
+                        if (data.marquee) {
+                            updateMarquee(data.marquee);
+                        }
                     }
                     lastDataUpdate = Date.now();
                 })
@@ -873,8 +883,16 @@
         // Refresh color settings in real-time
         function updateColorSettings() {
             fetch(`/${orgCode}/admin/organization-settings/api/get`)
-                .then(response => response.json())
+                .then(response => {
+                    // Silently ignore 403 errors - display should never crash
+                    if (response.status === 403 || response.status === 404) {
+                        console.warn(`Settings endpoint returned ${response.status} - using current colors`);
+                        return { success: false };
+                    }
+                    return response.json();
+                })
                 .then(data => {
+                    if (!data || !data.primary_color) return;
                     const root = document.documentElement;
                     if (data.primary_color) root.style.setProperty('--primary', data.primary_color);
                     if (data.secondary_color) root.style.setProperty('--secondary', data.secondary_color);
@@ -896,7 +914,7 @@
         // Prevent sleep/screensaver and track visibility
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
-                console.log('Monitor hidden');
+                console.log('Monitor hidden but remaining active in background');
             } else {
                 console.log('Monitor visible, refreshing...');
                 refreshMonitorData();
@@ -910,7 +928,37 @@
                 navigator.wakeLock?.request('screen').catch(() => {});
             }
         }, 5000);
+
+        // Handle network changes gracefully
+        window.addEventListener('online', function() {
+            console.log('Network restored, monitor resuming normal operation');
+            refreshMonitorData();
+            updateColorSettings();
+        });
+
+        window.addEventListener('offline', function() {
+            console.warn('Network disconnected, but monitor display remains operational with cached data');
+        });
+
+        // Prevent 403 errors from displaying alerts on monitor
+        const originalFetch = window.fetch;
+        window.fetch = function(...args) {
+            return originalFetch.apply(this, args)
+                .then(response => {
+                    // Never throw or alert on 403 for monitor - keep display alive
+                    if (response.status === 403) {
+                        console.warn('Monitor 403 suppressed - keeping display alive');
+                    }
+                    return response;
+                })
+                .catch(error => {
+                    console.error('Monitor fetch error:', error);
+                    // Continue with cached data on network errors
+                    return { ok: false, status: 0 };
+                });
+        };
     </script>
     <script src="{{ asset('js/settings-sync.js') }}"></script>
+    <script src="{{ asset('js/error-handler.js') }}"></script>
 </body>
 </html>
