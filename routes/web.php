@@ -90,11 +90,6 @@ Route::prefix('{organization_code}')->group(function () {
         Route::get('/data', [MonitorController::class, 'getData'])->name('data');
     });
     
-    // Public API for settings sync (used by Monitor, Kiosk, and Admin)
-    Route::middleware(['organization.context', 'allow.public', 'throttle:1,60'])->group(function () {
-        Route::get('/api/settings', [OrganizationSettingsController::class, 'getSettings'])->name('api.settings');
-    });
-
     // Protected routes - auth middleware runs FIRST, then organization context
     Route::middleware(['auth', 'organization.context'])->group(function () {
         
