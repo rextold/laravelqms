@@ -61,11 +61,13 @@ class Organization extends Model
     }
 
     /**
-     * Find organization by code
+     * Find organization by code (case-insensitive)
      */
     public static function findByCode($code)
     {
-        return self::where('organization_code', $code)->where('is_active', true)->first();
+        return self::whereRaw('LOWER(organization_code) = ?', [strtolower($code)])
+                   ->where('is_active', true)
+                   ->first();
     }
 
     /**
