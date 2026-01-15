@@ -383,6 +383,19 @@ class CounterController extends Controller
         }
         $counter = auth()->user();
 
+        // Enhanced debug logging for recall ownership validation
+        \Log::info('Recall queue ownership check', [
+            'queue_id' => $queue->id,
+            'queue_number' => $queue->queue_number,
+            'queue_counter_id' => $queue->counter_id,
+            'queue_status' => $queue->status,
+            'requesting_counter_id' => $counter->id,
+            'requesting_counter_username' => $counter->username,
+            'requesting_counter_number' => $counter->counter_number,
+            'requesting_counter_role' => $counter->role,
+            'organization_match' => $counter->organization_id === $queue->organization_id
+        ]);
+
         // Enhanced ownership validation for recall
         $hasOwnership = $this->validateQueueOwnership($queue, $counter, 'recall');
         if (!$hasOwnership['valid']) {
@@ -392,7 +405,8 @@ class CounterController extends Controller
                 'current_counter_id' => $queue->counter_id,
                 'requesting_counter_id' => $counter->id,
                 'requesting_counter' => $counter->username,
-                'reason' => $hasOwnership['reason']
+                'reason' => $hasOwnership['reason'],
+                'message' => $hasOwnership['message']
             ]);
             
             return response()->json([
