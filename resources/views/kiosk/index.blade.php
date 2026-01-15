@@ -783,7 +783,6 @@
 
     // Queue generation optimizations
     let isGenerating = false;
-    let csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
 
 
@@ -798,20 +797,14 @@
             const timeoutId = setTimeout(() => controller.abort(), 15000);
 
             try {
-                const body = new URLSearchParams();
-                body.set('counter_id', String(counterId));
-
-                const response = await fetch('{{ route('kiosk.generate', ['organization_code' => $companyCode]) }}', {
-                    method: 'POST',
+                const response = await fetch(`{{ route('kiosk.generate', ['organization_code' => $companyCode]) }}?counter_id=${counterId}`, {
+                    method: 'GET',
                     credentials: 'same-origin',
                     signal: controller.signal,
                     headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
                         'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': csrfToken
-                    },
-                    body
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
                 });
 
                 const status = response.status;
