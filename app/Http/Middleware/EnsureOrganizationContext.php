@@ -60,7 +60,6 @@ class EnsureOrganizationContext
         $path = $request->getPathInfo();
 
         if ($user && !$this->isPublicRoute($request)) {
-            // SuperAdmin can access any organization; regular users must match their assigned organization
             if (!$user->isSuperAdmin() && $user->organization_id && $user->organization_id !== $organization->id) {
                 Log::warning('403 Unauthorized organization access attempt', [
                     'user_id' => $user->id,

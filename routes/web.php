@@ -91,7 +91,7 @@ Route::prefix('{organization_code}')->group(function () {
     });
     
     // Protected routes - auth middleware runs FIRST, then organization context
-    Route::middleware(['auth', 'organization.context'])->group(function () {
+    Route::middleware(['organization.context'])->group(function () {
         
         // Account Settings (for admin and counter users)
         Route::get('/account/settings', [AccountController::class, 'settings'])->name('account.settings');
