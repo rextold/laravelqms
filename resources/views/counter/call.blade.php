@@ -21,11 +21,6 @@
                     <div class="text-right">
                         <div class="text-lg font-semibold text-gray-700" id="headerTime"></div>
                         <div class="text-xs text-gray-500" id="headerDate"></div>
-                        @guest
-                        <div class="text-xs text-orange-600 font-semibold mt-1">
-                            <i class="fas fa-eye mr-1"></i>Read-Only Mode
-                        </div>
-                        @endguest
                     </div>
                     <button id="btnToggleMinimize" type="button" onclick="toggleMinimize()" class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition" title="Minimize">
                         <i class="fas fa-window-minimize"></i>
@@ -329,15 +324,6 @@ function renderLists(data) {
     const btnTransfer = document.getElementById('btnTransfer');
     const btnCallNext = document.getElementById('btnCallNext');
 
-    @guest
-    // Disable all buttons for unauthenticated users (read-only mode)
-    if (btnNotify) btnNotify.disabled = true;
-    if (btnSkip) btnSkip.disabled = true;
-    if (btnComplete) btnComplete.disabled = true;
-    if (btnTransfer) btnTransfer.disabled = true;
-    if (btnCallNext) btnCallNext.disabled = true;
-    @else
-    // Normal authenticated behavior
     if (btnNotify) btnNotify.disabled = !hasCurrentQueue || isButtonCooling(btnNotify);
     if (btnSkip) btnSkip.disabled = !hasCurrentQueue || isButtonCooling(btnSkip);
     if (btnComplete) btnComplete.disabled = !hasCurrentQueue || isButtonCooling(btnComplete);
@@ -346,7 +332,6 @@ function renderLists(data) {
     // Disable Call Next if no waiting queues OR if still serving current queue
     const hasWaitingQueues = data.waiting_queues && data.waiting_queues.length > 0;
     if (btnCallNext) btnCallNext.disabled = !hasWaitingQueues || hasCurrentQueue || isButtonCooling(btnCallNext);
-    @endguest
 
     // Waiting
     const waiting = document.getElementById('waitingList');
@@ -390,13 +375,7 @@ function fetchData() {
         counterFetchController = null;
     }
 
-    // Add counter parameter for unauthenticated access
-    let url = '{{ route('counter.data', ['organization_code' => request()->route('organization_code')]) }}';
-    @guest
-    url += '?counter=' + COUNTER_NUM;
-    @endguest
-
-    fetch(url, {
+    fetch('{{ route('counter.data', ['organization_code' => request()->route('organization_code')]) }}', {
         cache: 'no-store',
         headers: { 'Accept': 'application/json' },
         credentials: 'same-origin',
