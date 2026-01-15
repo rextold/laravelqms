@@ -797,7 +797,14 @@
             const timeoutId = setTimeout(() => controller.abort(), 15000);
 
             try {
-                const response = await fetch(`{{ route('kiosk.generate', ['organization_code' => $companyCode]) }}?counter_id=${counterId}`, {
+                const response = await fetch(`{{ route('kiosk.generate', ['organization_code' => $companyCode]) }}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({ counter_id: counterId }),
                     method: 'GET',
                     credentials: 'same-origin',
                     signal: controller.signal,
