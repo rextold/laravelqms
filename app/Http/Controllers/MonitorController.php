@@ -104,8 +104,22 @@ class MonitorController extends Controller
                         ];
                     })->values(),
                 ];
-            })
-            ->values();
+            });
+
+        // Add online counters that don't have waiting queues
+        $onlineCountersWithoutQueues = $onlineCounters->filter(function ($counter) use ($waitingQueues) {
+            return !$waitingQueues->has($counter->id);
+        });
+
+        foreach ($onlineCountersWithoutQueues as $counter) {
+            $waitingQueues->put($counter->id, [
+                'counter_number' => $counter->counter_number,
+                'display_name' => $counter->display_name ?? 'Counter',
+                'queues' => [], // Empty queues array for online counters without waiting queues
+            ]);
+        }
+
+        $waitingQueues = $waitingQueues->values();
 
         return response()->json([
             'counters' => $counterQueues,
