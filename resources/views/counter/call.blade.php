@@ -192,7 +192,6 @@ function getCooldownRemainingSeconds(btnEl) {
 
 function startButtonCooldown(btnEl, seconds) {
     if (!btnEl || !btnEl.id) return;
-
     const existing = buttonCooldowns.get(btnEl.id);
     if (typeof existing === 'number' && Date.now() < existing) return;
 
