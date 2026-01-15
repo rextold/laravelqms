@@ -258,10 +258,9 @@
                                 <i class="fas fa-chart-line w-5"></i>
                                 <span class="ml-3 sidebar-text">Dashboard</span>
                             </a>
-                            <a href="{{ route('counter.panel', ['organization_code' => $orgCode]) }}" target="_blank" class="sidebar-link flex items-center px-6 py-3">
-                                <i class="fas fa-phone w-5"></i>
-                                <span class="ml-3 sidebar-text">Service Station</span>
-                                <i class="fas fa-external-link-alt ml-auto text-xs external-label"></i>
+                            <a href="{{ route('counter.dashboard', ['organization_code' => $orgCode]) }}" class="sidebar-link flex items-center px-6 py-3">
+                                <i class="fas fa-desktop w-5"></i>
+                                <span class="ml-3 sidebar-text">Panel</span>
                             </a>
                         @endif
                     @endauth
