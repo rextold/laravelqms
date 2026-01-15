@@ -353,11 +353,34 @@ class CounterController extends Controller
         ]);
     }    public function recallQueue(Request $request)
     {
-        $validated = $request->validate([
-            'queue_id' => 'required|exists:queues,id',
+        // Get queue_id from both query parameters and request body to handle both GET and POST requests
+        $queueId = $request->input('queue_id') ?: $request->query('queue_id');
+        
+        // Log the request for debugging
+        \Log::info('Recall queue request', [
+            'method' => $request->method(),
+            'queue_id_from_input' => $request->input('queue_id'),
+            'queue_id_from_query' => $request->query('queue_id'),
+            'final_queue_id' => $queueId,
+            'all_input' => $request->all(),
+            'query_params' => $request->query()
         ]);
-
-        $queue = \App\Models\Queue::findOrFail($validated['queue_id']);
+        
+        if (!$queueId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'The queue id field is required.'
+            ], 422);
+        }
+        
+        // Validate that the queue exists
+        $queue = \App\Models\Queue::find($queueId);
+        if (!$queue) {
+            return response()->json([
+                'success' => false,
+                'message' => 'The selected queue id is invalid.'
+            ], 422);
+        }
         $counter = auth()->user();
 
         // Enhanced ownership validation for recall
