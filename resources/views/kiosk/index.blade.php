@@ -762,19 +762,19 @@
     refreshCounters.inFlight = false;
     refreshCounters.controller = null;
 
-    function refreshColorSettings() {
-        const orgCode = '{{ $companyCode }}';
-        fetch(`/${orgCode}/api/settings`)
-            .then(response => response.json())
-            .then(data => {
-                const root = document.documentElement;
-                if (data.primary_color) root.style.setProperty('--primary-color', data.primary_color);
-                if (data.secondary_color) root.style.setProperty('--secondary-color', data.secondary_color);
-                if (data.accent_color) root.style.setProperty('--accent-color', data.accent_color);
-                if (data.text_color) root.style.setProperty('--text-color', data.text_color);
-            })
-            .catch(error => console.error('Color settings refresh failed:', error));
-    }
+    // function refreshColorSettings() {
+    //     const orgCode = '{{ $companyCode }}';
+    //     fetch(`/${orgCode}/api/settings`)
+    //         .then(response => response.json())
+    //         .then(data => {
+    //             const root = document.documentElement;
+    //             if (data.primary_color) root.style.setProperty('--primary-color', data.primary_color);
+    //             if (data.secondary_color) root.style.setProperty('--secondary-color', data.secondary_color);
+    //             if (data.accent_color) root.style.setProperty('--accent-color', data.accent_color);
+    //             if (data.text_color) root.style.setProperty('--text-color', data.text_color);
+    //         })
+    //         .catch(error => console.error('Color settings refresh failed:', error));
+    // }
 
     loadSettings();
     renderCounters(initialCounters);
