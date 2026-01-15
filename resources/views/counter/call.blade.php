@@ -456,7 +456,7 @@ function getJson(url, retry) {
 function notifyCustomer(btnEl, event) {
     if (event) event.preventDefault();
     return runActionWithCooldown(btnEl, () =>
-        getJson('{{ route('counter.api.notify', ['organization_code' => request()->route('organization_code')]) }}')
+        getJson('{{ route('counter.notify', ['organization_code' => request()->route('organization_code')]) }}')
             .then((data) => {
                 if (data && data.success) {
                     playNotificationSound();
