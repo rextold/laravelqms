@@ -5,15 +5,13 @@
 @section('content')
 <div class="container mx-auto px-4 py-8">
     <div class="flex justify-end items-center mb-6">
-        <form id="onlineForm" action="{{ route('counter.toggle-online', ['organization_code' => request()->route('organization_code')]) }}" method="POST">
-            @csrf
-            <button type="submit" id="onlineBtn" 
-                    class="px-4 py-2 rounded {{ $counter->is_online ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700' }} text-white flex items-center">
-                <i class="fas fa-power-off mr-2"></i>
-                <span id="onlineText">{{ $counter->is_online ? 'Go Offline' : 'Go Online' }}</span>
-                <span id="onlineSpinner" class="hidden ml-2"><i class="fas fa-spinner fa-spin"></i></span>
-            </button>
-        </form>
+        <button type="button" id="onlineBtn" 
+                class="px-4 py-2 rounded {{ $counter->is_online ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700' }} text-white flex items-center"
+                onclick="toggleOnline()">
+            <i class="fas fa-power-off mr-2"></i>
+            <span id="onlineText">{{ $counter->is_online ? 'Go Offline' : 'Go Online' }}</span>
+            <span id="onlineSpinner" class="hidden ml-2"><i class="fas fa-spinner fa-spin"></i></span>
+        </button>
     </div>
 
     <!-- Stats -->
@@ -111,37 +109,37 @@
 <!-- No large number styles needed in overview-only dashboard -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
 
-@push('scripts')
-<script>
-let isOnline = {{ $counter->is_online ? 'true' : 'false' }};
-const COUNTER_NUM = {{ $counter->counter_number }};
-
-// Periodically refresh dashboard numbers without manual reload
-const REFRESH_MS = 3000;
-let refreshTimer = null;
-
-function startAutoRefresh() {
-    refreshDashboardData();
-    refreshTimer = setInterval(refreshDashboardData, REFRESH_MS);
-}
-
-function refreshDashboardData() {
-    fetch('{{ route('counter.data', ['organization_code' => request()->route('organization_code')]) }}', {
-        credentials: 'same-origin',
-        headers: { 'Accept': 'application/json' }
-    })
-    .then(res => res.ok ? res.json() : Promise.reject(res))
-    .then(data => {
-        if (!data.success) return;
-        document.getElementById('waitingCount').textContent = data.stats.waiting ?? 0;
-        document.getElementById('completedCount').textContent = data.stats.completed_today ?? 0;
-        document.getElementById('currentQueue').textContent = data.current_queue ? formatDisplayQueue(data.current_queue.queue_number) : 'None';
-        if (typeof data.is_online === 'boolean') {
-            isOnline = data.is_online;
-            updateOnlineButton();
+    <script>
+        function toggleOnline() {
+            const btn = document.getElementById('onlineBtn');
+            const text = document.getElementById('onlineText');
+            const spinner = document.getElementById('onlineSpinner');
+            btn.disabled = true;
+            spinner.classList.remove('hidden');
+            fetch("{{ route('counter.toggle-online', ['organization_code' => request()->route('organization_code')]) }}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    text.textContent = data.is_online ? 'Go Offline' : 'Go Online';
+                    btn.classList.toggle('bg-green-600', !data.is_online);
+                    btn.classList.toggle('hover:bg-green-700', !data.is_online);
+                    btn.classList.toggle('bg-red-600', data.is_online);
+                    btn.classList.toggle('hover:bg-red-700', data.is_online);
+                }
+            })
+            .catch(() => {})
+            .finally(() => {
+                btn.disabled = false;
+                spinner.classList.add('hidden');
+            });
         }
-    })
-    .catch(() => {
+    </script>
         // swallow errors to avoid breaking the interval
     });
 }
