@@ -442,23 +442,15 @@ function getCsrfToken() {
     return metaTag ? metaTag.getAttribute('content') : '{{ csrf_token() }}';
 }
 
-function postJson(url, payload, retry) {
+function getJson(url, retry) {
     return fetch(url, {
-        method: 'POST',
+        method: 'GET',
         headers: { 
             'Content-Type': 'application/json', 
-            'X-CSRF-TOKEN': getCsrfToken(),
             'X-Requested-With': 'XMLHttpRequest'
         },
         credentials: 'same-origin',
-        body: payload ? JSON.stringify(payload) : null,
     }).then(async r => {
-        if (r.status === 403 && !retry) {
-            // Try to refresh CSRF token and retry once
-            const meta = document.querySelector('meta[name="csrf-token"]');
-            if (meta) meta.setAttribute('content', '{{ csrf_token() }}');
-            return postJson(url, payload, true);
-        }
         if (!r.ok) {
             return r.json().catch(() => ({ success: false, message: `HTTP ${r.status}` }))
                 .then(data => Promise.reject(new Error(data.message || `HTTP ${r.status}`)));
@@ -470,7 +462,7 @@ function postJson(url, payload, retry) {
 function notifyCustomer(btnEl, event) {
     if (event) event.preventDefault();
     return runActionWithCooldown(btnEl, () =>
-        postJson('{{ route('counter.notify', ['organization_code' => request()->route('organization_code')]) }}')
+        getJson('{{ route('counter.notify', ['organization_code' => request()->route('organization_code')]) }}')
             .then((data) => {
                 if (data && data.success) {
                     playNotificationSound();
@@ -491,13 +483,13 @@ function notifyCustomer(btnEl, event) {
 function skipCurrent() { openSkipModal(); }
 function moveToNext(btnEl) {
     return runActionWithCooldown(btnEl, () =>
-        postJson('{{ route('counter.move-next', ['organization_code' => request()->route('organization_code')]) }}')
+        getJson('{{ route('counter.move-next', ['organization_code' => request()->route('organization_code')]) }}')
             .then(() => fetchData())
     );
 }
 function callNext(btnEl) { 
     return runActionWithCooldown(btnEl, () =>
-        postJson('{{ route('counter.call-next', ['organization_code' => request()->route('organization_code')]) }}')
+        getJson('{{ route('counter.call-next', ['organization_code' => request()->route('organization_code')]) }}')
             .then(() => {
                 playNotificationSound();
                 fetchData();
@@ -505,7 +497,7 @@ function callNext(btnEl) {
     );
 }
 function recallQueue(id) { 
-    postJson('{{ route('counter.recall', ['organization_code' => request()->route('organization_code')]) }}', { queue_id: id })
+    getJson('{{ route('counter.recall', ['organization_code' => request()->route('organization_code')]) }}?queue_id=' + id)
         .then((res) => {
             if (!res || res.success !== true) {
                 const msg = (res && res.message) ? res.message : 'Recall failed. Please try again.';
@@ -543,7 +535,7 @@ function closeSkipModal() {
 function confirmSkip(btnEl) {
     closeSkipModal();
     return runActionWithCooldown(btnEl, () =>
-        postJson('{{ route('counter.skip', ['organization_code' => request()->route('organization_code')]) }}')
+        getJson('{{ route('counter.skip', ['organization_code' => request()->route('organization_code')]) }}')
             .then(() => fetchData())
     );
 }
@@ -601,17 +593,12 @@ function confirmTransfer(toCounterId) {
     
     closeTransferModal();
     
-    fetch('{{ route('counter.transfer', ['organization_code' => request()->route('organization_code')]) }}', {
-        method: 'POST',
+    fetch('{{ route('counter.transfer', ['organization_code' => request()->route('organization_code')]) }}?queue_id=' + selectedTransferQueueId + '&to_counter_id=' + toCounterId, {
+        method: 'GET',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
             'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-            queue_id: selectedTransferQueueId,
-            to_counter_id: toCounterId
-        })
+        }
     })
     .then(response => {
         if (!response.ok) {
