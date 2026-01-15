@@ -117,9 +117,8 @@
             btn.disabled = true;
             spinner.classList.remove('hidden');
             fetch("{{ route('counter.toggle-online', ['organization_code' => request()->route('organization_code')]) }}", {
-                method: 'POST',
+                method: 'GET',
                 headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
                     'Accept': 'application/json',
                 },
             })
