@@ -154,14 +154,60 @@ class CounterController extends Controller
             'queue' => $queue,
             'message' => 'Completed. Press Call Next to serve the next customer.'
         ]);
-    }
-
-    private function invalidateCounterCache(User $counter)
+    }    private function invalidateCounterCache(User $counter)
     {
         \Illuminate\Support\Facades\Cache::forget("counter.data.{$counter->id}");
     }
 
-    public function transferQueue(Request $request)
+    /**
+     * Enhanced queue ownership validation with better error handling
+     */
+    private function validateQueueOwnership(Queue $queue, User $counter, string $operation = 'operation'): array
+    {
+        // Direct ownership check
+        if ($queue->counter_id === $counter->id) {
+            return ['valid' => true, 'reason' => 'direct_ownership'];
+        }
+
+        // Check if queue was originally created by this counter but transferred
+        if ($queue->transferred_to && $queue->counter_id !== $counter->id) {
+            // If the queue was transferred away from this counter, they can't operate on it
+            return [
+                'valid' => false,
+                'reason' => 'transferred_away',
+                'message' => "This queue was transferred to another counter and is no longer under your control"
+            ];
+        }
+
+        // Check if this is a legacy queue without proper ownership
+        if (!$queue->counter_id) {
+            return [
+                'valid' => false,
+                'reason' => 'no_owner',
+                'message' => "This queue has no assigned counter"
+            ];
+        }
+
+        // Check organization-level permissions for admin override
+        if ($counter->isAdmin() && $counter->organization_id === $queue->organization_id) {
+            \Log::info("Admin override for queue {$operation}", [
+                'admin' => $counter->username,
+                'queue_id' => $queue->id,
+                'operation' => $operation
+            ]);
+            return ['valid' => true, 'reason' => 'admin_override'];
+        }
+
+        // Default case - queue belongs to different counter
+        $queueOwner = User::find($queue->counter_id);
+        $ownerName = $queueOwner ? $queueOwner->display_name : 'Unknown Counter';
+        
+        return [
+            'valid' => false,
+            'reason' => 'different_owner',
+            'message' => "This queue belongs to {$ownerName}. Only the assigned counter can perform this action."
+        ];
+    }    public function transferQueue(Request $request)
     {
         $counter = auth()->user();
         $validated = $request->validate([
@@ -172,11 +218,21 @@ class CounterController extends Controller
         $queue = \App\Models\Queue::findOrFail($validated['queue_id']);
         $toCounter = User::findOrFail($validated['to_counter_id']);
 
-        // Verify this queue belongs to the current counter
-        if ($queue->counter_id !== $counter->id) {
+        // Enhanced ownership validation - check if counter has authority over this queue
+        $hasOwnership = $this->validateQueueOwnership($queue, $counter, 'transfer');
+        if (!$hasOwnership['valid']) {
+            \Log::warning('Queue transfer ownership validation failed', [
+                'queue_id' => $queue->id,
+                'queue_number' => $queue->queue_number,
+                'current_counter_id' => $queue->counter_id,
+                'requesting_counter_id' => $counter->id,
+                'requesting_counter' => $counter->username,
+                'reason' => $hasOwnership['reason']
+            ]);
+            
             return response()->json([
                 'success' => false,
-                'message' => 'This queue does not belong to your counter'
+                'message' => $hasOwnership['message']
             ], 422);
         }
 
@@ -212,16 +268,40 @@ class CounterController extends Controller
             ], 422);
         }
 
-        $newQueue = $this->queueService->transferQueue($queue, $toCounter);
-        
-        // Invalidate cache for both counters
-        $this->invalidateCounterCache($counter);
-        $this->invalidateCounterCache($toCounter);
+        try {
+            $newQueue = $this->queueService->transferQueue($queue, $toCounter);
+            
+            // Log successful transfer
+            \Log::info('Queue transferred successfully', [
+                'queue_id' => $queue->id,
+                'queue_number' => $queue->queue_number,
+                'from_counter' => $counter->username,
+                'to_counter' => $toCounter->username,
+                'transferred_by' => $counter->id
+            ]);
+            
+            // Invalidate cache for both counters
+            $this->invalidateCounterCache($counter);
+            $this->invalidateCounterCache($toCounter);
 
-        return response()->json([
-            'success' => true,
-            'queue' => $newQueue
-        ]);
+            return response()->json([
+                'success' => true,
+                'queue' => $newQueue,
+                'message' => "Queue {$queue->queue_number} transferred to Counter {$toCounter->counter_number}"
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Queue transfer failed', [
+                'queue_id' => $queue->id,
+                'error' => $e->getMessage(),
+                'from_counter' => $counter->username,
+                'to_counter' => $toCounter->username
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Transfer failed. Please try again.'
+            ], 500);
+        }
     }
 
     public function notifyCustomer(Request $request)
@@ -271,9 +351,7 @@ class CounterController extends Controller
             'success' => true,
             'queue' => $queue
         ]);
-    }
-
-    public function recallQueue(Request $request)
+    }    public function recallQueue(Request $request)
     {
         $validated = $request->validate([
             'queue_id' => 'required|exists:queues,id',
@@ -282,11 +360,21 @@ class CounterController extends Controller
         $queue = \App\Models\Queue::findOrFail($validated['queue_id']);
         $counter = auth()->user();
 
-        // Verify this queue belongs to this counter
-        if ($queue->counter_id !== $counter->id) {
+        // Enhanced ownership validation for recall
+        $hasOwnership = $this->validateQueueOwnership($queue, $counter, 'recall');
+        if (!$hasOwnership['valid']) {
+            \Log::warning('Queue recall ownership validation failed', [
+                'queue_id' => $queue->id,
+                'queue_number' => $queue->queue_number,
+                'current_counter_id' => $queue->counter_id,
+                'requesting_counter_id' => $counter->id,
+                'requesting_counter' => $counter->username,
+                'reason' => $hasOwnership['reason']
+            ]);
+            
             return response()->json([
                 'success' => false,
-                'message' => 'This queue does not belong to your counter'
+                'message' => $hasOwnership['message']
             ], 422);
         }
 
