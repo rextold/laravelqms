@@ -477,7 +477,7 @@ function notifyCustomer(btnEl, event) {
 function skipCurrent() { openSkipModal(); }
 function moveToNext(btnEl) {
     return runActionWithCooldown(btnEl, () =>
-        getJson('{{ route('counter.api.move-next', ['organization_code' => request()->route('organization_code')]) }}')
+        getJson('{{ route('counter.move-next', ['organization_code' => request()->route('organization_code')]) }}')
             .then(() => fetchData())
     );
 }
