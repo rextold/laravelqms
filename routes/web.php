@@ -163,9 +163,7 @@ Route::prefix('{organization_code}')->group(function () {
             Route::get('/api/skip', [CounterController::class, 'skipQueue'])->name('counter.api.skip');
             Route::get('/api/recall/{queue_id}', [CounterController::class, 'recallQueue'])->name('counter.api.recall');
             Route::get('/api/transfer/{queue_id}/{to_counter_id}', [CounterController::class, 'transferQueue'])->name('counter.api.transfer');
-            Route.post('/api/auto-logout', [CounterController::class, 'autoLogout'])->name('counter.api.auto-logout');
+            Route::post('/api/auto-logout', [CounterController::class, 'autoLogout'])->name('counter.api.auto-logout');
         });
     });
 });
-
-require __DIR__ . '/auth.php';
