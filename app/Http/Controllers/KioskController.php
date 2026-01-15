@@ -22,7 +22,7 @@ class KioskController extends Controller
         $organization = Organization::where('organization_code', $request->route('organization_code'))->firstOrFail();        
         $onlineCounters = User::onlineCounters()->where('organization_id', $organization->id)->get();
         $settings = OrganizationSetting::where('organization_id', $organization->id)->first();
-
+        
         // Create default settings if none exist
         if (!$settings) {
             $settings = OrganizationSetting::create([
@@ -36,9 +36,9 @@ class KioskController extends Controller
                 'is_active' => true,
             ]);
         }
-
-        $organizationCode = $organization->organization_code;
-        return view('kiosk.index', compact('onlineCounters', 'settings', 'organization', 'organizationCode'));
+        
+        $companyCode = $organization->organization_code;
+        return view('kiosk.index', compact('onlineCounters', 'settings', 'organization', 'companyCode'));
     }    public function counters(Request $request)
     {
         $organization = Organization::where('organization_code', $request->route('organization_code'))->firstOrFail();
