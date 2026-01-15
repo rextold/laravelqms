@@ -775,18 +775,18 @@
                     </div>
                 `;
             } else {
-                // Each counter group is inline-flex, small font, single line, no vertical scroll
-                let waitingHTML = `<div style="display: inline-flex; flex-wrap: nowrap; align-items: center; gap: 2.5rem; width: 100%; overflow: hidden; max-height: 100%;">`;
+                // Each counter group is a block, allowing wrapping
+                let waitingHTML = `<div style="display: flex; flex-wrap: wrap; align-items: flex-start; gap: 1.5rem; width: 100%; max-height: 100%;">`;
                 waitingHTML += groups.map(group => {
                     const counterName = group.display_name || `Counter ${group.counter_number}`;
                     const queues = Array.isArray(group.queues) ? group.queues : [];
                     const queueNumbers = queues.map(queue =>
-                        `<span class=\"waiting-queue-number\" style=\"background: #f59e0b; color: #fff; border-radius: 4px; padding: 0.15em 0.5em; margin: 0 0.15em; font-size: 1.2rem;\">${queue.queue_number}</span>`
+                        `<span class="waiting-queue-number" style="background: #f59e0b; color: #fff; border-radius: 4px; padding: 0.15em 0.5em; margin: 0 0.15em; font-size: 1.2rem;">${queue.queue_number}</span>`
                     ).join('');
                     return `
-                        <div style=\"display: flex; flex-direction: row; align-items: center; gap: 0.5em; font-size: 1.1rem;\">
-                            <span style=\"font-weight: 600; color: #f59e0b; margin-right: 0.4em; white-space: nowrap;\">${counterName}:</span>
-                            <span>${queueNumbers || '<span style=\\"color: #bbb;\\">No waiting</span>'}</span>
+                        <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 0.5em; font-size: 1.1rem; margin-bottom: 1rem;">
+                            <span style="font-weight: 600; color: #f59e0b; white-space: nowrap;">${counterName}:</span>
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.5em;">${queueNumbers || '<span style="color: #bbb;">No waiting</span>'}</div>
                         </div>
                     `;
                 }).join('');
