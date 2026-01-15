@@ -421,7 +421,7 @@
             form.submit();
         }
     </script>
-    <script src="{{ asset('js/settings-sync.js') }}"></script>
+    {{-- <script src="{{ asset('js/settings-sync.js') }}"></script> --}}
     @else
     <main>
         @yield('content')
