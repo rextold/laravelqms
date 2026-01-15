@@ -143,6 +143,7 @@ Route::prefix('{organization_code}')->group(function () {
         Route::prefix('counter')->name('counter.')->middleware(['organization.context'])->group(function () {
             // This route is publicly accessible
             Route::get('/data', [CounterController::class, 'getData'])->name('data')->middleware('allow.public');
+<<<<<<< HEAD
         
             // These routes require counter role
             Route::middleware('role:counter')->group(function () {
@@ -162,6 +163,26 @@ Route::prefix('{organization_code}')->group(function () {
                     Route::post('/auto-logout', [CounterController::class, 'autoLogout'])->name('auto-logout');
                 });
             });
+=======
+        });
+        // All other counter routes require organization context and role:counter
+        Route::middleware(['organization.context', 'role:counter'])->prefix('counter')->name('counter.')->group(function () {
+            Route::get('/dashboard', [CounterController::class, 'dashboard'])->name('counter.dashboard');
+            Route::get('/call', [CounterController::class, 'callView'])->name('counter.call');
+            Route::post('/toggle-online', [CounterController::class, 'toggleOnline'])->name('counter.toggle-online');
+            
+            // API
+            Route::get('/api/data', [CounterController::class, 'getData'])->name('counter.api.data');
+            Route::get('/api/notify', [CounterController::class, 'notifyCustomer'])->name('counter.api.notify');
+            Route::get('/api/move-next', [CounterController::class, 'moveToNext'])->name('counter.api.move-next');
+            Route::get('/api/call-next', [CounterController::class, 'callNext'])->name('counter.api.call-next');
+            Route::get('/api/skip', [CounterController::class, 'skipQueue'])->name('counter.api.skip');
+            Route::get('/api/recall/{queue_id}', [CounterController::class, 'recallQueue'])->name('counter.api.recall');
+            Route::get('/api/transfer/{queue_id}/{to_counter_id}', [CounterController::class, 'transferQueue'])->name('counter.api.transfer');
+            Route.post('/api/auto-logout', [CounterController::class, 'autoLogout'])->name('counter.api.auto-logout');
+>>>>>>> parent of 1cd4bda (Fix Route error)
         });
     });
 });
+
+require __DIR__ . '/auth.php';
