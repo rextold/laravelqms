@@ -86,7 +86,7 @@ Route::prefix('{organization_code}')->group(function () {
     });
     
     // Protected routes - auth middleware runs FIRST, then organization context
-    Route::middleware(['organization.context'])->group(function () {
+    Route::middleware(['auth', 'organization.context'])->group(function () {
         
         // Account Settings (for admin and counter users)
         Route::get('/account/settings', [AccountController::class, 'settings'])->name('account.settings');
@@ -141,10 +141,9 @@ Route::prefix('{organization_code}')->group(function () {
         
         // Counter routes
         Route::prefix('counter')->name('counter.')->middleware(['organization.context'])->group(function () {
-            // This route is publicly accessible
-            Route::get('/data', [CounterController::class, 'getData'])->name('data')->middleware('allow.public');
-            
             Route::middleware('role:counter')->group(function () {
+                // Move data route inside authenticated middleware group
+                Route::get('/data', [CounterController::class, 'getData'])->name('data');
                 Route::get('/dashboard', [CounterController::class, 'dashboard'])->name('dashboard');
                 Route::get('/panel', [CounterController::class, 'callView'])->name('panel');
                 Route::get('/view', function () {
