@@ -19,7 +19,8 @@ class KioskController extends Controller
 
     public function index(Request $request)
     {
-        $organization = Organization::where('organization_code', $request->route('organization_code'))->firstOrFail();        
+        $organization = Organization::where('organization_code', $request->route('organization_code'))->firstOrFail();
+        $companyCode = $request->route('organization_code');
         $onlineCounters = User::onlineCounters()->where('organization_id', $organization->id)->get();
         $settings = OrganizationSetting::where('organization_id', $organization->id)->first();
         
@@ -37,8 +38,7 @@ class KioskController extends Controller
             ]);
         }
         
-        $companyCode = $organization->organization_code;
-        return view('kiosk.index', compact('onlineCounters', 'settings', 'organization', 'companyCode'));
+        return view('kiosk.index', compact('onlineCounters', 'settings', 'companyCode', 'organization'));
     }    public function counters(Request $request)
     {
         $organization = Organization::where('organization_code', $request->route('organization_code'))->firstOrFail();
@@ -103,6 +103,58 @@ class KioskController extends Controller
                 'counter' => $queue->counter,
                 'created_at' => $queue->created_at->toISOString(),
                 'called_at' => $queue->called_at?->toISOString(),
+                'served_at' => $queue->served_at?->toISOString(),
+            ],
+            'timestamp' => now()->toISOString()
+        ])
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
+    }
+
+    public function generateQueue(Request $request)
+    {
+        $organization = Organization::where('organization_code', $request->route('organization_code'))->firstOrFail();
+        $validated = $request->validate([
+            'counter_id' => 'required|exists:users,id',
+        ]);
+
+        $counter = User::findOrFail($validated['counter_id']);
+
+        if ((int) $counter->organization_id !== (int) $organization->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid counter for this organization'
+            ], 422);
+        }
+
+        // Verify counter is online
+        if (!$counter->is_online) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Counter is currently offline'
+            ], 422);
+        }
+        try {
+            $queue = $this->queueService->createQueue($counter);
+
+            return response()->json([
+                'success' => true,
+                'queue' => $queue->load('counter')
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('Failed to generate queue number', [
+                'counter_id' => $counter->id,
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error generating priority number. Please try again.'
+            ], 500);
+        }
+    }
+}
+d_at?->toISOString(),
                 'served_at' => $queue->served_at?->toISOString(),
             ],
             'timestamp' => now()->toISOString()
