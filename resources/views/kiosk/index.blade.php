@@ -782,12 +782,16 @@
     // setInterval(refreshColorSettings, 5000);
 
     // Queue generation optimizations
-    let isGenerating = false;
-
-
-
-    function selectCounter(counterId, counterNumber, counterName) {
+    let isGenerating = false;    function selectCounter(counterId, counterNumber, counterName) {
         if (isGenerating) return;
+        
+        // Validate counter_id before proceeding
+        if (!counterId || counterId === undefined || counterId === null) {
+            console.error('Invalid counter_id:', counterId);
+            showError('Invalid counter selection. Please try again.');
+            return;
+        }
+        
         isGenerating = true;
         moveToStep(2);
         document.querySelectorAll('.counter-btn').forEach(btn => btn.disabled = true);
@@ -798,7 +802,7 @@
 
             try {
                 console.log('Sending counter_id:', counterId);
-                const url = `{{ route('kiosk.generate', ['organization_code' => $companyCode]) }}?counter_id=${counterId}`;
+                const url = `{{ route('kiosk.generate', ['organization_code' => $companyCode]) }}?counter_id=${encodeURIComponent(counterId)}`;
                 console.log('Request URL:', url);
                 const response = await fetch(url, {
                     method: 'GET',
