@@ -19,7 +19,8 @@ class KioskController extends Controller
 
     public function index(Request $request)
     {
-        $organization = Organization::where('organization_code', $request->route('organization_code'))->firstOrFail();        $onlineCounters = User::onlineCounters()->where('organization_id', $organization->id)->get();
+        $organization = Organization::where('organization_code', $request->route('organization_code'))->firstOrFail();        
+        $onlineCounters = User::onlineCounters()->where('organization_id', $organization->id)->get();
         $settings = OrganizationSetting::where('organization_id', $organization->id)->first();
         
         // Create default settings if none exist
