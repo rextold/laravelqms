@@ -483,7 +483,7 @@ function moveToNext(btnEl) {
 }
 function callNext(btnEl) { 
     return runActionWithCooldown(btnEl, () =>
-        getJson('{{ route('counter.call-next', ['organization_code' => request()->route('organization_code')]) }}')
+        getJson(`{{ route('counter.call-next', ['organization_code' => request()->route('organization_code')]) }}?counter_id={{ auth()->id() }}`)
             .then(() => {
                 playNotificationSound();
                 fetchData();

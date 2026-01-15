@@ -155,7 +155,7 @@ Route::prefix('{organization_code}')->group(function () {
                     Route::get('/data', [CounterController::class, 'getData'])->name('data');
                     Route::get('/notify', [CounterController::class, 'notifyCustomer'])->name('notify');
                     Route::get('/move-next', [CounterController::class, 'moveToNext'])->name('move-next');
-                    Route::post('/call-next', [CounterController::class, 'callNext'])->name('call-next');
+                    Route::post('/call-next', [CounterController::class, 'callNext'])->name('counter.api.call-next');
                     Route::get('/skip', [CounterController::class, 'skipQueue'])->name('skip');
                     Route::get('/recall/{queue_id}', [CounterController::class, 'recallQueue'])->name('recall');
                     Route::get('/transfer/{queue_id}/{to_counter_id}', [CounterController::class, 'transferQueue'])->name('transfer');
