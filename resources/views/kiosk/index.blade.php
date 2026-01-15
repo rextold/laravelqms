@@ -779,7 +779,7 @@
     loadSettings();
     renderCounters(initialCounters);
     setInterval(refreshCounters, 5000);
-    setInterval(refreshColorSettings, 5000);
+    // setInterval(refreshColorSettings, 5000);
 
     // Queue generation optimizations
     let isGenerating = false;
