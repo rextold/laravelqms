@@ -5,8 +5,7 @@
 @section('content')
 <div class="container mx-auto px-4 py-8">
     <div class="flex justify-end items-center mb-6">
-        <form id="onlineForm" action="{{ route('counter.toggle-online', ['organization_code' => request()->route('organization_code')]) }}" method="POST">
-            @csrf
+        <form id="onlineForm" action="{{ route('counter.toggle-online', ['organization_code' => request()->route('organization_code')]) }}" method="GET">
             <button type="submit" id="onlineBtn" 
                     class="px-4 py-2 rounded {{ $counter->is_online ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700' }} text-white flex items-center">
                 <i class="fas fa-power-off mr-2"></i>
@@ -153,11 +152,10 @@ function toggleOnline() {
     spinner.classList.remove('hidden');
 
     fetch('{{ route('counter.toggle-online', ['organization_code' => request()->route('organization_code')]) }}', {
-        method: 'POST',
+        method: 'GET',
         credentials: 'same-origin',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
             'X-Requested-With': 'XMLHttpRequest',
             'Accept': 'application/json'
         }

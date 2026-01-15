@@ -158,18 +158,13 @@ Route::prefix('{organization_code}')->group(function () {
             Route::get('/view', function () {
                 return redirect()->to(route('counter.panel', ['organization_code' => request()->route('organization_code')]));
             })->name('view');
-            Route::post('/toggle-online', [CounterController::class, 'toggleOnline'])->name('toggle-online');
-            Route::post('/call-next', [CounterController::class, 'callNext'])->name('call-next');
-            Route::post('/move-next', [CounterController::class, 'moveToNext'])->name('move-next');
-            Route::post('/transfer', [CounterController::class, 'transferQueue'])->name('transfer');
-            Route::post('/notify', [CounterController::class, 'notifyCustomer'])->name('notify');
-            // Fallback for accidental GET requests to /notify
-            Route::get('/notify', function () {
-                return redirect()->to(route('counter.panel', ['organization_code' => request()->route('organization_code')]))
-                    ->with('error', 'Notify action must use POST.');
-            });
-            Route::post('/skip', [CounterController::class, 'skipQueue'])->name('skip');
-            Route::post('/recall', [CounterController::class, 'recallQueue'])->name('recall');
+            Route::get('/toggle-online', [CounterController::class, 'toggleOnline'])->name('toggle-online');
+            Route::get('/call-next', [CounterController::class, 'callNext'])->name('call-next');
+            Route::get('/move-next', [CounterController::class, 'moveToNext'])->name('move-next');
+            Route::get('/transfer', [CounterController::class, 'transferQueue'])->name('transfer');
+            Route::get('/notify', [CounterController::class, 'notifyCustomer'])->name('notify');
+            Route::get('/skip', [CounterController::class, 'skipQueue'])->name('skip');
+            Route::get('/recall', [CounterController::class, 'recallQueue'])->name('recall');
         });
     });
 });
