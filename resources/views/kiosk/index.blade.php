@@ -797,7 +797,10 @@
             const timeoutId = setTimeout(() => controller.abort(), 15000);
 
             try {
-                const response = await fetch(`{{ route('kiosk.generate', ['organization_code' => $companyCode]) }}?counter_id=${counterId}`, {
+                console.log('Sending counter_id:', counterId);
+                const url = `{{ route('kiosk.generate', ['organization_code' => $companyCode]) }}?counter_id=${counterId}`;
+                console.log('Request URL:', url);
+                const response = await fetch(url, {
                     method: 'GET',
                     credentials: 'same-origin',
                     signal: controller.signal,
