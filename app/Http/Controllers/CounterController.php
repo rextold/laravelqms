@@ -37,12 +37,46 @@ class CounterController extends Controller
         return view('counter.dashboard', compact('counter', 'stats', 'waitingQueues', 'skippedQueues', 'onlineCounters', 'analyticsData'));
     }
 
-    public function callView()
+    public function callView(Request $request)
     {
-        $counter = auth()->user();
-        $stats = $this->queueService->getCounterStats($counter);
+        // Handle both authenticated and unauthenticated access
+        if (auth()->check()) {
+            // Authenticated user - use their counter
+            $counter = auth()->user();
+        } else {
+            // Unauthenticated access - try to get counter from query parameter or use default
+            $counterNumber = $request->query('counter', 1); // Default to counter 1
+            
+            // Get organization from the route
+            $orgCode = $request->route('organization_code');
+            $organization = \App\Models\Organization::where('organization_code', $orgCode)->first();
+            
+            if (!$organization) {
+                abort(404, 'Organization not found');
+            }
+            
+            // Find counter by number in this organization
+            $counter = User::where('organization_id', $organization->id)
+                ->where('counter_number', $counterNumber)
+                ->where('role', 'counter')
+                ->first();
+            
+            if (!$counter) {
+                // Create a mock counter object for display
+                $counter = new User();
+                $counter->id = 0;
+                $counter->counter_number = $counterNumber;
+                $counter->display_name = 'Counter ' . $counterNumber;
+                $counter->organization_id = $organization->id;
+                $counter->role = 'counter';
+                $counter->is_online = false;
+            }
+        }
+        
+        $stats = auth()->check() ? $this->queueService->getCounterStats($counter) : ['waiting' => 0, 'completed_today' => 0];
         $settings = \App\Models\OrganizationSetting::getSettings();
-        $organization = $counter->organization;
+        $organization = $counter->organization ?? $organization;
+        
         return view('counter.call', compact('counter', 'stats', 'settings', 'organization'));
     }
 
