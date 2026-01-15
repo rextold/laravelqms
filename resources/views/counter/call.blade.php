@@ -442,12 +442,23 @@ function getCsrfToken() {
 }
 
 function getJson(url, retry) {
+    // Get CSRF token from meta tag or form input
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') 
+        || document.querySelector('input[name="_token"]')?.value;
+    
+    const headers = { 
+        'Content-Type': 'application/json', 
+        'X-Requested-With': 'XMLHttpRequest'
+    };
+    
+    // Add CSRF token if available
+    if (csrfToken) {
+        headers['X-CSRF-TOKEN'] = csrfToken;
+    }
+    
     return fetch(url, {
         method: 'GET',
-        headers: { 
-            'Content-Type': 'application/json', 
-            'X-Requested-With': 'XMLHttpRequest'
-        },
+        headers: headers,
         credentials: 'same-origin',
     }).then(async r => {
         if (!r.ok) {
