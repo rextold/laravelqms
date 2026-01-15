@@ -28,6 +28,9 @@
                 </div>
             </div>
         </div>
+    </div>    <!-- Error Message Display -->
+    <div id="error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
+        <span class="block sm:inline"></span>
     </div>
 
     <!-- Main Content -->
@@ -373,19 +376,41 @@ function fetchData() {
         counterFetchController = new AbortController();
     } catch (e) {
         counterFetchController = null;
-    }
-
-    fetch('{{ route('counter.data', ['organization_code' => request()->route('organization_code')]) }}', {
+    }    fetch('{{ route('counter.data', ['organization_code' => request()->route('organization_code')]) }}', {
         cache: 'no-store',
-        headers: { 'Accept': 'application/json' },
+        headers: { 
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
         credentials: 'same-origin',
         signal: counterFetchController ? counterFetchController.signal : undefined,
     })
-        .then(r => r.json())
+        .then(response => {
+            if (!response.ok) {
+                if (response.status === 401 || response.status === 403) {
+                    // Authentication/authorization failed - redirect to login
+                    console.warn('Authentication failed, redirecting to login...');
+                    window.location.href = '/login';
+                    return Promise.reject(new Error('Authentication failed'));
+                }
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
         .then(d => { if (d.success) renderLists(d); })
         .catch(err => {
             if (err && err.name === 'AbortError') return;
             console.error('Counter refresh failed:', err);
+            
+            // Show user-friendly error message for persistent failures
+            if (err.message && err.message.includes('403')) {
+                const errorDiv = document.getElementById('error-message');
+                if (errorDiv) {
+                    errorDiv.textContent = 'Access denied. Please refresh the page or contact your administrator.';
+                    errorDiv.style.display = 'block';
+                }
+            }
         })
         .finally(() => {
             counterFetchInFlight = false;
