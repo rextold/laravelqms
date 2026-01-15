@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Organization;
+use App\Models\OrganizationSetting;
 use App\Services\QueueService;
 use Illuminate\Http\Request;
 
