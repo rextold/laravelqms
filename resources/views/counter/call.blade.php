@@ -436,6 +436,11 @@ function toggleMinimize(force) {
 setInterval(fetchData, 1000);
 fetchData();
 
+function getCsrfToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    return metaTag ? metaTag.getAttribute('content') : '{{ csrf_token() }}';
+}
+
 function getJson(url, retry) {
     return fetch(url, {
         method: 'GET',
@@ -491,7 +496,7 @@ function callNext(btnEl) {
     );
 }
 function recallQueue(id) { 
-    getJson('{{ route('counter.api.recall', ['organization_code' => request()->route('organization_code'), 'queue_id' => '']) }}/' + id)
+    getJson('{{ route('counter.recall', ['organization_code' => request()->route('organization_code')]) }}?queue_id=' + id)
         .then((res) => {
             if (!res || res.success !== true) {
                 const msg = (res && res.message) ? res.message : 'Recall failed. Please try again.';
@@ -587,7 +592,7 @@ function confirmTransfer(toCounterId) {
     
     closeTransferModal();
     
-    fetch('{{ route('counter.api.transfer', ['organization_code' => request()->route('organization_code'), 'queue_id' => '']) }}/' + selectedTransferQueueId + '/' + toCounterId, {
+    fetch('{{ route('counter.transfer', ['organization_code' => request()->route('organization_code')]) }}?queue_id=' + selectedTransferQueueId + '&to_counter_id=' + toCounterId, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',

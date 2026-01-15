@@ -167,6 +167,7 @@ Route::prefix('{organization_code}')->group(function () {
         });
         // All other counter routes require organization context and role:counter
         Route::middleware(['organization.context', 'role:counter'])->prefix('counter')->name('counter.')->group(function () {
+<<<<<<< HEAD
             Route::get('/dashboard', [CounterController::class, 'dashboard'])->name('counter.dashboard');
             Route::get('/call', [CounterController::class, 'callView'])->name('counter.call');
             Route::post('/toggle-online', [CounterController::class, 'toggleOnline'])->name('counter.toggle-online');
@@ -181,8 +182,22 @@ Route::prefix('{organization_code}')->group(function () {
             Route::get('/api/transfer/{queue_id}/{to_counter_id}', [CounterController::class, 'transferQueue'])->name('counter.api.transfer');
             Route.post('/api/auto-logout', [CounterController::class, 'autoLogout'])->name('counter.api.auto-logout');
 >>>>>>> parent of 1cd4bda (Fix Route error)
+=======
+            Route::get('/dashboard', [CounterController::class, 'dashboard'])->name('dashboard');
+            // Counter single-frame calling view now at /counter/panel
+            Route::get('/panel', [CounterController::class, 'callView'])->name('panel');
+            // Backward-compatible redirect from /view to /panel
+            Route::get('/view', function () {
+                return redirect()->to(route('counter.panel', ['organization_code' => request()->route('organization_code')]));
+            })->name('view');
+            Route::get('/toggle-online', [CounterController::class, 'toggleOnline'])->name('toggle-online');
+            Route::get('/call-next', [CounterController::class, 'callNext'])->name('call-next');
+            Route::get('/move-next', [CounterController::class, 'moveToNext'])->name('move-next');
+            Route::get('/transfer', [CounterController::class, 'transferQueue'])->name('transfer');
+            Route::get('/notify', [CounterController::class, 'notifyCustomer'])->name('notify');
+            Route::get('/skip', [CounterController::class, 'skipQueue'])->name('skip');
+            Route::get('/recall', [CounterController::class, 'recallQueue'])->name('recall');
+>>>>>>> parent of fcfc1d7 (These changes ensure that all counter actions now use the GET method as you requested. The task is now complete. Please let me know if you have any other requests.)
         });
     });
 });
-
-require __DIR__ . '/auth.php';

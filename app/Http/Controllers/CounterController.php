@@ -161,12 +161,16 @@ class CounterController extends Controller
         \Illuminate\Support\Facades\Cache::forget("counter.data.{$counter->id}");
     }
 
-    public function transferQueue($queue_id, $to_counter_id)
+    public function transferQueue(Request $request)
     {
         $counter = auth()->user();
+        $validated = $request->validate([
+            'queue_id' => 'required|exists:queues,id',
+            'to_counter_id' => 'required|exists:users,id',
+        ]);
 
-        $queue = \App\Models\Queue::findOrFail($queue_id);
-        $toCounter = User::findOrFail($to_counter_id);
+        $queue = \App\Models\Queue::findOrFail($validated['queue_id']);
+        $toCounter = User::findOrFail($validated['to_counter_id']);
 
         // Verify this queue belongs to the current counter
         if ($queue->counter_id !== $counter->id) {
@@ -220,7 +224,7 @@ class CounterController extends Controller
         ]);
     }
 
-    public function notifyCustomer()
+    public function notifyCustomer(Request $request)
     {
         $counter = auth()->user();
         $queue = $counter->getCurrentQueue();
@@ -243,7 +247,7 @@ class CounterController extends Controller
         ]);
     }
 
-    public function skipQueue()
+    public function skipQueue(Request $request)
     {
         $counter = auth()->user();
         $queue = $counter->getCurrentQueue();
@@ -269,9 +273,13 @@ class CounterController extends Controller
         ]);
     }
 
-    public function recallQueue($queue_id)
+    public function recallQueue(Request $request)
     {
-        $queue = \App\Models\Queue::findOrFail($queue_id);
+        $validated = $request->validate([
+            'queue_id' => 'required|exists:queues,id',
+        ]);
+
+        $queue = \App\Models\Queue::findOrFail($validated['queue_id']);
         $counter = auth()->user();
 
         // Verify this queue belongs to this counter
