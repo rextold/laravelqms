@@ -6,11 +6,9 @@
     <title>Logging out...</title>
 </head>
 <body>
-    <form id="logoutForm" action="{{ route('logout') }}" method="POST">
-        @csrf
-    </form>
     <script>
-        document.getElementById('logoutForm').submit();
+        // Redirect to logout using GET method
+        window.location.href = "{{ route('logout') }}";
     </script>
 </body>
 </html>

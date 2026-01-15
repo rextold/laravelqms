@@ -395,35 +395,11 @@
             localStorage.setItem('sidebarCollapsed', isCollapsed);
         });
 
-        // Handle logout with CSRF token refresh
-        async function handleLogout(event) {
+        // Handle logout with GET method
+        function handleLogout(event) {
             event.preventDefault();
-            
-            let csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-
-            try {
-                // Refresh CSRF token before logout
-                const response = await fetch('/refresh-csrf');
-                const data = await response.json();
-                if (data.token) {
-                    csrfToken = data.token;
-                }
-            } catch (error) {
-                console.log('CSRF refresh failed, proceeding with existing token:', error);
-            }
-
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '{{ route('logout') }}';
-            
-            const csrfInput = document.createElement('input');
-            csrfInput.type = 'hidden';
-            csrfInput.name = '_token';
-            csrfInput.value = csrfToken;
-            
-            form.appendChild(csrfInput);
-            document.body.appendChild(form);
-            form.submit();
+            // Simply redirect to the logout route using GET method
+            window.location.href = '{{ route('logout') }}';
         }
     </script>
     {{-- <script src="{{ asset('js/settings-sync.js') }}"></script> --}}

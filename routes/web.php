@@ -45,8 +45,8 @@ Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 });
-// Removed GET /logout route to prevent infinite logout loop. Logout is POST only.
-Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
+// GET /logout route for GET method logout
+Route::get('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
 // SuperAdmin routes (no company code in URL)
 Route::middleware(['auth', 'role:superadmin'])->prefix('superadmin')->name('superadmin.')->group(function () {
