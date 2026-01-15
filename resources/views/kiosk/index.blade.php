@@ -1178,6 +1178,5 @@
         });
     }
     </script>
-    <script src="{{ asset('js/settings-sync.js') }}"></script>
 </body>
 </html>
