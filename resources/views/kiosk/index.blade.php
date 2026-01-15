@@ -721,34 +721,65 @@
         });
     }
 
-    async function refreshCounters() {
+    function refreshCounters() {
+        if (refreshCounters.inFlight) return;
+        refreshCounters.inFlight = true;
+
         try {
-            const response = await fetch(countersEndpoint, {
-                credentials: 'same-origin',
-                cache: 'no-store',
-                headers: { 'Accept': 'application/json' },
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+            if (refreshCounters.controller) {
+                refreshCounters.controller.abort();
             }
-
-            const data = await response.json();
-            // Update the initial counters data
-            initialCounters.splice(0, initialCounters.length, ...(data.counters || []));
-
-            // Only re-render if on step 1
-            if (!document.getElementById('step1').classList.contains('hidden')) {
-                renderCounters(data.counters || []);
-            }
-        } catch (error) {
-            console.error('Refresh failed:', error);
+            refreshCounters.controller = new AbortController();
+        } catch (e) {
+            refreshCounters.controller = null;
         }
+
+        fetch(countersEndpoint, {
+            credentials: 'same-origin',
+            cache: 'no-store',
+            headers: { 'Accept': 'application/json' },
+            signal: refreshCounters.controller ? refreshCounters.controller.signal : undefined,
+        })
+            .then(response => response.ok ? response.json() : Promise.reject(response))
+            .then(data => {
+                // Update the initial counters data
+                initialCounters.splice(0, initialCounters.length, ...(data.counters || []));
+
+                // Only re-render if on step 1
+                if (!document.getElementById('step1').classList.contains('hidden')) {
+                    renderCounters(data.counters || []);
+                }
+            })
+            .catch(error => {
+                if (error && error.name === 'AbortError') return;
+                console.error('Refresh failed:', error);
+            })
+            .finally(() => {
+                refreshCounters.inFlight = false;
+            });
     }
+
+    refreshCounters.inFlight = false;
+    refreshCounters.controller = null;
+
+    // function refreshColorSettings() {
+    //     const orgCode = '{{ $companyCode }}';
+    //     fetch(`/${orgCode}/api/settings`)
+    //         .then(response => response.json())
+    //         .then(data => {
+    //             const root = document.documentElement;
+    //             if (data.primary_color) root.style.setProperty('--primary-color', data.primary_color);
+    //             if (data.secondary_color) root.style.setProperty('--secondary-color', data.secondary_color);
+    //             if (data.accent_color) root.style.setProperty('--accent-color', data.accent_color);
+    //             if (data.text_color) root.style.setProperty('--text-color', data.text_color);
+    //         })
+    //         .catch(error => console.error('Color settings refresh failed:', error));
+    // }
 
     loadSettings();
     renderCounters(initialCounters);
     setInterval(refreshCounters, 5000);
+    // setInterval(refreshColorSettings, 5000);
 
     // Queue generation optimizations
     let isGenerating = false;
@@ -762,7 +793,7 @@
         if (meta) meta.setAttribute('content', token);
     }
 
-    async function refreshCsrfToken() {
+    function refreshCsrfToken() {
         if (csrfRefreshInFlight) return csrfRefreshInFlight;
         csrfRefreshInFlight = fetch('/refresh-csrf', {
             credentials: 'same-origin',
@@ -778,48 +809,70 @@
         return csrfRefreshInFlight;
     }
 
-    async function selectCounter(counterId, counterNumber, counterName) {
+    function selectCounter(counterId, counterNumber, counterName) {
         if (isGenerating) return;
         isGenerating = true;
         moveToStep(2);
         document.querySelectorAll('.counter-btn').forEach(btn => btn.disabled = true);
 
-        try {
+        const attemptGenerate = async (didRetry = false) => {
             await refreshCsrfToken();
-            const body = new URLSearchParams();
-            body.set('counter_id', String(counterId));
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-            const response = await fetch('{{ route('kiosk.generate', ['organization_code' => $companyCode]) }}', {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': csrfToken
-                },
-                body
-            });
+            try {
+                const body = new URLSearchParams();
+                body.set('counter_id', String(counterId));
 
-            const data = await response.json();
+                const response = await fetch('{{ route('kiosk.generate', ['organization_code' => $companyCode]) }}', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    signal: controller.signal,
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': csrfToken
+                    },
+                    body
+                });
 
-            if (!response.ok) {
-                throw new Error(data.message || `Request failed with status ${response.status}`);
+                const status = response.status;
+                let data;
+                try {
+                    data = await response.json();
+                } catch (e) {
+                    data = { success: false, message: `Server error (status ${status})` };
+                }
+
+                // Retry once on CSRF/session expiry
+                if (!response.ok && (status === 419 || status === 403) && !didRetry) {
+                    await refreshCsrfToken();
+                    return attemptGenerate(true);
+                }
+
+                if (!response.ok) {
+                    throw new Error(data.message || `Request failed with status ${status}`);
+                }
+
+                if (data.success && data.queue) {
+                    currentQueue = data.queue;
+                    showQueueDisplay(data.queue);
+                } else {
+                    throw new Error(data.message || 'Failed to generate queue number');
+                }
+            } catch (error) {
+                console.error('Generate failed:', error);
+                const msg = (error && error.name === 'AbortError')
+                    ? 'Request timed out. Please try again.'
+                    : (error.message || 'Error generating queue number. Please try again.');
+                showError(msg);
+            } finally {
+                clearTimeout(timeoutId);
             }
+        };
 
-            if (data.success && data.queue) {
-                currentQueue = data.queue;
-                showQueueDisplay(data.queue);
-            } else {
-                throw new Error(data.message || 'Failed to generate queue number');
-            }
-        } catch (error) {
-            console.error('Generate failed:', error);
-            const msg = (error.message || 'Error generating queue number. Please try again.');
-            showError(msg);
-        } finally {
-            isGenerating = false;
-        }
+        attemptGenerate();
     }
 
     function moveToStep(stepNumber) {
@@ -863,120 +916,267 @@
         isGenerating = false;
     }
 
-    function showQueueDisplay(queue) {
-        moveToStep(3);
-        document.getElementById('queue_number_display').textContent = queue.queue_number_formatted;
-        document.getElementById('queue_counter_name_display').textContent = queue.counter.name;
-        document.getElementById('queue_message_display').textContent = queue.counter.queue_message || 'Please wait for your turn';
-
-        const useThermal = printerSettings.printer === 'usb_thermal';
-        const useBrowser = printerSettings.printer === 'browser_print';
-        const useScreenshot = printerSettings.printer === 'screenshot_only';
-
-        document.getElementById('btn_print').style.display = (useThermal || useBrowser) ? 'inline-block' : 'none';
-        document.getElementById('btn_screenshot').style.display = useScreenshot ? 'inline-block' : 'none';
-    }
-
     function showError(message) {
-        const errorContainer = document.getElementById('error_container');
         alert(message);
         document.querySelectorAll('.counter-btn').forEach(btn => btn.disabled = false);
         moveToStep(1);
-    }
-
-    function resetKiosk() {
-        currentQueue = null;
         isGenerating = false;
-        document.querySelectorAll('.counter-btn').forEach(btn => btn.disabled = false);
-        moveToStep(1);
     }
 
-    function printQueue() {
-        if (!currentQueue) return;
+    function finishAndReset() {
+        currentQueue = null;
+        moveToStep(1);
+        document.querySelectorAll('.counter-btn').forEach(btn => btn.disabled = false);
+        isGenerating = false;
+    }
 
-        const useThermal = printerSettings.printer === 'usb_thermal';
-        const useBrowser = printerSettings.printer === 'browser_print';
+    function showSettings() {
+        document.getElementById('settingsModal').classList.remove('hidden');
+        document.querySelectorAll('input[name="printerType"]').forEach(input => {
+            input.checked = input.value === printerSettings.type;
+        });
+        document.getElementById('vendorId').value = printerSettings.vendorId || '';
+        updatePrinterSettings();
+    }
 
-        if (useThermal) {
-            printThermal();
-        } else if (useBrowser) {
-            printBrowser();
+    function closeSettings() {
+        document.getElementById('settingsModal').classList.add('hidden');
+    }
+
+    function updatePrinterSettings() {
+        const selected = document.querySelector('input[name="printerType"]:checked').value;
+        const thermalSettings = document.getElementById('thermalSettings');
+        
+        if (selected === 'thermal') {
+            thermalSettings.classList.remove('hidden');
+        } else {
+            thermalSettings.classList.add('hidden');
         }
     }
 
-    function printThermal() {
-        if (!currentQueue) return;
-        const { queue_number_formatted, counter } = currentQueue;
-        const content = [
-            `QUEUE NUMBER: ${queue_number_formatted}`,
-            `COUNTER: ${counter.name}`,
-            `Please wait for your turn.`
-        ].join('\n');
-
-        // Assuming you have a function to send this to a thermal printer
-        // sendToThermalPrinter(content);
-        console.log("Thermal print:", content);
-        alert("Printing to thermal printer...");
-        resetKiosk();
+    function saveSettings() {
+        printerSettings.type = document.querySelector('input[name="printerType"]:checked').value;
+        printerSettings.vendorId = document.getElementById('vendorId').value || '0x0fe6';
+        
+        localStorage.setItem('kioskPrinterSettings', JSON.stringify(printerSettings));
+        
+        alert('Settings saved successfully!');
+        closeSettings();
     }
 
-    function printBrowser() {
+    function testPrint() {
+        if (!currentQueue) {
+            currentQueue = {
+                queue_number: 'TEST-0001',
+                counter: {
+                    counter_number: '1',
+                    display_name: 'Test Counter'
+                }
+            };
+        }
+        printQueue();
+    }
+
+    function printQueue() {
+        if (!currentQueue) {
+            alert('No queue number to print');
+            return;
+        }
+        
+        switch(printerSettings.type) {
+            case 'thermal':
+                printToThermalPrinter();
+                break;
+            case 'browser':
+                printToBrowser();
+                break;
+            case 'none':
+                capturePhoto();
+                break;
+            default:
+                printToBrowser();
+        }
+    }
+
+    function printToThermalPrinter() {
+        if (!navigator.usb) {
+            alert('USB printing not supported in this browser. Using browser print instead.');
+            printToBrowser();
+            return;
+        }
+
+        if (connectedPrinter) {
+            sendToPrinter(connectedPrinter);
+            return;
+        }
+
+        let vendorId = parseInt(printerSettings.vendorId);
+        if (isNaN(vendorId)) vendorId = 0x0fe6;
+
+        navigator.usb.requestDevice({ filters: [{ vendorId: vendorId }] })
+            .then(device => {
+                connectedPrinter = device;
+                return device.open();
+            })
+            .then(() => sendToPrinter(connectedPrinter))
+            .catch(error => {
+                console.log('Thermal printer error:', error);
+                alert('Could not connect to thermal printer. Using browser print instead.');
+                connectedPrinter = null;
+                printToBrowser();
+            });
+    }
+
+    async function sendToPrinter(device) {
+        try {
+            if (!device.opened) await device.open();
+            if (device.configuration === null) await device.selectConfiguration(1);
+            await device.claimInterface(0);
+
+            const encoder = new TextEncoder();
+            const now = new Date().toLocaleString('en-US', { 
+                month: 'short', day: 'numeric', year: 'numeric',
+                hour: '2-digit', minute: '2-digit', hour12: true 
+            });
+            
+            const commands = [
+                '\x1B\x40', '\x1B\x61\x01', '\x1B\x45\x01', '\x1D\x21\x11',
+                '{{ $organization->organization_name }}\n',
+                '\x1B\x45\x00', '\x1D\x21\x00', '\n',
+                'QUEUE MANAGEMENT SYSTEM\n',
+                '================================\n', '\n',
+                '\x1B\x45\x01', '\x1D\x21\x11', 'Priority Number\n',
+                '\x1D\x21\x22', currentQueue.queue_number.split('-').pop() + '\n',
+                '\x1D\x21\x00', '\x1B\x45\x00', '\n',
+                '================================\n',
+                '\x1B\x45\x01', 'Counter ' + currentQueue.counter.counter_number + '\n',
+                '\x1B\x45\x00', currentQueue.counter.display_name + '\n', '\n',
+                '================================\n',
+                'INSTRUCTIONS:\n',
+                '1. Watch the monitor display\n',
+                '2. Listen for your number\n',
+                '3. Proceed to Counter ' + currentQueue.counter.counter_number + '\n',
+                '================================\n', '\n',
+                'Generated: ' + now + '\n',
+                '\x1B\x61\x01', 'Thank you!\n', '\n\n\n', '\x1D\x56\x00',
+            ];
+
+            await device.transferOut(1, encoder.encode(commands.join('')));
+            console.log('Print job sent successfully');
+            
+        } catch (error) {
+            console.error('Print error:', error);
+            alert('Failed to print: ' + error.message);
+            connectedPrinter = null;
+        }
+    }
+
+    function printToBrowser() {
         if (!currentQueue) return;
-        const { queue_number_formatted, counter } = currentQueue;
-        const printContent = `
-            <div style="text-align: center; font-family: sans-serif;">
-                <h2>QUEUE NUMBER</h2>
-                <h1>${queue_number_formatted}</h1>
-                <h3>${counter.name}</h3>
-                <p>Please wait for your turn</p>
-            </div>
-        `;
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(printContent);
+        
+        const printWindow = window.open('', '_blank', 'width=350,height=500');
+        const now = new Date().toLocaleString('en-US', { 
+            month: 'short', day: 'numeric', year: 'numeric',
+            hour: '2-digit', minute: '2-digit', hour12: true 
+        });
+        
+        const displayNumber = currentQueue.queue_number.split('-').pop();
+        
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Queue Number - ${displayNumber}</title>
+                <style>
+                    @media print { @page { margin: 0; size: 80mm auto; } body { margin: 0; padding: 10mm; } }
+                    body { font-family: Arial, sans-serif; text-align: center; padding: 20px; max-width: 300px; margin: 0 auto; }
+                    .header { font-size: 24px; font-weight: bold; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 3px double #000; }
+                    .organization-name { font-size: 18px; margin-bottom: 10px; color: #333; }
+                    .title { font-size: 18px; font-weight: bold; margin-bottom: 20px; text-transform: uppercase; }
+                    .queue-number { font-size: 84px; font-weight: bold; margin: 30px 0; letter-spacing: 4px; 
+                                   border: 5px solid #000; padding: 25px; background: linear-gradient(135deg, #f0f0f0, #fff); 
+                                   box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
+                    .counter-info { font-size: 28px; font-weight: bold; margin: 25px 0 10px 0; }
+                    .counter-name { font-size: 20px; margin-bottom: 25px; color: #333; }
+                    .instructions { font-size: 15px; margin: 25px 0; padding: 20px; border-top: 3px double #000; 
+                                   border-bottom: 3px double #000; line-height: 1.8; text-align: left; }
+                    .instructions strong { display: block; text-align: center; margin-bottom: 10px; font-size: 16px; }
+                    .footer { font-size: 13px; color: #666; margin-top: 20px; padding-top: 15px; border-top: 2px dashed #999; }
+                    .barcode { margin: 20px 0; padding: 15px; background: #fff; border: 2px solid #333; 
+                              font-family: 'Courier New', monospace; font-size: 18px; letter-spacing: 3px; font-weight: bold; }
+                </style>
+            </head>
+            <body>
+                <div class="organization-name" data-org-name>{{ $organization->organization_name }}</div>
+                <div class="header">QUEUE MANAGEMENT SYSTEM</div>
+                <div class="title">Priority Number</div>
+                <div class="queue-number">${displayNumber}</div>
+                <div class="barcode">*${currentQueue.queue_number}*</div>
+                <div class="counter-info">Counter ${currentQueue.counter.counter_number}</div>
+                <div class="counter-name">${currentQueue.counter.display_name}</div>
+                <div class="instructions">
+                    <strong>📋 INSTRUCTIONS</strong>
+                    1. Watch the monitor display<br>
+                    2. Listen for your number<br>
+                    3. Proceed to Counter ${currentQueue.counter.counter_number}<br>
+                    4. Keep this ticket visible
+                </div>
+                <div class="footer">Generated: ${now}<br><strong>Thank you for your patience!</strong></div>
+            </body>
+            </html>
+        `);
+        
         printWindow.document.close();
-        printWindow.print();
-        printWindow.close();
-        resetKiosk();
+        printWindow.onload = function() {
+            setTimeout(() => {
+                printWindow.print();
+                setTimeout(() => printWindow.close(), 500);
+            }, 250);
+        };
     }
 
-    function screenshotQueue() {
-        const queueDisplay = document.getElementById('queue_display_section');
-        html2canvas(queueDisplay, {
+    function capturePhoto() {
+        if (!currentQueue) {
+            alert('No queue number to capture');
+            return;
+        }
+
+        const element = document.getElementById('queueContent');
+        
+        if (typeof html2canvas === 'undefined') {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+            script.onload = () => captureWithHtml2Canvas(element);
+            document.head.appendChild(script);
+        } else {
+            captureWithHtml2Canvas(element);
+        }
+    }
+
+    function captureWithHtml2Canvas(element) {
+        html2canvas(element, {
+            backgroundColor: '#ffffff',
             scale: 2,
-            useCORS: true,
-            backgroundColor: '#ffffff'
+            logging: false,
+            windowWidth: element.scrollWidth,
+            windowHeight: element.scrollHeight
         }).then(canvas => {
-            const link = document.createElement('a');
-            link.href = canvas.toDataURL('image/png');
-            link.download = `queue-${currentQueue.queue_number_formatted}.png`;
-            link.click();
-            resetKiosk();
-        }).catch(err => {
-            console.error('Screenshot failed:', err);
-            alert('Could not take screenshot. Please try again.');
+            canvas.toBlob(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `queue-number-${currentQueue.queue_number}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                alert('Queue number saved as image!');
+            });
+        }).catch(error => {
+            console.error('Capture error:', error);
+            alert('Could not capture photo. Please try print instead.');
         });
     }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        loadPrinterSettings();
-        renderCounters(initialCounters);
-        setInterval(refreshCounters, 5000);
-
-        document.getElementById('btn_print').addEventListener('click', printQueue);
-        document.getElementById('btn_screenshot').addEventListener('click', screenshotQueue);
-        document.getElementById('btn_reset').addEventListener('click', resetKiosk);
-        document.getElementById('btn_done').addEventListener('click', resetKiosk);
-
-        document.getElementById('btn_show_settings').addEventListener('click', () => {
-            document.getElementById('settings_modal').classList.remove('hidden');
-        });
-
-        document.getElementById('btn_close_settings').addEventListener('click', () => {
-            document.getElementById('settings_modal').classList.add('hidden');
-        });
-
-        document.getElementById('btn_save_settings').addEventListener('click', savePrinterSettings);
-    });
     </script>
     <script src="{{ asset('js/settings-sync.js') }}"></script>
 </body>
