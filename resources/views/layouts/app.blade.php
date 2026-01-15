@@ -139,10 +139,15 @@
         <aside id="sidebar" class="sidebar w-64 gradient-bg text-white flex-shrink-0 fixed h-full z-50 md:relative">
             <div class="h-full flex flex-col">
                 @php
-                    // Get organization code from URL or from user's organization
+                    // Get organization code from URL or from user's organization, fallback to default
                     $orgCode = request()->route('organization_code');
                     if (!$orgCode && auth()->user() && auth()->user()->organization) {
                         $orgCode = auth()->user()->organization->organization_code;
+                    }
+                    if (!$orgCode) {
+                        // Fallback to first organization code in DB if still missing
+                        $org = \App\Models\Organization::first();
+                        $orgCode = $org ? $org->organization_code : 'default';
                     }
                     $canAccountSettings = auth()->check() && !auth()->user()->isSuperAdmin() && !empty($orgCode);
                 @endphp
