@@ -784,30 +784,8 @@
     // Queue generation optimizations
     let isGenerating = false;
     let csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-    let csrfRefreshInFlight = null;
 
-    function setCsrfToken(token) {
-        if (!token) return;
-        csrfToken = token;
-        const meta = document.querySelector('meta[name="csrf-token"]');
-        if (meta) meta.setAttribute('content', token);
-    }
 
-    function refreshCsrfToken() {
-        if (csrfRefreshInFlight) return csrfRefreshInFlight;
-        csrfRefreshInFlight = fetch('/refresh-csrf', {
-            credentials: 'same-origin',
-            headers: { 'Accept': 'application/json' }
-        })
-        .then(res => res.ok ? res.json() : Promise.reject(res))
-        .then(data => {
-            if (data && data.token) setCsrfToken(data.token);
-            return csrfToken;
-        })
-        .catch(() => csrfToken)
-        .finally(() => { csrfRefreshInFlight = null; });
-        return csrfRefreshInFlight;
-    }
 
     function selectCounter(counterId, counterNumber, counterName) {
         if (isGenerating) return;
@@ -816,7 +794,6 @@
         document.querySelectorAll('.counter-btn').forEach(btn => btn.disabled = true);
 
         const attemptGenerate = async (didRetry = false) => {
-            await refreshCsrfToken();
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 15000);
 
@@ -845,11 +822,7 @@
                     data = { success: false, message: `Server error (status ${status})` };
                 }
 
-                // Retry once on CSRF/session expiry
-                if (!response.ok && (status === 419 || status === 403) && !didRetry) {
-                    await refreshCsrfToken();
-                    return attemptGenerate(true);
-                }
+
 
                 if (!response.ok) {
                     throw new Error(data.message || `Request failed with status ${status}`);
