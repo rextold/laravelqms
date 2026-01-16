@@ -1,18 +1,43 @@
 @extends('layouts.app')
 
-@section('title', 'Dashboard & Reports')
+@section('title', 'Counter Dashboard')
 
 @section('content')
 <div class="container mx-auto px-4 py-8">
-    <div class="flex justify-end items-center mb-6">
-        <form id="onlineForm" action="{{ route('counter.toggle-online', ['organization_code' => request()->route('organization_code')]) }}" method="GET">
-            <button type="submit" id="onlineBtn" 
-                    class="px-4 py-2 rounded {{ $counter->is_online ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700' }} text-white flex items-center">
-                <i class="fas fa-power-off mr-2"></i>
-                <span id="onlineText">{{ $counter->is_online ? 'Go Offline' : 'Go Online' }}</span>
-                <span id="onlineSpinner" class="hidden ml-2"><i class="fas fa-spinner fa-spin"></i></span>
-            </button>
-        </form>
+    <!-- Header Section -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 space-y-4 sm:space-y-0">
+        <div class="flex items-center space-x-4">
+            @if($settings->logo_url)
+                <img src="{{ $settings->logo_url }}" alt="Organization Logo" class="h-12 w-auto">
+            @endif
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800" data-org-name>{{ $organization->organization_name ?? 'QMS' }}</h1>
+                <p class="text-lg text-gray-600">Counter {{ $counter->counter_number }} - {{ $counter->display_name }}</p>
+                <div class="flex items-center mt-2">
+                    <div class="w-3 h-3 rounded-full {{ $counter->is_online ? 'bg-green-500' : 'bg-red-500' }} mr-2"></div>
+                    <span class="text-sm font-medium {{ $counter->is_online ? 'text-green-600' : 'text-red-600' }}">
+                        {{ $counter->is_online ? 'Online' : 'Offline' }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex space-x-3">
+            <a href="{{ route('counter.panel', ['organization_code' => request()->route('organization_code')]) }}" 
+               class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center transition-colors">
+                <i class="fas fa-desktop mr-2"></i>
+                Service Panel
+            </a>
+            
+            <form id="onlineForm" action="{{ route('counter.toggle-online', ['organization_code' => request()->route('organization_code')]) }}" method="GET" class="inline">
+                <button type="submit" id="onlineBtn" 
+                        class="px-4 py-2 rounded-lg {{ $counter->is_online ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700' }} text-white flex items-center transition-colors">
+                    <i class="fas fa-power-off mr-2"></i>
+                    <span id="onlineText">{{ $counter->is_online ? 'Go Offline' : 'Go Online' }}</span>
+                    <span id="onlineSpinner" class="hidden ml-2"><i class="fas fa-spinner fa-spin"></i></span>
+                </button>
+            </form>
+        </div>
     </div>
 
     <!-- Stats -->

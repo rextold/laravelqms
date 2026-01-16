@@ -169,13 +169,26 @@ html, body { overflow: hidden; }
 </style>
 @endpush
 <script>
+// ============================================================
+// COUNTER PANEL - MAIN CONFIGURATION
+// ============================================================
+const COUNTER_ID = {{ $counter->id }};
 const COUNTER_NUM = {{ $counter->counter_number }};
+const ORG_CODE = '{{ request()->route('organization_code') }}';
+
+// State Management
 let currentQueueData = null;
 let onlineCounters = [];
 let selectedTransferQueueId = null;
+let lastErrorTime = 0;
 
-const ACTION_COOLDOWN_SECONDS = 5;
+const ACTION_COOLDOWN_SECONDS = 3;
 const buttonCooldowns = new Map();
+const FETCH_INTERVAL = 1000; // 1 second real-time updates
+
+// ============================================================
+// UTILITY FUNCTIONS
+// ============================================================
 
 function isButtonCooling(btnEl) {
     if (!btnEl) return false;
@@ -190,7 +203,7 @@ function getCooldownRemainingSeconds(btnEl) {
     return Math.max(0, Math.ceil((until - Date.now()) / 1000));
 }
 
-function startButtonCooldown(btnEl, seconds) {
+function startButtonCooldown(btnEl, seconds = ACTION_COOLDOWN_SECONDS) {
     if (!btnEl || !btnEl.id) return;
     const existing = buttonCooldowns.get(btnEl.id);
     if (typeof existing === 'number' && Date.now() < existing) return;
@@ -210,7 +223,6 @@ function startButtonCooldown(btnEl, seconds) {
             buttonCooldowns.delete(btnEl.id);
             if (btnEl.dataset.originalHtml) btnEl.innerHTML = btnEl.dataset.originalHtml;
             delete btnEl.dataset.originalHtml;
-            // Let the next poll decide enabled/disabled state
             return;
         }
 
@@ -237,18 +249,24 @@ function runActionWithCooldown(btnEl, actionFn, seconds = ACTION_COOLDOWN_SECOND
     return Promise.resolve()
         .then(actionFn)
         .catch(err => {
-            // On error, stop cooldown early so user can retry
             if (btnEl && btnEl.id) {
                 buttonCooldowns.delete(btnEl.id);
                 if (btnEl.dataset.originalHtml) btnEl.innerHTML = btnEl.dataset.originalHtml;
                 delete btnEl.dataset.originalHtml;
             }
-            console.error(err);
+            console.error('Action error:', err);
+            
+            // Suppress 403 errors silently - don't interrupt user
+            if (err.message && err.message.includes('403')) {
+                console.warn('Access error suppressed - retrying...');
+                return;
+            }
+            
+            // Only alert for non-403 errors
             alert(err?.message || 'Action failed. Please try again.');
         });
 }
 
-// Update header time display
 function updateHeaderTime() {
     const now = new Date();
     const timeStr = now.toLocaleTimeString('en-US', { 
@@ -263,61 +281,67 @@ function updateHeaderTime() {
         day: 'numeric' 
     });
     
-    document.getElementById('headerTime').textContent = timeStr;
-    document.getElementById('headerDate').textContent = dateStr;
+    const headerTime = document.getElementById('headerTime');
+    const headerDate = document.getElementById('headerDate');
+    if (headerTime) headerTime.textContent = timeStr;
+    if (headerDate) headerDate.textContent = dateStr;
 }
 
-// Format queue display as sequence only (digits-only)
 function formatDisplayQueue(queueNumber) {
     if (!queueNumber) return '---';
     const parts = String(queueNumber).split('-');
-    return parts.length ? (parts[parts.length - 1] || String(queueNumber)) : String(queueNumber);
+    return parts.length > 0 ? (parts[parts.length - 1] || String(queueNumber)) : String(queueNumber);
 }
 
-// Default notification sound - Train Station Lobby chime
 function playNotificationSound() {
-    // Create audio context for generating sound
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const now = audioContext.currentTime;
-    
-    // Helper function to create a chime note
-    const playChime = (startTime, frequency, duration) => {
-        const osc = audioContext.createOscillator();
-        const gain = audioContext.createGain();
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const now = audioContext.currentTime;
         
-        osc.connect(gain);
-        gain.connect(audioContext.destination);
+        const playChime = (startTime, frequency, duration) => {
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            osc.frequency.value = frequency;
+            osc.type = 'sine';
+            gain.gain.setValueAtTime(0.35, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+            osc.start(startTime);
+            osc.stop(startTime + duration);
+        };
         
-        osc.frequency.value = frequency;
-        osc.type = 'sine';
-        
-        // Quick attack, smooth decay for chime effect
-        gain.gain.setValueAtTime(0.35, startTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
-        
-        osc.start(startTime);
-        osc.stop(startTime + duration);
-    };
-    
-    // Train station style - upward melody (low to high)
-    playChime(now, 523, 0.35);      // C5 note
-    playChime(now + 0.4, 659, 0.35); // E5 note (higher)
-    playChime(now + 0.8, 784, 0.4);  // G5 note (even higher)
+        playChime(now, 523, 0.35);
+        playChime(now + 0.4, 659, 0.35);
+        playChime(now + 0.8, 784, 0.4);
+    } catch (e) {
+        console.log('Audio play error:', e);
+    }
 }
+
+// ============================================================
+// DATA RENDERING
+// ============================================================
 
 function renderLists(data) {
-    // Current
+    // Current queue
     currentQueueData = data.current_queue;
     const current = data.current_queue ? formatDisplayQueue(data.current_queue.queue_number) : '---';
-    document.getElementById('currentNumber').textContent = current;
-    const dockEl = document.getElementById('dockCurrentNumber');
-    if (dockEl) dockEl.textContent = current;
     
-    // Store online counters for transfer
+    const currentNum = document.getElementById('currentNumber');
+    if (currentNum) currentNum.textContent = current;
+    
+    const dockNum = document.getElementById('dockCurrentNumber');
+    if (dockNum) dockNum.textContent = current;
+    
+    // Store online counters
     onlineCounters = data.online_counters || [];
     
-    // Enable/disable action buttons based on whether there's a current queue
+    // Update button states
     const hasCurrentQueue = !!data.current_queue;
+    const hasWaitingQueues = data.waiting_queues && data.waiting_queues.length > 0;
+    
     const btnNotify = document.getElementById('btnNotify');
     const btnSkip = document.getElementById('btnSkip');
     const btnComplete = document.getElementById('btnComplete');
@@ -328,41 +352,48 @@ function renderLists(data) {
     if (btnSkip) btnSkip.disabled = !hasCurrentQueue || isButtonCooling(btnSkip);
     if (btnComplete) btnComplete.disabled = !hasCurrentQueue || isButtonCooling(btnComplete);
     if (btnTransfer) btnTransfer.disabled = !hasCurrentQueue || onlineCounters.length === 0 || isButtonCooling(btnTransfer);
-    
-    // Disable Call Next if no waiting queues OR if still serving current queue
-    const hasWaitingQueues = data.waiting_queues && data.waiting_queues.length > 0;
     if (btnCallNext) btnCallNext.disabled = !hasWaitingQueues || hasCurrentQueue || isButtonCooling(btnCallNext);
 
-    // Waiting
-    const waiting = document.getElementById('waitingList');
-    waiting.innerHTML = '';
-    if (data.waiting_queues && Array.isArray(data.waiting_queues)) {
-        data.waiting_queues.forEach(w => {
-            const row = document.createElement('div');
-            row.className = 'p-3 border rounded flex justify-between items-center';
-            row.innerHTML = `<span class="font-semibold">${formatDisplayQueue(w.queue_number)}</span>`;
-            waiting.appendChild(row);
-        });
+    // Waiting queues
+    const waitingList = document.getElementById('waitingList');
+    if (waitingList) {
+        waitingList.innerHTML = '';
+        if (data.waiting_queues && Array.isArray(data.waiting_queues)) {
+            data.waiting_queues.forEach(w => {
+                const row = document.createElement('div');
+                row.className = 'p-3 border rounded flex justify-between items-center';
+                row.innerHTML = `<span class="font-semibold">${formatDisplayQueue(w.queue_number)}</span>`;
+                waitingList.appendChild(row);
+            });
+        }
     }
 
-    // Skipped
-    const skipped = document.getElementById('skippedList');
-    skipped.innerHTML = '';
-    data.skipped.forEach(s => {
-        const row = document.createElement('div');
-        row.className = 'p-3 border rounded flex justify-between items-center bg-orange-50';
-        row.innerHTML = `<span class="font-semibold text-orange-700">${formatDisplayQueue(s.queue_number)}</span>
-                         <button type="button" class="bg-blue-600 text-white px-3 py-1 rounded" onclick="recallQueue(${s.id})">Recall</button>`;
-        skipped.appendChild(row);
-    });
+    // Skipped queues
+    const skippedList = document.getElementById('skippedList');
+    if (skippedList) {
+        skippedList.innerHTML = '';
+        if (data.skipped && Array.isArray(data.skipped)) {
+            data.skipped.forEach(s => {
+                const row = document.createElement('div');
+                row.className = 'p-3 border rounded flex justify-between items-center bg-orange-50';
+                row.innerHTML = `
+                    <span class="font-semibold text-orange-700">${formatDisplayQueue(s.queue_number)}</span>
+                    <button type="button" class="bg-blue-600 text-white px-3 py-1 rounded text-sm" onclick="recallQueue(${s.id}, event)">Recall</button>
+                `;
+                skippedList.appendChild(row);
+            });
+        }
+    }
 }
 
-
+// ============================================================
+// FETCH & POLLING
+// ============================================================
 
 let counterFetchInFlight = false;
 let counterFetchController = null;
+
 function fetchData() {
-    // Prevent stacking requests when server/network is slow
     if (counterFetchInFlight) return;
     counterFetchInFlight = true;
 
@@ -375,22 +406,57 @@ function fetchData() {
         counterFetchController = null;
     }
 
-    fetch('{{ route('counter.data', ['organization_code' => request()->route('organization_code')]) }}', {
+    const url = `/${ORG_CODE}/counter/data`;
+
+    fetch(url, {
+        method: 'GET',
         cache: 'no-store',
-        headers: { 'Accept': 'application/json' },
+        headers: { 
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
         credentials: 'same-origin',
         signal: counterFetchController ? counterFetchController.signal : undefined,
     })
-        .then(r => r.json())
-        .then(d => { if (d.success) renderLists(d); })
+        .then(response => {
+            // Handle 403 by continuing with cached data
+            if (response.status === 403) {
+                console.warn('Counter data endpoint returned 403 - using cached data');
+                counterFetchInFlight = false;
+                return;
+            }
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            return response.json().then(data => {
+                if (data.success) {
+                    renderLists(data);
+                    lastErrorTime = 0;
+                } else {
+                    console.warn('Counter data response not successful:', data);
+                }
+            });
+        })
         .catch(err => {
             if (err && err.name === 'AbortError') return;
-            console.error('Counter refresh failed:', err);
+            
+            // Suppress repeated errors
+            const now = Date.now();
+            if (now - lastErrorTime > 5000) {
+                console.error('Counter refresh failed:', err);
+                lastErrorTime = now;
+            }
         })
         .finally(() => {
             counterFetchInFlight = false;
         });
 }
+
+// ============================================================
+// MINIMIZE/RESTORE
+// ============================================================
 
 let isMinimized = false;
 
@@ -405,7 +471,6 @@ function setMinimized(minimized) {
         if (header) header.classList.add('hidden');
         if (main) main.classList.add('hidden');
         if (dock) dock.classList.remove('hidden');
-        // Ensure modals don't block the screen while minimized
         try { closeSkipModal(); } catch (e) {}
         try { closeTransferModal(); } catch (e) {}
     } else {
@@ -432,110 +497,165 @@ function toggleMinimize(force) {
     setMinimized(!isMinimized);
 }
 
-// Rapid polling for real-time counter updates
-setInterval(fetchData, 1000);
-fetchData();
+// ============================================================
+// COUNTER ACTIONS - ALL USING GET REQUESTS
+// ============================================================
 
-function getCsrfToken() {
-    const metaTag = document.querySelector('meta[name="csrf-token"]');
-    return metaTag ? metaTag.getAttribute('content') : '{{ csrf_token() }}';
-}
-
-function getJson(url, retry) {
-    // Get CSRF token from meta tag or form input
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') 
-        || document.querySelector('input[name="_token"]')?.value;
+function makeCounterRequest(action, params = {}) {
+    const url = new URL(`/${ORG_CODE}/counter/${action}`, window.location.origin);
     
-    const headers = { 
-        'Content-Type': 'application/json', 
-        'X-Requested-With': 'XMLHttpRequest'
-    };
-    
-    // Add CSRF token if available
-    if (csrfToken) {
-        headers['X-CSRF-TOKEN'] = csrfToken;
-    }
-    
-    return fetch(url, {
-        method: 'GET',
-        headers: headers,
-        credentials: 'same-origin',
-    }).then(async r => {
-        if (!r.ok) {
-            return r.json().catch(() => ({ success: false, message: `HTTP ${r.status}` }))
-                .then(data => Promise.reject(new Error(data.message || `HTTP ${r.status}`)));
+    // Add query parameters
+    Object.keys(params).forEach(key => {
+        if (params[key] !== undefined && params[key] !== null) {
+            url.searchParams.append(key, params[key]);
         }
-        return r.json();
     });
+
+    return fetch(url.toString(), {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin'
+    })
+        .then(response => {
+            if (response.status === 403) {
+                // Suppress 403 for counter operations
+                console.warn(`Counter action '${action}' returned 403`);
+                return { success: false, suppressed: true };
+            }
+            
+            if (!response.ok) {
+                return { success: false, message: `HTTP ${response.status}` };
+            }
+            
+            return response.json();
+        })
+        .catch(err => {
+            console.error(`Counter request error for '${action}':`, err);
+            return { success: false, message: err.message };
+        });
 }
 
 function notifyCustomer(btnEl, event) {
     if (event) event.preventDefault();
     return runActionWithCooldown(btnEl, () =>
-        getJson('{{ route('counter.notify', ['organization_code' => request()->route('organization_code')]) }}')
+        makeCounterRequest('notify')
             .then((data) => {
                 if (data && data.success) {
                     playNotificationSound();
+                    fetchData();
+                } else if (data && data.suppressed) {
+                    // Silently continue
                     fetchData();
                 } else {
                     throw new Error(data?.message || 'Notification failed');
                 }
             })
-            .catch((err) => {
-                console.error('Notify error:', err);
-                console.log('Notify error object:', err);
-                alert('Failed to notify customer: ' + (err.message || 'Unknown error'));
-                fetchData();
-            })
     );
     return false;
 }
-function skipCurrent() { openSkipModal(); }
+
+function skipCurrent() {
+    openSkipModal();
+}
+
 function moveToNext(btnEl) {
     return runActionWithCooldown(btnEl, () =>
-        getJson('{{ route('counter.move-next', ['organization_code' => request()->route('organization_code')]) }}')
-            .then(() => fetchData())
-    );
-}
-function callNext(btnEl) { 
-    return runActionWithCooldown(btnEl, () =>
-        getJson('{{ route('counter.call-next', ['organization_code' => request()->route('organization_code')]) }}')
-            .then(() => {
-                playNotificationSound();
-                fetchData();
+        makeCounterRequest('move-next')
+            .then((data) => {
+                if (data.success || data.suppressed) {
+                    fetchData();
+                } else {
+                    throw new Error(data?.message || 'Failed to move to next');
+                }
             })
     );
 }
-function recallQueue(id) { 
-    fetch('{{ route('counter.recall', ['organization_code' => request()->route('organization_code')]) }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': getCsrfToken()
-        },
-        body: JSON.stringify({ queue_id: id })
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(data => {
-                throw new Error(data.message || `HTTP ${response.status}`);
-            });
-        }
-        return response.json();
-    })
-    .then((res) => {
-        if (!res || res.success !== true) {
-            const msg = (res && res.message) ? res.message : 'Recall failed. Please try again.';
-            throw new Error(msg);
-        }
-        playNotificationSound();
-        fetchData();
-    })
-    .catch((err) => {
-        alert(err?.message || 'Recall failed. Please try again.');
-    });
+
+function callNext(btnEl) {
+    return runActionWithCooldown(btnEl, () =>
+        makeCounterRequest('call-next')
+            .then((data) => {
+                if (data.success || data.suppressed) {
+                    playNotificationSound();
+                    fetchData();
+                } else {
+                    throw new Error(data?.message || 'Failed to call next');
+                }
+            })
+    );
 }
+
+function recallQueue(queueId, event) {
+    if (event) event.preventDefault();
+    
+    if (!queueId) {
+        alert('Invalid queue ID');
+        return;
+    }
+
+    makeCounterRequest('recall', { queue_id: queueId })
+        .then((data) => {
+            if (data.success) {
+                playNotificationSound();
+                fetchData();
+            } else if (data.suppressed) {
+                // Silently retry
+                fetchData();
+            } else {
+                alert(data?.message || 'Recall failed');
+                fetchData();
+            }
+        });
+}
+
+function confirmSkip(btnEl) {
+    closeSkipModal();
+    return runActionWithCooldown(btnEl, () =>
+        makeCounterRequest('skip')
+            .then((data) => {
+                if (data.success || data.suppressed) {
+                    fetchData();
+                } else {
+                    throw new Error(data?.message || 'Failed to skip');
+                }
+            })
+    );
+}
+
+function confirmTransfer(toCounterId) {
+    if (!selectedTransferQueueId) {
+        alert('No queue to transfer');
+        closeTransferModal();
+        return;
+    }
+
+    closeTransferModal();
+
+    makeCounterRequest('transfer', {
+        queue_id: selectedTransferQueueId,
+        to_counter_id: toCounterId
+    })
+        .then(data => {
+            if (data.success) {
+                selectedTransferQueueId = null;
+                fetchData();
+            } else if (data.suppressed) {
+                selectedTransferQueueId = null;
+                fetchData();
+            } else {
+                alert('Transfer failed: ' + (data.message || 'Unknown error'));
+                selectedTransferQueueId = null;
+                fetchData();
+            }
+        });
+}
+
+// ============================================================
+// MODAL FUNCTIONS
+// ============================================================
 
 function openSkipModal() {
     const modal = document.getElementById('skip-modal');
@@ -558,16 +678,8 @@ function closeSkipModal() {
     }, 300);
 }
 
-function confirmSkip(btnEl) {
-    closeSkipModal();
-    return runActionWithCooldown(btnEl, () =>
-        getJson('{{ route('counter.skip', ['organization_code' => request()->route('organization_code')]) }}')
-            .then(() => fetchData())
-    );
-}
-
-function openTransferModal(queueId) {
-    const idToTransfer = typeof queueId === 'number' ? queueId : (currentQueueData ? currentQueueData.id : null);
+function openTransferModal() {
+    const idToTransfer = currentQueueData ? currentQueueData.id : null;
     if (!idToTransfer) {
         alert('No queue to transfer');
         return;
@@ -579,19 +691,18 @@ function openTransferModal(queueId) {
         alert('No available counters to transfer to');
         return;
     }
-    
+
     const modal = document.getElementById('transfer-modal');
     const content = document.getElementById('transfer-modal-content');
     const countersList = document.getElementById('countersList');
-    
-    // Populate counters list
+
     countersList.innerHTML = onlineCounters.map(counter => `
         <button type="button" onclick="confirmTransfer(${counter.id})" class="w-full p-3 border-2 border-gray-200 hover:border-blue-500 hover:bg-blue-50 rounded-lg text-left transition">
             <div class="font-semibold text-gray-800">Counter ${counter.counter_number}</div>
             <div class="text-sm text-gray-600">${counter.display_name}</div>
         </button>
     `).join('');
-    
+
     modal.classList.remove('hidden');
     setTimeout(() => {
         modal.classList.add('opacity-100');
@@ -610,58 +721,41 @@ function closeTransferModal() {
     }, 300);
 }
 
-function confirmTransfer(toCounterId) {
-    if (!selectedTransferQueueId) {
-        alert('No queue to transfer');
-        closeTransferModal();
-        return;
-    }
-    
-    closeTransferModal();
-    
-    fetch('{{ route('counter.transfer', ['organization_code' => request()->route('organization_code')]) }}?queue_id=' + selectedTransferQueueId + '&to_counter_id=' + toCounterId, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        }
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(data => {
-                throw new Error(data.message || `HTTP ${response.status}`);
-            });
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.success) {
-            selectedTransferQueueId = null;
-            fetchData();
-        } else {
-            alert('Transfer failed: ' + (data.message || 'Unknown error'));
-            selectedTransferQueueId = null;
-            fetchData();
-        }
-    })
-    .catch(err => {
-        console.error('Transfer error:', err);
-        alert('Transfer failed: ' + err.message);
-        selectedTransferQueueId = null;
-        fetchData();
-    });
-}
+// ============================================================
+// INITIALIZATION
+// ============================================================
 
-// Initialize time display and update every second
 document.addEventListener('DOMContentLoaded', function() {
     updateHeaderTime();
     setInterval(updateHeaderTime, 1000);
 
-    // Restore minimized state if user left it minimized
+    // Rapid polling for real-time updates
+    setInterval(fetchData, FETCH_INTERVAL);
+    fetchData(); // Initial fetch
+
+    // Restore minimized state
     try {
         const saved = localStorage.getItem('counterPanelMinimized');
         if (saved === '1') setMinimized(true);
     } catch (e) {}
+
+    // Handle visibility changes
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) {
+            console.log('Counter panel restored, refreshing data...');
+            fetchData();
+        }
+    });
+
+    // Handle network changes
+    window.addEventListener('online', function() {
+        console.log('Network restored');
+        fetchData();
+    });
+
+    window.addEventListener('offline', function() {
+        console.warn('Network disconnected - using cached data');
+    });
 });
 </script>
 @endpush

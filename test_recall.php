@@ -1,120 +1,104 @@
 <?php
 
+// test_recall.php
+
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 echo "DEBUG: Script execution started.\n";
 
-require_once 'vendor/autoload.php';
+require_once __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/app/Http/Controllers/CounterController.php';
 
-use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
-use App\Http\Controllers\CounterController;
-use App\Models\User;
 use App\Models\Queue;
+use App\Models\User;
+use App\Services\QueueService;
+use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\CounterController;
 
-// Bootstrap Laravel
 echo "DEBUG: Bootstrapping Laravel...\n";
-$app = require_once 'bootstrap/app.php';
-$app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
+
+$app = require_once __DIR__ . '/bootstrap/app.php';
+$kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
+$response = $kernel->handle(
+    $request = Illuminate\Http\Request::capture()
+);
+
 echo "DEBUG: Laravel bootstrapped.\n";
 
 echo "Testing Recall Functionality\n";
 echo "============================\n\n";
 
-// Find a counter user
+// Find a counter user to authenticate
 echo "DEBUG: Finding a counter user...\n";
-$counter = User::where('role', 'counter')->first();
-
-if (!$counter) {
-    echo "❌ No counter users found. Please run php artisan db:seed first.\n";
+$counterUser = User::where('role', 'counter')->first();
+if (!$counterUser) {
+    echo "❌ No counter user found in the database. Please seed the database with a counter user.\n";
     exit(1);
 }
 echo "DEBUG: Found counter user.\n";
+echo "✅ Found counter: {$counterUser->name} (ID: {$counterUser->id})\n";
 
-echo "✅ Found counter: {$counter->username} (ID: {$counter->id})\n";
+// Manually authenticate the counter user
+Auth::login($counterUser);
 
-// Check current queue status
-$currentQueue = $counter->getCurrentQueue();
-if ($currentQueue) {
-    echo "⚠️  Counter has active queue: {$currentQueue->queue_number} (Status: {$currentQueue->status})\n";
-    echo "🔄 Completing current queue to test recall functionality...\n";
-    
-    // Complete the current queue
-    $currentQueue->update([
-        'status' => 'completed',
-        'completed_at' => now()
-    ]);
-    echo "✅ Completed current queue\n";
-}
+// Check total queues
+$totalQueues = Queue::count();
+echo "📊 Total queues in database: {$totalQueues}\n";
 
-// Check if there are any queues
-$queueCount = Queue::count();
-echo "📊 Total queues in database: {$queueCount}\n";
-
-// Find or create a skipped queue for this counter
-$queue = Queue::where('counter_id', $counter->id)
-              ->where('status', 'skipped')
-              ->first();
+// Find a skipped queue to recall
+$queue = Queue::where('status', 'skipped')->first();
 
 if (!$queue) {
-    // Create a skipped queue for testing
-    $queue = Queue::create([
-        'queue_number' => '20260115-01-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT),
-        'counter_id' => $counter->id,
-        'status' => 'skipped',
-        'skipped_at' => now(),
-        'called_at' => now()->subMinutes(5),
-        'organization_id' => $counter->organization_id
-    ]);
-    
-    echo "✅ Created test skipped queue: {$queue->queue_number} (ID: {$queue->id})\n";
-} else {
-    echo "✅ Found existing skipped queue: {$queue->queue_number} (ID: {$queue->id})\n";
+    echo "❌ No skipped queues found to test the recall functionality.\n";
+    // Optional: Create a dummy skipped queue for testing
+    $queue = Queue::factory()->create(['status' => 'skipped']);
+    echo "ℹ️ Created a dummy skipped queue for testing: {$queue->queue_number}\n";
 }
 
-echo "\n🧪 Testing Recall Functionality\n";
-echo "--------------------------------\n";
+if ($queue) {
+    echo "✅ Found existing skipped queue: {$queue->queue_number} (ID: {$queue->id})\n\n";
 
-// Simulate authentication
-auth()->login($counter);
-echo "✅ Authenticated as counter: {$counter->username}\n";
+    echo "🧪 Testing Recall Functionality\n";
+    echo "--------------------------------\n";
 
-// Verify no current queue before testing recall
-$currentQueueCheck = $counter->getCurrentQueue();
-if ($currentQueueCheck) {
-    echo "⚠️  Still has active queue, completing it...\n";
-    $currentQueueCheck->update(['status' => 'completed', 'completed_at' => now()]);
-}
-
-// Create a mock request
-$request = Request::create('/counter/recall', 'GET', ['queue_id' => $queue->id]);
-
-// Test the recall functionality
-$queueService = app(\App\Services\QueueService::class);
-$controller = new CounterController($queueService);
-
-echo "🔄 Attempting to recall queue {$queue->queue_number}...\n";
-
-try {
-    $response = $controller->recallQueue($request);
-    $responseData = json_decode($response->getContent(), true);
-    
-    echo "📤 Response Status: " . $response->getStatusCode() . "\n";
-    echo "📄 Response Data: " . json_encode($responseData, JSON_PRETTY_PRINT) . "\n";
-    
-    if ($responseData['success'] ?? false) {
-        echo "✅ Recall successful!\n";
-        
-        // Verify the queue status changed
-        $updatedQueue = Queue::find($queue->id);
-        echo "📊 Updated queue status: {$updatedQueue->status}\n";
-        echo "📊 Updated queue called_at: {$updatedQueue->called_at}\n";
-        echo "📊 Updated queue skipped_at: " . ($updatedQueue->skipped_at ?? 'null') . "\n";
+    if (Auth::check()) {
+        echo "✅ Authenticated as counter: " . Auth::user()->name . "\n\n";
     } else {
-        echo "❌ Recall failed: " . ($responseData['message'] ?? 'Unknown error') . "\n";
+        echo "❌ Failed to authenticate as counter.\n\n";
+        exit(1);
     }
-    
-} catch (Exception $e) {
-    echo "❌ Exception occurred: " . $e->getMessage() . "\n";
-    echo "📍 File: " . $e->getFile() . ":" . $e->getLine() . "\n";
+
+    // Create a new request instance for the recall
+    $request = Request::create('/counter/recall', 'GET', ['queue_id' => $queue->id]);
+
+    // Test the recall functionality
+    $queueService = app(\App\Services\QueueService::class);
+    $controller = new CounterController($queueService);
+
+    echo "🔄 Attempting to recall queue {$queue->queue_number}...\n";
+
+    try {
+        $response = $controller->recallQueue($request);
+        $recalledQueue = Queue::find($queue->id);
+
+        if ($recalledQueue->status === 'serving') {
+            echo "✅ Queue recalled successfully! Status is now 'serving'.\n";
+            echo "   - Queue Number: {$recalledQueue->queue_number}\n";
+            echo "   - Counter: {$recalledQueue->counter->name}\n";
+            echo "   - Called At: {$recalledQueue->called_at}\n";
+        } else {
+            echo "❌ Recall failed. Queue status is still '{$recalledQueue->status}'.\n";
+            echo "   - Response: " . $response->getContent() . "\n";
+        }
+    } catch (\Exception $e) {
+        echo "❌ An error occurred during recall: " . $e->getMessage() . "\n";
+        echo "   - File: " . $e->getFile() . "\n";
+        echo "   - Line: " . $e->getLine() . "\n";
+    }
+} else {
+    echo "🤷 No skipped queues available to test recall.\n";
 }
 
-echo "\n📋 Test completed.\n";
+echo "\n";
