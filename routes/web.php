@@ -85,6 +85,11 @@ Route::prefix('{organization_code}')->group(function () {
         Route::get('/data', [MonitorController::class, 'getData'])->name('data');
     });
     
+    // Public counter data endpoint - accessible without authentication
+    Route::prefix('counter')->name('counter.')->middleware(['organization.context', 'allow.public'])->group(function () {
+        Route::get('/data', [CounterController::class, 'getData'])->name('data');
+    });
+    
     // Protected routes - auth middleware runs FIRST, then organization context
     Route::middleware(['auth', 'organization.context'])->group(function () {
         
@@ -139,10 +144,7 @@ Route::prefix('{organization_code}')->group(function () {
             Route::delete('/marquee/{marquee}', [MarqueeController::class, 'destroy'])->name('marquee.destroy');
         });
         
-        // Counter routes
-        Route::prefix('counter')->name('counter.')->middleware(['organization.context'])->group(function () {
-            Route::get('/data', [CounterController::class, 'getData'])->name('data')->middleware('allow.public');
-        });        // All other counter routes require organization context and role:counter
+        // All other counter routes require organization context and role:counter
         Route::middleware(['organization.context', 'role:counter'])->prefix('counter')->name('counter.')->group(function () {
             // Counter single-frame calling view now at /counter/panel
             Route::get('/panel', [CounterController::class, 'callView'])->name('panel');
