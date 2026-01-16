@@ -19,7 +19,7 @@
                             <i class="fas fa-circle mr-2 text-red-500" id="onlineStatusIcon"></i>
                             <span id="onlineStatus">Offline</span>
                         </span>
-                        <button type="button" id="btnToggleOnline" onclick="toggleOnline(this)" 
+                        <button type="button" id="btnToggleOnline" 
                                 class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-600 hover:bg-green-700 text-white transition-colors">
                             <i class="fas fa-power-off mr-2"></i>
                             Go Online
@@ -163,7 +163,7 @@
                     <i class="fas fa-exchange-alt text-white text-xl"></i>
                     <h3 class="text-xl font-bold text-white">Transfer Queue</h3>
                 </div>
-                <button type="button" onclick="closeTransferModal()" class="text-white hover:text-gray-200 text-2xl leading-none">&times;</button>
+                <button type="button" id="closeTransferModalBtn" class="text-white hover:text-gray-200 text-2xl leading-none">&times;</button>
             </div>
         </div>
 
@@ -183,8 +183,8 @@
 
         <!-- Footer -->
         <div class="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3 border-t border-gray-200">
-                        <button type="button" onclick="closeTransferModal()" class="counter-btn px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold">Cancel</button>
-                        <button type="button" onclick="confirmTransfer()" class="counter-btn px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold">
+                        <button type="button" id="cancelTransferBtn" class="counter-btn px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold">Cancel</button>
+                        <button type="button" id="confirmTransferBtn" class="counter-btn px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold">
                             <i class="fas fa-exchange-alt mr-2"></i>Transfer Customer
                         </button>
                     </div>
@@ -201,7 +201,7 @@
                     <i class="fas fa-forward text-white text-xl"></i>
                     <h3 class="text-xl font-bold text-white">Skip Current Queue?</h3>
                 </div>
-                <button type="button" onclick="closeSkipModal()" class="text-white hover:text-gray-200 text-2xl leading-none">&times;</button>
+                <button type="button" id="closeSkipModalBtn" class="text-white hover:text-gray-200 text-2xl leading-none">&times;</button>
             </div>
         </div>
 
@@ -218,8 +218,8 @@
 
         <!-- Footer -->
         <div class="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3 border-t border-gray-200">
-            <button type="button" onclick="closeSkipModal()" class="counter-btn px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold">Cancel</button>
-            <button type="button" onclick="confirmSkip(this)" class="counter-btn px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold">
+            <button type="button" id="cancelSkipBtn" class="counter-btn px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold">Cancel</button>
+            <button type="button" id="confirmSkipBtn" class="counter-btn px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold">
                 <i class="fas fa-forward mr-2"></i>Skip Queue
             </button>
         </div>
@@ -464,12 +464,20 @@ function renderLists(data) {
                     </div>
                     <div class="flex items-center space-x-2">
                         <span class="text-sm text-gray-500">${new Date(s.created_at).toLocaleTimeString()}</span>
-                        <button type="button" class="bg-blue-600 text-white px-3 py-1 rounded text-sm" onclick="recallQueue(${s.id}, event)">Recall</button>
+                        <button type="button" class="bg-blue-600 text-white px-3 py-1 rounded text-sm recall-queue-btn" data-queue-id="${s.id}">Recall</button>
                     </div>
                 `;
                 skippedList.appendChild(row);
             });
         }
+        
+        // Add event listeners to recall buttons
+        skippedList.querySelectorAll('.recall-queue-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const queueId = parseInt(this.getAttribute('data-queue-id'));
+                recallQueue(queueId, event);
+            });
+        });
     }
     
     // Update dock recall button visibility
@@ -911,11 +919,19 @@ function openTransferModal() {
     const countersList = document.getElementById('countersList');
 
     countersList.innerHTML = onlineCounters.map(counter => `
-        <button type="button" onclick="confirmTransfer(${counter.id})" class="queue-item hover:bg-blue-50 cursor-pointer">
+        <button type="button" data-counter-id="${counter.id}" class="queue-item hover:bg-blue-50 cursor-pointer counter-transfer-btn">
             <div class="font-semibold text-gray-800">Counter ${counter.counter_number}</div>
             <div class="text-sm text-gray-600">${counter.display_name}</div>
         </button>
     `).join('');
+    
+    // Add event listeners to transfer buttons
+    countersList.querySelectorAll('.counter-transfer-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const counterId = parseInt(this.getAttribute('data-counter-id'));
+            confirmTransfer(counterId);
+        });
+    });
 
     modal.classList.remove('hidden');
     setTimeout(() => {
@@ -940,6 +956,48 @@ function closeTransferModal() {
 // ============================================================
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Add event listeners for CSP-compliant buttons
+    const btnToggleOnline = document.getElementById('btnToggleOnline');
+    if (btnToggleOnline) {
+        btnToggleOnline.addEventListener('click', function() {
+            toggleOnline(this);
+        });
+    }
+
+    const closeTransferModalBtn = document.getElementById('closeTransferModalBtn');
+    if (closeTransferModalBtn) {
+        closeTransferModalBtn.addEventListener('click', closeTransferModal);
+    }
+
+    const cancelTransferBtn = document.getElementById('cancelTransferBtn');
+    if (cancelTransferBtn) {
+        cancelTransferBtn.addEventListener('click', closeTransferModal);
+    }
+
+    const confirmTransferBtn = document.getElementById('confirmTransferBtn');
+    if (confirmTransferBtn) {
+        confirmTransferBtn.addEventListener('click', function() {
+            confirmTransfer();
+        });
+    }
+
+    const closeSkipModalBtn = document.getElementById('closeSkipModalBtn');
+    if (closeSkipModalBtn) {
+        closeSkipModalBtn.addEventListener('click', closeSkipModal);
+    }
+
+    const cancelSkipBtn = document.getElementById('cancelSkipBtn');
+    if (cancelSkipBtn) {
+        cancelSkipBtn.addEventListener('click', closeSkipModal);
+    }
+
+    const confirmSkipBtn = document.getElementById('confirmSkipBtn');
+    if (confirmSkipBtn) {
+        confirmSkipBtn.addEventListener('click', function() {
+            confirmSkip(this);
+        });
+    }
+
     // Rapid polling for real-time updates
     setInterval(fetchData, FETCH_INTERVAL);
     fetchData(); // Initial fetch
