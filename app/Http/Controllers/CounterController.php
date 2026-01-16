@@ -480,8 +480,7 @@ class CounterController extends Controller
     }
 
     /**
-     * Get counter data for real-time updates
-     * Accessible to both authenticated and guest users on kiosk/monitor
+     * Get counter data for real-time updates (both panel and dashboard)
      */
     public function getData(Request $request)
     {
@@ -501,8 +500,13 @@ class CounterController extends Controller
                     ->orderBy('counter_number')
                     ->get(['id', 'counter_number', 'display_name']);
 
+                // Get stats and analytics safely
+                $stats = $this->getCounterStats($user);
+                $analytics = $this->getAnalyticsData($user);
+
                 return response()->json([
                     'success' => true,
+                    'online_status' => $user->is_online,
                     'current_queue' => $currentQueue ? [
                         'id' => $currentQueue->id,
                         'queue_number' => $currentQueue->queue_number,
@@ -518,6 +522,9 @@ class CounterController extends Controller
                         'queue_number' => $q->queue_number,
                     ])->values(),
                     'online_counters' => $onlineCounters,
+                    // Dashboard stats and analytics
+                    'stats' => $stats,
+                    'analytics' => $analytics
                 ]);
             }
 
@@ -567,87 +574,96 @@ class CounterController extends Controller
      */
     private function getAnalyticsData(User $counter)
     {
-        $today = Carbon::today();
-        $weekAgo = $today->copy()->subDays(6);
-        
-        // Hourly completions for today
-        $hourlyData = [];
-        for ($hour = 0; $hour < 24; $hour++) {
-            $count = Queue::where('counter_id', $counter->id)
-                ->where('status', 'completed')
-                ->whereDate('completed_at', $today)
-                ->whereHour('completed_at', $hour)
-                ->count();
-            $hourlyData[] = $count;
+        try {
+            $today = Carbon::today();
+            
+            // Hourly completions for today
+            $hourlyData = [];
+            for ($hour = 0; $hour < 24; $hour++) {
+                $count = Queue::where('counter_id', $counter->id)
+                    ->where('status', 'completed')
+                    ->whereDate('completed_at', $today)
+                    ->whereRaw('HOUR(completed_at) = ?', [$hour])
+                    ->count();
+                $hourlyData[] = $count;
+            }
+            
+            // Weekly completions (last 7 days)
+            $weeklyData = [];
+            $weeklyDays = [];
+            for ($i = 6; $i >= 0; $i--) {
+                $date = $today->copy()->subDays($i);
+                $count = Queue::where('counter_id', $counter->id)
+                    ->where('status', 'completed')
+                    ->whereDate('completed_at', $date)
+                    ->count();
+                $weeklyData[] = $count;
+                $weeklyDays[] = $date->format('M j');
+            }
+            
+            // Average wait time by day (last 7 days)
+            $waitTimeData = [];
+            for ($i = 6; $i >= 0; $i--) {
+                $date = $today->copy()->subDays($i);
+                $avgWaitTime = Queue::where('counter_id', $counter->id)
+                    ->where('status', 'completed')
+                    ->whereDate('completed_at', $date)
+                    ->whereNotNull('called_at')
+                    ->selectRaw('AVG(TIMESTAMPDIFF(MINUTE, created_at, called_at)) as avg_wait')
+                    ->value('avg_wait');
+                $waitTimeData[] = round($avgWaitTime ?? 0, 1);
+            }
+            
+            // Peak hours distribution (last 30 days)
+            $thirtyDaysAgo = $today->copy()->subDays(30);
+            $peakHours = [
+                // Peak Hours (9am-5pm)
+                Queue::where('counter_id', $counter->id)
+                    ->where('status', 'completed')
+                    ->where('completed_at', '>=', $thirtyDaysAgo)
+                    ->whereRaw('TIME(completed_at) >= ?', ['09:00:00'])
+                    ->whereRaw('TIME(completed_at) < ?', ['17:00:00'])
+                    ->count(),
+                // Morning (6am-9am)
+                Queue::where('counter_id', $counter->id)
+                    ->where('status', 'completed')
+                    ->where('completed_at', '>=', $thirtyDaysAgo)
+                    ->whereRaw('TIME(completed_at) >= ?', ['06:00:00'])
+                    ->whereRaw('TIME(completed_at) < ?', ['09:00:00'])
+                    ->count(),
+                // Evening (5pm-9pm)
+                Queue::where('counter_id', $counter->id)
+                    ->where('status', 'completed')
+                    ->where('completed_at', '>=', $thirtyDaysAgo)
+                    ->whereRaw('TIME(completed_at) >= ?', ['17:00:00'])
+                    ->whereRaw('TIME(completed_at) < ?', ['21:00:00'])
+                    ->count(),
+                // Night (9pm-6am)
+                Queue::where('counter_id', $counter->id)
+                    ->where('status', 'completed')
+                    ->where('completed_at', '>=', $thirtyDaysAgo)
+                    ->whereRaw('(TIME(completed_at) >= ? OR TIME(completed_at) < ?)', ['21:00:00', '06:00:00'])
+                    ->count()
+            ];
+            
+            return [
+                'hourly' => $hourlyData,
+                'weekly' => $weeklyData,
+                'weekly_days' => $weeklyDays,
+                'wait_time' => $waitTimeData,
+                'peak_hours' => $peakHours
+            ];
+        } catch (\Exception $e) {
+            Log::error('Error generating analytics data: ' . $e->getMessage());
+            
+            // Return empty data structure to prevent crashes
+            return [
+                'hourly' => array_fill(0, 24, 0),
+                'weekly' => array_fill(0, 7, 0),
+                'weekly_days' => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                'wait_time' => array_fill(0, 7, 0),
+                'peak_hours' => [0, 0, 0, 0]
+            ];
         }
-        
-        // Weekly completions (last 7 days)
-        $weeklyData = [];
-        $weeklyDays = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $date = $today->copy()->subDays($i);
-            $count = Queue::where('counter_id', $counter->id)
-                ->where('status', 'completed')
-                ->whereDate('completed_at', $date)
-                ->count();
-            $weeklyData[] = $count;
-            $weeklyDays[] = $date->format('M j');
-        }
-        
-        // Average wait time by day (last 7 days)
-        $waitTimeData = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $date = $today->copy()->subDays($i);
-            $avgWaitTime = Queue::where('counter_id', $counter->id)
-                ->where('status', 'completed')
-                ->whereDate('completed_at', $date)
-                ->whereNotNull('called_at')
-                ->selectRaw('AVG(TIMESTAMPDIFF(MINUTE, created_at, called_at)) as avg_wait')
-                ->value('avg_wait');
-            $waitTimeData[] = round($avgWaitTime ?? 0, 1);
-        }
-        
-        // Peak hours distribution (last 30 days)
-        $thirtyDaysAgo = $today->copy()->subDays(30);
-        $peakHours = [
-            // Peak Hours (9am-5pm)
-            Queue::where('counter_id', $counter->id)
-                ->where('status', 'completed')
-                ->where('completed_at', '>=', $thirtyDaysAgo)
-                ->whereTime('completed_at', '>=', '09:00:00')
-                ->whereTime('completed_at', '<', '17:00:00')
-                ->count(),
-            // Morning (6am-9am)
-            Queue::where('counter_id', $counter->id)
-                ->where('status', 'completed')
-                ->where('completed_at', '>=', $thirtyDaysAgo)
-                ->whereTime('completed_at', '>=', '06:00:00')
-                ->whereTime('completed_at', '<', '09:00:00')
-                ->count(),
-            // Evening (5pm-9pm)
-            Queue::where('counter_id', $counter->id)
-                ->where('status', 'completed')
-                ->where('completed_at', '>=', $thirtyDaysAgo)
-                ->whereTime('completed_at', '>=', '17:00:00')
-                ->whereTime('completed_at', '<', '21:00:00')
-                ->count(),
-            // Night (9pm-6am)
-            Queue::where('counter_id', $counter->id)
-                ->where('status', 'completed')
-                ->where('completed_at', '>=', $thirtyDaysAgo)
-                ->where(function($query) {
-                    $query->whereTime('completed_at', '>=', '21:00:00')
-                          ->orWhereTime('completed_at', '<', '06:00:00');
-                })
-                ->count()
-        ];
-        
-        return [
-            'hourly' => $hourlyData,
-            'weekly' => $weeklyData,
-            'weekly_days' => $weeklyDays,
-            'wait_time' => $waitTimeData,
-            'peak_hours' => $peakHours
-        ];
     }
 }
