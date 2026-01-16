@@ -78,6 +78,7 @@ Route::prefix('{organization_code}')->group(function () {
         Route::get('/counters', [KioskController::class, 'counters'])->name('counters');
         Route::get('/generate-queue', [KioskController::class, 'generateQueue'])->name('generate');
     });
+    
     // Monitor Display (public, read-only)
     Route::prefix('monitor')->name('monitor.')->middleware(['organization.context', 'allow.public'])->group(function () {
         Route::get('/', [MonitorController::class, 'index'])->name('index');
