@@ -59,21 +59,38 @@
     </div>
 
     <!-- Key Metrics Section -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        
-        <!-- Waiting Count -->
-        <div class="bg-white rounded-xl shadow-md p-6 border-t-4 border-amber-500 hover:shadow-lg transition-all">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">In Queue</p>
-                    <p class="text-4xl font-bold text-gray-900" id="waitingCount">{{ $stats['waiting'] ?? 0 }}</p>
-                    <p class="text-xs text-gray-500 mt-2">Waiting customers</p>
-                </div>
-                <div class="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center">
-                    <i class="fas fa-users text-2xl text-amber-600"></i>
-                </div>
-            </div>
-        </div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <x-counter.metric-card 
+        title="In Queue"
+        value="{{ $stats['waiting'] ?? 0 }}"
+        icon="users"
+        color="amber"
+        tooltip="Waiting customers"
+    />
+    
+    <x-counter.metric-card 
+        title="Completed"
+        value="{{ $stats['completed_today'] ?? 0 }}"
+        icon="check-double"
+        color="green"
+        tooltip="Today"
+    />
+    
+    <x-counter.metric-card 
+        title="Now Serving"
+        value="{{ $currentNumber ?? '---' }}"
+        icon="user-check"
+        color="blue"
+        tooltip="Active queue"
+    />
+    
+    <x-counter.metric-card 
+        title="Total Served"
+        value="{{ $stats['total_served'] ?? 0 }}"
+        icon="chart-line"
+        color="purple"
+        tooltip="All time"
+    />
 
         <!-- Completed Today -->
         <div class="bg-white rounded-xl shadow-md p-6 border-t-4 border-green-500 hover:shadow-lg transition-all">
@@ -196,22 +213,21 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
 
 @push('scripts')
+<script src="{{ asset('js/counter/dashboard.js') }}"></script>
 <script>
-const ORG_CODE = '{{ request()->route('organization_code') }}';
-const COUNTER_ID = {{ $counter->id }};
-let dashboardData = null;
-let refreshCount = 0;
-let charts = {};
+const dashboard = new DashboardManager({
+    orgCode: '{{ request()->route('organization_code') }}',
+    counterId: {{ $counter->id }},
+    charts: ['hourly', 'weekly', 'waitTime', 'peakHours'],
+    refreshInterval: 3000
+});
+
+dashboard.initialize();
 
 const REFRESH_INTERVAL = 3000;
 let refreshTimer = null;
 
-// ===== UTILITY FUNCTIONS =====
-function formatDisplayQueue(queueNumber) {
-    if (!queueNumber) return '---';
-    const parts = String(queueNumber).split('-');
-    return parts.length > 0 ? (parts[parts.length - 1] || '---') : '---';
-}
+
 
 function updateTimeAgo() {
     const el = document.getElementById('lastUpdate');
