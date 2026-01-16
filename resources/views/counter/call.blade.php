@@ -413,7 +413,9 @@ function fetchData() {
         cache: 'no-store',
         headers: { 
             'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': csrfToken,
+            'Content-Type': 'application/json'
         },
         credentials: 'same-origin',
         signal: counterFetchController ? counterFetchController.signal : undefined,
