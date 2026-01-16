@@ -650,15 +650,3 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 @endpush
 @endsection
-<div id="counter-panel" 
-     class="w-full max-w-sm mx-auto bg-white rounded-lg shadow-lg overflow-hidden"
-     data-routes="{{ json_encode([
-        'data' => route('counter.data', ['organization_code' => request()->route('organization_code')]),
-        'notify' => route('counter.notify', ['organization_code' => request()->route('organization_code')]),
-        'skip' => route('counter.skip', ['organization_code' => request()->route('organization_code')]),
-        'complete' => route('counter.move-next', ['organization_code' => request()->route('organization_code')]),
-        'callNext' => route('counter.call-next', ['organization_code' => request()->route('organization_code')]),
-        'recall' => route('counter.recall', ['organization_code' => request()->route('organization_code')]),
-        'transfer' => route('counter.transfer', ['organization_code' => request()->route('organization_code')]),
-     ]) }}">
-@endpush
