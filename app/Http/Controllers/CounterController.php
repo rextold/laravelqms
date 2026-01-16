@@ -563,6 +563,13 @@ class CounterController extends Controller
             ->whereNotNull('called_at')
             ->selectRaw('AVG(TIMESTAMPDIFF(MINUTE, called_at, completed_at)) as avg_service')
             ->value('avg_service');
+        // Compute current number for dashboard display
+        $currentNumber = null;
+        $currentQueue = $counter->getCurrentQueue();
+        if ($currentQueue && $currentQueue->queue_number) {
+            $queueParts = explode('-', $currentQueue->queue_number);
+            $currentNumber = $queueParts[array_key_last($queueParts)];
+        }
         return [
             'waiting' => Queue::where('counter_id', $counter->id)
                 ->where('status', 'waiting')
@@ -571,7 +578,8 @@ class CounterController extends Controller
                 ->where('status', 'completed')
                 ->whereDate('completed_at', $today)
                 ->count(),
-            'current_queue' => $counter->getCurrentQueue(),
+            'current_queue' => $currentQueue,
+            'current_number' => $currentNumber,
             'total_served' => Queue::where('counter_id', $counter->id)
                 ->where('status', 'completed')
                 ->count(),

@@ -78,7 +78,7 @@
         />
         <x-counter.metric-card 
             title="Now Serving"
-            value="{{ isset($stats['current_queue']) ? (explode('-', $stats['current_queue']->queue_number)[array_key_last(explode('-', $stats['current_queue']->queue_number))]) : '---' }}"
+            value="{{ $stats['current_number'] ?? '---' }}"
             icon="user-check"
             color="blue"
             tooltip="Active queue"
