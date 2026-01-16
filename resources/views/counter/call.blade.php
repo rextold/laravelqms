@@ -27,75 +27,13 @@
                     </div>
                     <div id="currentNumber" class="queue-number font-extrabold text-gray-900 mb-6 tracking-wider">---</div>
                     
-                    <!-- Action Buttons -->
-                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 max-w-4xl mx-auto">
-                        <button type="button" id="btnCallNext" onclick="callNext(this)" 
-                                class="counter-btn flex items-center justify-center px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" disabled>
-                            <i class="fas fa-bell mr-2"></i>
-                            Call Next
-                        </button>
-                        
-                        <button type="button" id="btnNotify" onclick="return notifyCustomer(this, event);" 
-                                class="counter-btn flex items-center justify-center px-4 py-3 bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" disabled>
-                            <i class="fas fa-bell mr-2"></i>
-                            Notify
-                        </button>
-                        
-                        <button type="button" id="btnComplete" onclick="moveToNext(this)" 
-                                class="counter-btn flex items-center justify-center px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" disabled>
-                            <i class="fas fa-check-circle mr-2"></i>
-                            Complete
-                        </button>
-                        
-                        <button type="button" id="btnSkip" onclick="skipCurrent()" 
-                                class="counter-btn flex items-center justify-center px-4 py-3 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" disabled>
-                            <i class="fas fa-forward mr-2"></i>
-                            Skip
-                        </button>
-                        
-                        <button type="button" id="btnTransfer" onclick="openTransferModal()" 
-                                class="counter-btn flex items-center justify-center px-4 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" disabled>
-                            <i class="fas fa-exchange-alt mr-2"></i>
-                            Transfer
-                        </button>
-                    </div>
+                    <!-- Action Buttons Component -->
+                @include('components.counter.action-buttons', ['disabled' => true])
                 </div>
             </div>
 
-            <!-- Queue Lists -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Waiting Queue -->
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold text-gray-900">
-                            <i class="fas fa-users text-amber-600 mr-2"></i>
-                            Waiting Queue
-                        </h3>
-                        <span id="waitingCount" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                            0
-                        </span>
-                    </div>
-                    <div id="waitingList" class="queue-list max-h-80 overflow-y-auto">
-                        <!-- Waiting queue items will be populated here -->
-                    </div>
-                </div>
-
-                <!-- Skipped Queue -->
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold text-gray-900">
-                            <i class="fas fa-clock text-orange-600 mr-2"></i>
-                            Skipped Queue
-                        </h3>
-                        <span id="skippedCount" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                            0
-                        </span>
-                    </div>
-                    <div id="skippedList" class="queue-list max-h-80 overflow-y-auto">
-                        <!-- Skipped queue items will be populated here -->
-                    </div>
-                </div>
-            </div>
+            <!-- Queue Lists Component -->
+            @include('components.counter.queue-lists')
 
             <!-- Quick Stats -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
@@ -152,22 +90,67 @@
 </div>
 
     <!-- Minimized dock bar (for easy corner docking) -->
-    <div id="panelDock" class="hidden fixed bottom-4 right-4 bg-white rounded-lg shadow-md px-4 py-3 flex items-center space-x-4 z-40">
-        <div class="text-sm font-semibold text-gray-700">Counter {{ $counter->counter_number }}</div>
-        <div class="flex items-baseline space-x-2">
-            <div class="text-xs text-gray-500">Now</div>
-            <div id="dockCurrentNumber" class="text-xl font-extrabold text-gray-900">---</div>
-        </div>
-        <button type="button" onclick="toggleMinimize(false)" class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition" title="Restore">
-            <i class="fas fa-window-restore"></i>
-        </button>
-    </div>
+    @include('components.counter.dock', ['counter' => $counter, 'organizationCode' => $organization->organization_code ?? ''])
 
 <style>
 .responsive-queue-number { font-size: 6rem; }
 @media (orientation: portrait) { .responsive-queue-number { font-size: 4.5rem; } }
 @media (max-width: 768px) and (orientation: portrait) { .responsive-queue-number { font-size: 3rem; } }
 @media (max-width: 768px) and (orientation: landscape) { .responsive-queue-number { font-size: 3.5rem; } }
+
+/* Enhanced dock styling for better visibility */
+#panelDock {
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.95);
+}
+
+/* Mobile responsive dock */
+@media (max-width: 640px) {
+    #panelDock {
+        bottom: 1rem;
+        right: 1rem;
+        left: 1rem;
+        padding: 0.75rem;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    #panelDock > div:first-child {
+        order: 1;
+        flex-basis: 100%;
+        text-align: center;
+        margin-bottom: 0.5rem;
+    }
+    
+    #panelDock .bg-blue-100 {
+        order: 2;
+        flex: 1;
+        min-width: 0;
+    }
+    
+    #dockRecallBtn {
+        order: 3;
+        flex-shrink: 0;
+    }
+    
+    #panelDock button[onclick*="toggleMinimize"] {
+        order: 4;
+        flex-shrink: 0;
+    }
+}
+
+/* Small screens - extra compact */
+@media (max-width: 390px) {
+    #panelDock #dockRecallBtn {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.75rem;
+    }
+    
+    #panelDock #dockRecallBtn i {
+        margin-right: 0.25rem;
+    }
+}
 </style>
 
 <!-- Transfer Queue Modal -->
@@ -488,6 +471,17 @@ function renderLists(data) {
             });
         }
     }
+    
+    // Update dock recall button visibility
+    const dockRecallBtn = document.getElementById('dockRecallBtn');
+    if (dockRecallBtn) {
+        if (data.skipped && data.skipped.length > 0) {
+            dockRecallBtn.classList.remove('hidden');
+            dockRecallBtn.title = `Recall skipped queue (${data.skipped.length} available)`;
+        } else {
+            dockRecallBtn.classList.add('hidden');
+        }
+    }
 }
 
 // ============================================================
@@ -546,7 +540,7 @@ function fetchData() {
     
     fetch(url, {
         method: 'GET',
-        headers: {
+        headers: window.CounterSecurity ? window.CounterSecurity.getHeaders() : {
             'X-Requested-With': 'XMLHttpRequest',
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
             'Accept': 'application/json'
@@ -654,18 +648,18 @@ function makeCounterRequest(action, params = {}) {
         }
     });
 
-    // Get CSRF token from meta tag
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    // Use enhanced CSRF security
+    const headers = window.CounterSecurity ? window.CounterSecurity.getHeaders() : {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+    };
     
     console.log(`Making counter request: ${action} to ${url.toString()}`);
     
     return fetch(url.toString(), {
         method: 'GET',
-        headers: {
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRF-TOKEN': csrfToken || ''
-        },
+        headers: headers,
         credentials: 'same-origin'
     })
         .then(response => {
@@ -814,6 +808,20 @@ function recallQueue(queueId, event) {
         });
 }
 
+function recallFromDock() {
+    // Get the first available skipped queue when in dock mode
+    if (lastSuccessfulData && lastSuccessfulData.skipped && lastSuccessfulData.skipped.length > 0) {
+        const firstSkipped = lastSuccessfulData.skipped[0];
+        if (firstSkipped && firstSkipped.id) {
+            recallQueue(firstSkipped.id, null);
+        } else {
+            alert('No skipped queues available to recall');
+        }
+    } else {
+        alert('No skipped queues available to recall');
+    }
+}
+
 function confirmSkip(btnEl) {
     closeSkipModal();
     return runActionWithCooldown(btnEl, () =>
@@ -953,7 +961,135 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('offline', function() {
         console.warn('Network disconnected - using cached data');
     });
+    
+    // Keyboard shortcuts for quick actions when minimized
+    document.addEventListener('keydown', function(e) {
+        // Only work when dock is visible (minimized state)
+        const dock = document.getElementById('panelDock');
+        if (dock && !dock.classList.contains('hidden')) {
+            // R key for Recall (when recall button is visible)
+            if (e.key === 'r' || e.key === 'R') {
+                const recallBtn = document.getElementById('dockRecallBtn');
+                if (recallBtn && !recallBtn.classList.contains('hidden')) {
+                    e.preventDefault();
+                    recallFromDock();
+                }
+            }
+            // Space bar to restore from dock
+            else if (e.key === ' ') {
+                e.preventDefault();
+                toggleMinimize(false);
+            }
+        }
+    });
 });
 </script>
+
+<!-- Enhanced CSS for better recall visibility -->
+<style>
+    /* Enhanced visibility for recall button */
+    #dockRecallBtn {
+        animation: pulse-orange 2s infinite;
+        position: relative;
+    }
+    
+    #dockRecallBtn:hover {
+        animation: none;
+        transform: scale(1.05);
+    }
+    
+    @keyframes pulse-orange {
+        0%, 100% {
+            box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.7);
+        }
+        50% {
+            box-shadow: 0 0 0 10px rgba(249, 115, 22, 0);
+        }
+    }
+    
+    /* High contrast mode support */
+    @media (prefers-contrast: high) {
+        #panelDock {
+            border-width: 3px;
+            box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.8);
+        }
+        
+        #dockRecallBtn {
+            border: 2px solid #000;
+        }
+    }
+    
+    /* Reduced motion support */
+    @media (prefers-reduced-motion: reduce) {
+        #dockRecallBtn {
+            animation: none;
+        }
+        
+        .transition-all {
+            transition: none !important;
+        }
+    }
+    
+    /* Enhanced responsive styles */
+    @media (max-width: 640px) {
+        #panelDock {
+            bottom: 2px;
+            right: 2px;
+            padding: 8px 12px;
+            font-size: 0.75rem;
+        }
+        
+        #dockCurrentNumber {
+            font-size: 1.25rem;
+        }
+        
+        #dockRecallBtn {
+            padding: 6px 10px;
+            font-size: 0.7rem;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        #panelDock {
+            bottom: 1px;
+            right: 1px;
+            padding: 6px 8px;
+            border-width: 1px;
+        }
+        
+        #dockCurrentNumber {
+            font-size: 1rem;
+        }
+    }
+    
+    @media (max-width: 390px) {
+        #panelDock {
+            padding: 4px 6px;
+        }
+        
+        #dockRecallBtn span:not(.fas) {
+            display: none;
+        }
+        
+        #dockRecallBtn {
+            padding: 4px 6px;
+        }
+    }
+    
+    /* Ultra small screens */
+    @media (max-width: 320px) {
+        #panelDock {
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 4px;
+        }
+        
+        #dockRecallBtn {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+</style>
 @endpush
 @endsection
