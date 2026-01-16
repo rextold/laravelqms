@@ -506,7 +506,6 @@ function renderLists(data) {
 let counterFetchInFlight = false;
 let counterFetchController = null;
 let lastSuccessfulData = null;
-let lastErrorTime = 0;
 
 function handleFallbackData() {
     console.log('Using cached counter data as fallback');
