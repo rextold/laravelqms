@@ -408,13 +408,20 @@ function fetchData() {
 
     fetch(url, {
         method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        },
         credentials: 'same-origin',
         signal: counterFetchController ? counterFetchController.signal : undefined,
     })
         .then(response => {
             // Handle 403 by continuing with cached data
-            if (response.status === 403) {
-                console.warn('Counter data endpoint returned 403 - using cached data');
+            if (response.status === 403 || response.status === 401) {
+                console.warn(`Counter endpoint ${response.status} - using cached data`);
+                 if (typeof handleFallbackData === 'function') {
+                     handleFallbackData();
+                 }
                 counterFetchInFlight = false;
                 return;
             }
