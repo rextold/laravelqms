@@ -169,4 +169,59 @@ class QueueService
             'current_queue' => $counter->getCurrentQueue(),
         ];
     }
+
+    public function skipQueue(User $counter): ?Queue
+    {
+        $currentQueue = $counter->getCurrentQueue();
+
+        if ($currentQueue) {
+            $currentQueue->update([
+                'status' => 'skipped',
+                'skipped_at' => now(),
+            ]);
+        }
+
+        return $currentQueue;
+    }
+
+    public function recallQueue(User $counter): ?Queue
+    {
+        // Find the last skipped queue for this counter
+        $recalledQueue = $counter->queues()
+            ->where('status', 'skipped')
+            ->orderByDesc('skipped_at')
+            ->first();
+
+        if ($recalledQueue) {
+            // Mark any currently "called" queue as completed first
+            $currentQueue = $counter->getCurrentQueue();
+            if ($currentQueue) {
+                $currentQueue->update([
+                    'status' => 'completed',
+                    'completed_at' => now(),
+                ]);
+            }
+            
+            $recalledQueue->update([
+                'status' => 'called',
+                'called_at' => now(),
+                'skipped_at' => null,
+            ]);
+
+            if ($this->shouldBroadcast()) {
+                broadcast(new QueueCalled($recalledQueue))->toOthers();
+            }
+        }
+
+        return $recalledQueue;
+    }
+
+    public function notifyCustomer(User $counter): void
+    {
+        $currentQueue = $counter->getCurrentQueue();
+
+        if ($currentQueue && $this->shouldBroadcast()) {
+            broadcast(new QueueCalled($currentQueue))->toOthers();
+        }
+    }
 }
