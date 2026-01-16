@@ -412,6 +412,8 @@ function fetchData() {
         method: 'GET',
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Accept': 'application/json',
             'Accept': 'application/json'
         },
         credentials: 'same-origin',
