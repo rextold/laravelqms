@@ -507,18 +507,34 @@ function callNext(btnEl) {
     );
 }
 function recallQueue(id) { 
-    getJson('{{ route('counter.recall', ['organization_code' => request()->route('organization_code')]) }}?queue_id=' + id)
-        .then((res) => {
-            if (!res || res.success !== true) {
-                const msg = (res && res.message) ? res.message : 'Recall failed. Please try again.';
-                throw new Error(msg);
-            }
-            playNotificationSound();
-            fetchData();
-        })
-        .catch((err) => {
-            alert(err?.message || 'Recall failed. Please try again.');
-        });
+    fetch('{{ route('counter.recall', ['organization_code' => request()->route('organization_code')]) }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': getCsrfToken()
+        },
+        body: JSON.stringify({ queue_id: id })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.message || `HTTP ${response.status}`);
+            });
+        }
+        return response.json();
+    })
+    .then((res) => {
+        if (!res || res.success !== true) {
+            const msg = (res && res.message) ? res.message : 'Recall failed. Please try again.';
+            throw new Error(msg);
+        }
+        playNotificationSound();
+        fetchData();
+    })
+    .catch((err) => {
+        alert(err?.message || 'Recall failed. Please try again.');
+    });
 }
 
 function openSkipModal() {
