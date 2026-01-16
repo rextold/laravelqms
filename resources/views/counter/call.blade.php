@@ -263,12 +263,13 @@
     </div>
 </div>
 
-@push('scripts')
 @push('styles')
 <style>
 html, body { overflow: hidden; }
 </style>
 @endpush
+
+@push('scripts')
 <script>
 // ============================================================
 // COUNTER PANEL - MAIN CONFIGURATION
