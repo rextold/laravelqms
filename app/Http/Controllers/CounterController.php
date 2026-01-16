@@ -230,15 +230,30 @@ class CounterController extends Controller
             return response()->json(['error' => 'Counter must be online'], 403);
         }
 
-        $request->validate([
-            'queue_id' => 'required|exists:queues,id',
-            'target_counter_id' => 'required|exists:users,id'
-        ]);
+        // Get parameters from GET request
+        $queueId = $request->query('queue_id') ?? $request->input('queue_id');
+        $targetCounterId = $request->query('to_counter_id') ?? $request->input('to_counter_id');
+
+        if (!$queueId || !$targetCounterId) {
+            return response()->json([
+                'error' => 'Missing required parameters: queue_id and to_counter_id'
+            ], 422);
+        }
+
+        // Validate queue exists
+        $queue = Queue::find($queueId);
+        if (!$queue) {
+            return response()->json(['error' => 'Queue not found'], 404);
+        }
+
+        // Validate target counter exists
+        $targetCounter = User::find($targetCounterId);
+        if (!$targetCounter) {
+            return response()->json(['error' => 'Target counter not found'], 404);
+        }
 
         try {
-            $result = DB::transaction(function () use ($request, $user) {
-                $queue = Queue::findOrFail($request->queue_id);
-                $targetCounter = User::findOrFail($request->target_counter_id);
+            $result = DB::transaction(function () use ($queue, $targetCounter, $user) {
 
                 // Verify queue belongs to current counter
                 if ($queue->counter_id !== $user->id) {
