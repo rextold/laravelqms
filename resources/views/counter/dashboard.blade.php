@@ -7,10 +7,11 @@
 <div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 md:p-8">
     
     <!-- Header Section -->
-    <div class="mb-8">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-6">
-            <!-- Left: Organization Info -->
-            <div class="flex items-center gap-4">
+<x-counter.header 
+    :organization="$organization"
+    :counter="$counter"
+    :settings="$settings"
+/>
                 @if($settings->company_logo)
                     <div class="w-14 h-14 bg-white rounded-xl shadow-md p-2 flex items-center justify-center">
                         <img src="{{ asset('storage/' . $settings->company_logo) }}" alt="Organization Logo" class="h-full w-auto object-contain">
@@ -220,9 +221,9 @@ const dashboard = new DashboardManager({
     counterId: {{ $counter->id }},
     charts: ['hourly', 'weekly', 'waitTime', 'peakHours'],
     refreshInterval: 3000
-});
-
-dashboard.initialize();
+})
+    .initialize()
+    .startAutoRefresh();
 
 const REFRESH_INTERVAL = 3000;
 let refreshTimer = null;
