@@ -257,11 +257,6 @@
                                   <i class="fas fa-phone-alt w-5"></i>
                                   <span class="ml-3 sidebar-text">Service Panel</span>
                               </a>
-                            <a href="{{ route('counter.panel', ['organization_code' => $orgCode]) }}" class="sidebar-link flex items-center px-6 py-3">
-                                <i class="fas fa-phone w-5"></i>
-                                <span class="ml-3 sidebar-text">Service Station</span>
-                                <i class="fas fa-external-link-alt ml-auto text-xs external-label"></i>
-                            </a>
                         @endif
                     @endauth
                 </nav>

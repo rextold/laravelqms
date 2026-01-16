@@ -156,9 +156,12 @@ class AuthController extends Controller
                     'username' => 'User organization not assigned. Please contact administrator.',
                 ])->onlyInput('username');
             }
+
             // Set counter online on login
             $user->update(['is_online' => true]);
-            $this->putOrganizationContextInSession($request, $organization);            // Counters go straight to their service panel; skip intended URLs to avoid role-mismatch 403s
+            $this->putOrganizationContextInSession($request, $organization);
+
+            // Counters go straight to their service panel; skip intended URLs to avoid role-mismatch 403s
             $orgCode = strtolower($organization->organization_code ?? '');
             return redirect()->to(route('counter.panel', ['organization_code' => $orgCode]));
         }
