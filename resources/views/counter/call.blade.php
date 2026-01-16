@@ -407,7 +407,10 @@ function fetchData() {
     }
 
     const url = `/${ORG_CODE}/counter/data`;
-
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')
+                    ? document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    : ''; // Fallback to an empty string or handle error
+                    
     fetch(url, {
         method: 'GET',
         cache: 'no-store',
