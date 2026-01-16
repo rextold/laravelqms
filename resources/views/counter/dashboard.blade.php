@@ -4,25 +4,57 @@
 @section('page-title', 'Counter Dashboard - Analytics & Performance')
 
 @section('content')
-<div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-    <!-- Modern Header -->
-    <div class="bg-white shadow-sm border-b border-gray-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <!-- Left: Logo & Info -->
-                <div class="flex items-center space-x-4">
-                    <div class="flex-shrink-0">
-                        @if($settings->logo_url)
-                            <img src="{{ $settings->logo_url }}" alt="Organization Logo" class="h-10 w-auto">
-                        @else
-                            <div class="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                                <i class="fas fa-building text-white text-lg"></i>
-                            </div>
-                        @endif
-                    </div>
-                    <div class="hidden md:block">
-                        <h1 class="text-lg font-bold text-gray-900">{{ $organization->organization_name ?? 'QMS' }}</h1>
-                        <p class="text-sm text-gray-500">Counter #{{ $counter->counter_number }} - {{ $counter->display_name }}</p>
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-end items-center mb-6">
+        <button type="button" id="onlineBtn" 
+                class="px-4 py-2 rounded {{ $counter->is_online ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700' }} text-white flex items-center"
+                onclick="toggleOnline()">
+            <i class="fas fa-power-off mr-2"></i>
+            <span id="onlineText">{{ $counter->is_online ? 'Go Offline' : 'Go Online' }}</span>
+            <span id="onlineSpinner" class="hidden ml-2"><i class="fas fa-spinner fa-spin"></i></span>
+        </button>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div class="bg-gradient-to-br from-yellow-400 to-orange-500 p-6 rounded-xl shadow-lg transform hover:scale-105 transition-all">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-orange-100 text-sm font-medium mb-1">Waiting</div>
+                    <div class="text-4xl font-bold text-white" id="waitingCount">{{ $stats['waiting'] }}</div>
+                    <div class="text-orange-100 text-xs mt-2"><i class="fas fa-clock"></i> In Queue</div>
+                </div>
+                <div class="p-4 bg-white bg-opacity-20 rounded-full">
+                    <i class="fas fa-hourglass-half text-white text-3xl"></i>
+                </div>
+            </div>
+        </div>
+        <div class="bg-gradient-to-br from-green-400 to-green-600 p-6 rounded-xl shadow-lg transform hover:scale-105 transition-all">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-green-100 text-sm font-medium mb-1">Completed Today</div>
+                    <div class="text-4xl font-bold text-white" id="completedCount">{{ $stats['completed_today'] }}</div>
+                    <div class="text-green-100 text-xs mt-2"><i class="fas fa-check-circle"></i> Served</div>
+                </div>
+                <div class="p-4 bg-white bg-opacity-20 rounded-full">
+                    <i class="fas fa-check-double text-white text-3xl"></i>
+                </div>
+            </div>
+        </div>
+        <div class="bg-gradient-to-br from-blue-500 to-indigo-600 p-6 rounded-xl shadow-lg transform hover:scale-105 transition-all">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-blue-100 text-sm font-medium mb-1">Current Queue</div>
+                    @php
+                        $formatCounterQueue = function ($queueNumber, $counterNumber) {
+                            if (!$queueNumber) return 'None';
+                            $parts = explode('-', $queueNumber);
+                            $suffix = count($parts) ? end($parts) : $queueNumber;
+                            return $suffix ?: $queueNumber;
+                        };
+                    @endphp
+                    <div class="text-3xl font-bold text-white" id="currentQueue">
+                        {{ $stats['current_queue'] ? $formatCounterQueue($stats['current_queue']->queue_number, $counter->counter_number) : 'None' }}
                     </div>
                 </div>
 
@@ -251,37 +283,36 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
 
-@push('scripts')
-<script>
-let isOnline = {{ $counter->is_online ? 'true' : 'false' }};
-const COUNTER_NUM = {{ $counter->counter_number }};
-
-// Periodically refresh dashboard numbers without manual reload
-const REFRESH_MS = 3000;
-let refreshTimer = null;
-
-function startAutoRefresh() {
-    refreshDashboardData();
-    refreshTimer = setInterval(refreshDashboardData, REFRESH_MS);
-}
-
-function refreshDashboardData() {
-    fetch('{{ route('counter.data', ['organization_code' => request()->route('organization_code')]) }}', {
-        credentials: 'same-origin',
-        headers: { 'Accept': 'application/json' }
-    })
-    .then(res => res.ok ? res.json() : Promise.reject(res))
-    .then(data => {
-        if (!data.success) return;
-        document.getElementById('waitingCount').textContent = data.stats.waiting ?? 0;
-        document.getElementById('completedCount').textContent = data.stats.completed_today ?? 0;
-        document.getElementById('currentQueue').textContent = data.current_queue ? formatDisplayQueue(data.current_queue.queue_number) : 'None';
-        if (typeof data.is_online === 'boolean') {
-            isOnline = data.is_online;
-            updateOnlineButton();
+    <script>
+        function toggleOnline() {
+            const btn = document.getElementById('onlineBtn');
+            const text = document.getElementById('onlineText');
+            const spinner = document.getElementById('onlineSpinner');
+            btn.disabled = true;
+            spinner.classList.remove('hidden');
+            fetch("{{ route('counter.toggle-online', ['organization_code' => request()->route('organization_code')]) }}", {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    text.textContent = data.is_online ? 'Go Offline' : 'Go Online';
+                    btn.classList.toggle('bg-green-600', !data.is_online);
+                    btn.classList.toggle('hover:bg-green-700', !data.is_online);
+                    btn.classList.toggle('bg-red-600', data.is_online);
+                    btn.classList.toggle('hover:bg-red-700', data.is_online);
+                }
+            })
+            .catch(() => {})
+            .finally(() => {
+                btn.disabled = false;
+                spinner.classList.add('hidden');
+            });
         }
-    })
-    .catch(() => {
+    </script>
         // swallow errors to avoid breaking the interval
     });
 }
