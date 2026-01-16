@@ -233,7 +233,7 @@ html, body { overflow: hidden; }
 @endpush
 
 @push('scripts')
-<script>
+<script nonce="{{ session('csp_nonce', '') }}">
 // ============================================================
 // COUNTER PANEL - MAIN CONFIGURATION
 // ============================================================
@@ -986,7 +986,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <!-- Enhanced CSS for better recall visibility -->
-<style>
+<style nonce="{{ session('csp_nonce', '') }}">
     /* Enhanced visibility for recall button */
     #dockRecallBtn {
         animation: pulse-orange 2s infinite;

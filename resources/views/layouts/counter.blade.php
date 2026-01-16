@@ -187,14 +187,14 @@
                         </div>
                         
                         <!-- Minimize/Restore button -->
-                        <button id="btnToggleMinimize" type="button" onclick="toggleMinimize()" 
-                                class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors" title="Minimize">
+                        <button id="btnToggleMinimize" type="button" 
+                                class="minimize-btn px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors" title="Minimize">
                             <i class="fas fa-window-minimize"></i>
                         </button>
                         
                         <!-- Logout button -->
-                        <a href="#" onclick="handleLogout(event)" 
-                           class="px-3 py-2 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 transition-colors" title="Logout">
+                        <a href="#" id="logoutBtn" 
+                           class="logout-btn px-3 py-2 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 transition-colors" title="Logout">
                             <i class="fas fa-sign-out-alt"></i>
                         </a>
                     </div>
@@ -215,7 +215,7 @@
             <div class="text-xs text-gray-500">Now</div>
             <div id="dockCurrentNumber" class="text-xl font-extrabold text-gray-900">---</div>
         </div>
-        <button type="button" onclick="toggleMinimize(false)" class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition" title="Restore">
+        <button type="button" id="dockRestoreBtn" class="dock-restore-btn px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition" title="Restore">
             <i class="fas fa-window-restore"></i>
         </button>
     </div>
@@ -223,7 +223,7 @@
     <!-- Authentication Error Modal -->
     @include('components.auth-error-modal')
 
-    <script>
+    <script nonce="{{ session('csp_nonce', '') }}">
         // Auto-refresh CSRF token every 30 minutes to prevent page expiration
         function refreshCSRFToken() {
             fetch('/refresh-csrf', {
@@ -378,6 +378,31 @@
             if (e.key === 'F11' || (e.ctrlKey && e.shiftKey && e.key === 'F')) {
                 e.preventDefault();
                 toggleFullscreen();
+            }
+        });
+
+        // Event listeners for CSP-compliant buttons
+        document.addEventListener('DOMContentLoaded', function() {
+            // Minimize button
+            const minimizeBtn = document.getElementById('btnToggleMinimize');
+            if (minimizeBtn) {
+                minimizeBtn.addEventListener('click', function() {
+                    toggleMinimize(true);
+                });
+            }
+
+            // Logout button
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', handleLogout);
+            }
+
+            // Dock restore button
+            const dockRestoreBtn = document.getElementById('dockRestoreBtn');
+            if (dockRestoreBtn) {
+                dockRestoreBtn.addEventListener('click', function() {
+                    toggleMinimize(false);
+                });
             }
         });
     </script>

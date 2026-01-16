@@ -9,13 +9,13 @@
     </div>
     
     <!-- Quick Recall Button - Visible when minimized -->
-    <button type="button" id="dockRecallBtn" onclick="recallFromDock()" 
-            class="px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white transition-all duration-200 font-bold text-sm shadow-lg hover:shadow-xl transform hover:scale-105 hidden" 
+    <button type="button" id="dockRecallBtn" 
+            class="dock-recall-btn px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white transition-all duration-200 font-bold text-sm shadow-lg hover:shadow-xl transform hover:scale-105 hidden" 
             title="Recall Skipped Queue (Press 'R')">
         <i class="fas fa-redo mr-2"></i>Recall
     </button>
     
-    <button type="button" onclick="toggleMinimize(false)" class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition" title="Restore (Press Space)">
+    <button type="button" id="dockRestoreBtn" class="dock-restore-btn px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition" title="Restore (Press Space)">
         <i class="fas fa-window-restore"></i>
     </button>
     
@@ -27,7 +27,7 @@
 </div>
 
 @push('scripts')
-<script>
+<script nonce="{{ session('csp_nonce', '') }}">
 // CSRF token management for counter operations
 const CounterCSRF = {
     getToken: function() {
@@ -95,6 +95,25 @@ document.addEventListener('keydown', function(e) {
     else if (e.key === ' ') {
         e.preventDefault();
         toggleMinimize(false);
+    }
+});
+
+// Add event listeners for dock buttons (CSP-compliant)
+document.addEventListener('DOMContentLoaded', function() {
+    // Recall button
+    const dockRecallBtn = document.getElementById('dockRecallBtn');
+    if (dockRecallBtn) {
+        dockRecallBtn.addEventListener('click', function() {
+            recallFromDock();
+        });
+    }
+    
+    // Restore button
+    const dockRestoreBtn = document.getElementById('dockRestoreBtn');
+    if (dockRestoreBtn) {
+        dockRestoreBtn.addEventListener('click', function() {
+            toggleMinimize(false);
+        });
     }
 });
 </script>

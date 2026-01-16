@@ -42,7 +42,7 @@
 </div>
 
 @push('scripts')
-<script>
+<script nonce="{{ session('csp_nonce', '') }}">
 // Enhanced queue list management with CSRF validation
 function renderLists(data) {
     const waitingList = document.getElementById('waitingList');
@@ -103,8 +103,8 @@ function renderLists(data) {
                         </div>
                     </div>
                     <div class="flex items-center space-x-2">
-                        <button type="button" onclick="recallQueue(${queue.id})" 
-                                class="px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded text-sm font-medium transition-colors"
+                        <button type="button" data-queue-id="${queue.id}" 
+                                class="recall-btn px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded text-sm font-medium transition-colors"
                                 title="Recall this queue">
                             <i class="fas fa-redo mr-1"></i>Recall
                         </button>
@@ -129,6 +129,16 @@ function renderLists(data) {
             dockRecallBtn.classList.add('hidden');
         }
     }
+    
+    // Add event listeners for recall buttons (CSP-compliant)
+    document.querySelectorAll('.recall-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const queueId = this.getAttribute('data-queue-id');
+            if (queueId) {
+                recallQueue(queueId);
+            }
+        });
+    });
 }
 
 // Utility functions
