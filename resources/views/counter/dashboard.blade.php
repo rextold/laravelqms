@@ -96,7 +96,11 @@
                     <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Now Serving</p>
                     <p class="text-4xl font-bold text-gray-900" id="currentQueue">
                         @if($stats['current_queue'])
-                            {{ explode('-', $stats['current_queue']->queue_number)[array_key_last(explode('-', $stats['current_queue']->queue_number))] }}
+                            @php 
+                                $queueParts = explode('-', $stats['current_queue']->queue_number);
+                                $currentNumber = $queueParts[array_key_last($queueParts)];
+                            @endphp
+                            {{ $currentNumber }}
                         @else
                             ---
                         @endif
