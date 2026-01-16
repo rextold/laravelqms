@@ -10,11 +10,20 @@
             <!-- Current Queue Display -->
             <div class="glass-card p-8 mb-6">
                 <div class="text-center">
-                    <div class="mb-4">
+                    <div class="mb-4 flex items-center justify-center gap-3">
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
                             <i class="fas fa-user-check mr-2"></i>
                             NOW SERVING
                         </span>
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                            <i class="fas fa-circle mr-2 text-red-500" id="onlineStatusIcon"></i>
+                            <span id="onlineStatus">Offline</span>
+                        </span>
+                        <button type="button" id="btnToggleOnline" onclick="toggleOnline(this)" 
+                                class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-600 hover:bg-green-700 text-white transition-colors">
+                            <i class="fas fa-power-off mr-2"></i>
+                            Go Online
+                        </button>
                     </div>
                     <div id="currentNumber" class="queue-number font-extrabold text-gray-900 mb-6 tracking-wider">---</div>
                     
@@ -390,6 +399,23 @@ function renderLists(data) {
     const dockNum = document.getElementById('dockCurrentNumber');
     if (dockNum) dockNum.textContent = current;
     
+    // Update online status
+    const statusEl = document.getElementById('onlineStatus');
+    const statusIcon = document.getElementById('onlineStatusIcon');
+    const btnToggle = document.getElementById('btnToggleOnline');
+    const btnText = btnToggle?.querySelector('span') || btnToggle;
+    
+    if (statusEl && data.online_status !== undefined) {
+        statusEl.textContent = data.online_status ? 'Online' : 'Offline';
+    }
+    if (statusIcon && data.online_status !== undefined) {
+        statusIcon.className = data.online_status ? 'fas fa-circle mr-2 text-green-500' : 'fas fa-circle mr-2 text-red-500';
+    }
+    if (btnToggle && btnText && data.online_status !== undefined) {
+        btnText.innerHTML = data.online_status ? '<i class="fas fa-power-off mr-2"></i>Go Offline' : '<i class="fas fa-power-off mr-2"></i>Go Online';
+        btnToggle.className = data.online_status ? 'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-600 hover:bg-red-700 text-white transition-colors' : 'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-600 hover:bg-green-700 text-white transition-colors';
+    }
+    
     // Store online counters
     onlineCounters = data.online_counters || [];
     
@@ -628,31 +654,88 @@ function makeCounterRequest(action, params = {}) {
         }
     });
 
+    // Get CSRF token from meta tag
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    
+    console.log(`Making counter request: ${action} to ${url.toString()}`);
+    
     return fetch(url.toString(), {
         method: 'GET',
         headers: {
             'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': csrfToken || ''
         },
         credentials: 'same-origin'
     })
         .then(response => {
+            console.log(`Counter action '${action}' response status: ${response.status}`);
             if (response.status === 403) {
-                // Suppress 403 for counter operations
-                console.warn(`Counter action '${action}' returned 403`);
-                return { success: false, suppressed: true };
+                // Handle 403 by showing authentication error
+                console.error(`Counter action '${action}' returned 403 - Authentication required`);
+                alert('Authentication error. Please refresh the page and log in again.');
+                return { success: false, message: 'Authentication required' };
+            }
+            
+            if (response.status === 401) {
+                // Handle 401 unauthorized
+                console.error(`Counter action '${action}' returned 401 - Unauthorized`);
+                alert('Session expired. Please refresh the page and log in again.');
+                return { success: false, message: 'Unauthorized' };
             }
             
             if (!response.ok) {
                 return { success: false, message: `HTTP ${response.status}` };
             }
             
-            return response.json();
+            return response.json().then(json => {
+                console.log(`Counter action '${action}' response data:`, json);
+                return json;
+            });
         })
         .catch(err => {
             console.error(`Counter request error for '${action}':`, err);
             return { success: false, message: err.message };
         });
+}
+
+function toggleOnline(btnEl) {
+    console.log('toggleOnline called with button:', btnEl);
+    return runActionWithCooldown(btnEl, () =>
+        makeCounterRequest('toggle-online')
+            .then((data) => {
+                console.log('Toggle online response:', data);
+                if (data.success) {
+                    // Update online status indicator
+                    const statusEl = document.getElementById('onlineStatus');
+                    const statusIcon = document.getElementById('onlineStatusIcon');
+                    const btnText = btnEl.querySelector('span') || btnEl;
+                    
+                    console.log('Updating status to:', data.is_online);
+                    
+                    if (statusEl) {
+                        statusEl.textContent = data.is_online ? 'Online' : 'Offline';
+                    }
+                    if (statusIcon) {
+                        statusIcon.className = data.is_online ? 'fas fa-circle mr-2 text-green-500' : 'fas fa-circle mr-2 text-red-500';
+                    }
+                    if (btnText) {
+                        btnText.innerHTML = data.is_online ? '<i class="fas fa-power-off mr-2"></i>Go Offline' : '<i class="fas fa-power-off mr-2"></i>Go Online';
+                        btnEl.className = data.is_online ? 'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-600 hover:bg-red-700 text-white transition-colors' : 'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-600 hover:bg-green-700 text-white transition-colors';
+                    }
+                    
+                    fetchData(); // Refresh data after status change
+                } else if (data.message) {
+                    throw new Error(data.message);
+                } else {
+                    throw new Error('Failed to toggle online status');
+                }
+            })
+            .catch(err => {
+                console.error('Toggle online error:', err);
+                throw err;
+            })
+    );
 }
 
 function notifyCustomer(btnEl, event) {
@@ -663,15 +746,14 @@ function notifyCustomer(btnEl, event) {
                 if (data && data.success) {
                     playNotificationSound();
                     fetchData();
-                } else if (data && data.suppressed) {
-                    // Silently continue
-                    fetchData();
+                } else if (data && data.message) {
+                    // Show error message if available
+                    throw new Error(data.message);
                 } else {
-                    throw new Error(data?.message || 'Notification failed');
+                    throw new Error('Notification failed');
                 }
             })
     );
-    return false;
 }
 
 function skipCurrent() {
@@ -682,10 +764,12 @@ function moveToNext(btnEl) {
     return runActionWithCooldown(btnEl, () =>
         makeCounterRequest('move-next')
             .then((data) => {
-                if (data.success || data.suppressed) {
+                if (data.success) {
                     fetchData();
+                } else if (data.message) {
+                    throw new Error(data.message);
                 } else {
-                    throw new Error(data?.message || 'Failed to move to next');
+                    throw new Error('Failed to move to next');
                 }
             })
     );
@@ -695,11 +779,13 @@ function callNext(btnEl) {
     return runActionWithCooldown(btnEl, () =>
         makeCounterRequest('call-next')
             .then((data) => {
-                if (data.success || data.suppressed) {
+                if (data.success) {
                     playNotificationSound();
                     fetchData();
+                } else if (data.message) {
+                    throw new Error(data.message);
                 } else {
-                    throw new Error(data?.message || 'Failed to call next');
+                    throw new Error('Failed to call next');
                 }
             })
     );
@@ -718,11 +804,11 @@ function recallQueue(queueId, event) {
             if (data.success) {
                 playNotificationSound();
                 fetchData();
-            } else if (data.suppressed) {
-                // Silently retry
+            } else if (data.message) {
+                alert(data.message);
                 fetchData();
             } else {
-                alert(data?.message || 'Recall failed');
+                alert('Recall failed');
                 fetchData();
             }
         });
@@ -733,10 +819,12 @@ function confirmSkip(btnEl) {
     return runActionWithCooldown(btnEl, () =>
         makeCounterRequest('skip')
             .then((data) => {
-                if (data.success || data.suppressed) {
+                if (data.success) {
                     fetchData();
+                } else if (data.message) {
+                    throw new Error(data.message);
                 } else {
-                    throw new Error(data?.message || 'Failed to skip');
+                    throw new Error('Failed to skip');
                 }
             })
     );
@@ -759,11 +847,12 @@ function confirmTransfer(toCounterId) {
             if (data.success) {
                 selectedTransferQueueId = null;
                 fetchData();
-            } else if (data.suppressed) {
+            } else if (data.message) {
+                alert('Transfer failed: ' + data.message);
                 selectedTransferQueueId = null;
                 fetchData();
             } else {
-                alert('Transfer failed: ' + (data.message || 'Unknown error'));
+                alert('Transfer failed: Unknown error');
                 selectedTransferQueueId = null;
                 fetchData();
             }
