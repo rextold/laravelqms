@@ -142,10 +142,8 @@ Route::prefix('{organization_code}')->group(function () {
         // Counter routes
         Route::prefix('counter')->name('counter.')->middleware(['organization.context'])->group(function () {
             Route::get('/data', [CounterController::class, 'getData'])->name('data')->middleware('allow.public');
-        });
-        // All other counter routes require organization context and role:counter
+        });        // All other counter routes require organization context and role:counter
         Route::middleware(['organization.context', 'role:counter'])->prefix('counter')->name('counter.')->group(function () {
-            Route::get('/dashboard', [CounterController::class, 'dashboard'])->name('dashboard');
             // Counter single-frame calling view now at /counter/panel
             Route::get('/panel', [CounterController::class, 'callView'])->name('panel');
             // Backward-compatible redirect from /view to /panel

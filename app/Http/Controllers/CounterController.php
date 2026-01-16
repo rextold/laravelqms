@@ -25,36 +25,6 @@ class CounterController extends Controller
     }
 
     /**
-     * Show counter dashboard with statistics and reports
-     */
-    public function dashboard(Request $request)
-    {
-        $user = Auth::user();
-        $organization = $request->attributes->get('organization');
-        
-        if (!$user->isCounter()) {
-            abort(403, 'Access denied. Counter role required.');
-        }
-
-        // Get counter statistics
-        $stats = $this->getCounterStats($user);
-        
-        // Get analytics data for charts
-        $analyticsData = $this->getAnalyticsData($user);
-        
-        // Get organization settings
-        $settings = OrganizationSetting::getSettings($organization->id);
-
-        return view('counter.dashboard', [
-            'counter' => $user,
-            'organization' => $organization,
-            'settings' => $settings,
-            'stats' => $stats,
-            'analyticsData' => $analyticsData
-        ]);
-    }
-
-    /**
      * Show counter call/service panel
      */
     public function callView(Request $request)

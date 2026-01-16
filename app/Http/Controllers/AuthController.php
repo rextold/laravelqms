@@ -158,10 +158,9 @@ class AuthController extends Controller
             }
             // Set counter online on login
             $user->update(['is_online' => true]);
-            $this->putOrganizationContextInSession($request, $organization);
-            // Counters go straight to their dashboard; skip intended URLs to avoid role-mismatch 403s
+            $this->putOrganizationContextInSession($request, $organization);            // Counters go straight to their service panel; skip intended URLs to avoid role-mismatch 403s
             $orgCode = strtolower($organization->organization_code ?? '');
-            return redirect()->to(route('counter.dashboard', ['organization_code' => $orgCode]));
+            return redirect()->to(route('counter.panel', ['organization_code' => $orgCode]));
         }
 
         // Fallback
