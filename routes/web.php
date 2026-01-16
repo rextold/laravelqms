@@ -153,6 +153,10 @@ Route::prefix('{organization_code}')->group(function () {
             Route::get('/view', function () {
                 return redirect()->to(route('counter.panel', ['organization_code' => request()->route('organization_code')]));
             })->name('view');
+            // Dashboard route - alias for panel to handle legacy references
+            Route::get('/dashboard', function () {
+                return redirect()->to(route('counter.panel', ['organization_code' => request()->route('organization_code')]));
+            })->name('dashboard');
             Route::get('/toggle-online', [CounterController::class, 'toggleOnline'])->name('toggle-online');
             Route::get('/call-next', [CounterController::class, 'callNext'])->name('call-next');
             Route::get('/move-next', [CounterController::class, 'moveToNext'])->name('move-next');
