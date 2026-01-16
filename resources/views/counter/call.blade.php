@@ -505,6 +505,37 @@ function renderLists(data) {
 
 let counterFetchInFlight = false;
 let counterFetchController = null;
+let lastSuccessfulData = null;
+let lastErrorTime = 0;
+
+function handleFallbackData() {
+    console.log('Using cached counter data as fallback');
+    if (lastSuccessfulData) {
+        renderLists(lastSuccessfulData);
+    } else {
+        // If no cached data, render empty state
+        renderLists({
+            success: true,
+            current_queue: null,
+            waiting_queues: [],
+            skipped: [],
+            online_counters: [],
+            served_today: 0,
+            stats: {
+                waiting: 0,
+                completed_today: 0,
+                avg_wait_time: 0,
+                avg_service_time: 0
+            },
+            analytics: {
+                hourly: Array(24).fill(0),
+                weekly: Array(7).fill(0),
+                weekly_days: [],
+                wait_times: Array(7).fill(0)
+            }
+        });
+    }
+}
 
 function fetchData() {
     if (counterFetchInFlight) return;
@@ -518,27 +549,26 @@ function fetchData() {
     } catch (e) {
         counterFetchController = null;
     }
+    
     const url = new URL(`/${ORG_CODE}/counter/data`, window.location.origin);
     url.searchParams.append('counter_id', COUNTER_ID);
     console.log('Fetching counter data from', url.toString());
+    
     fetch(url, {
         method: 'GET',
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            'Accept': 'application/json',
             'Accept': 'application/json'
         },
         credentials: 'same-origin',
         signal: counterFetchController ? counterFetchController.signal : undefined,
     })
         .then(response => {
-            // Handle 403 by continuing with cached data
+            // Handle authentication errors gracefully
             if (response.status === 403 || response.status === 401) {
-                console.warn(`Counter endpoint ${response.status} - using cached data`);
-                 if (typeof handleFallbackData === 'function') {
-                     handleFallbackData();
-                 }
+                console.warn(`Counter endpoint ${response.status} - using fallback data`);
+                handleFallbackData();
                 counterFetchInFlight = false;
                 return;
             }
@@ -549,10 +579,13 @@ function fetchData() {
             
             return response.json().then(data => {
                 if (data.success) {
+                    // Cache successful data for fallback
+                    lastSuccessfulData = data;
                     renderLists(data);
                     lastErrorTime = 0;
                 } else {
                     console.warn('Counter data response not successful:', data);
+                    handleFallbackData();
                 }
             });
         })
@@ -565,6 +598,9 @@ function fetchData() {
                 console.error('Counter refresh failed:', err);
                 lastErrorTime = now;
             }
+            
+            // Use fallback data on network errors
+            handleFallbackData();
         })
         .finally(() => {
             counterFetchInFlight = false;
