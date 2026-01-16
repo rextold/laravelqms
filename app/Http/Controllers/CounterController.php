@@ -549,7 +549,20 @@ class CounterController extends Controller
     private function getCounterStats(User $counter)
     {
         $today = Carbon::today();
-        
+        // Average wait time (from created_at to called_at)
+        $avgWaitTime = Queue::where('counter_id', $counter->id)
+            ->where('status', 'completed')
+            ->whereDate('completed_at', $today)
+            ->whereNotNull('called_at')
+            ->selectRaw('AVG(TIMESTAMPDIFF(MINUTE, created_at, called_at)) as avg_wait')
+            ->value('avg_wait');
+        // Average service time (from called_at to completed_at)
+        $avgServiceTime = Queue::where('counter_id', $counter->id)
+            ->where('status', 'completed')
+            ->whereDate('completed_at', $today)
+            ->whereNotNull('called_at')
+            ->selectRaw('AVG(TIMESTAMPDIFF(MINUTE, called_at, completed_at)) as avg_service')
+            ->value('avg_service');
         return [
             'waiting' => Queue::where('counter_id', $counter->id)
                 ->where('status', 'waiting')
@@ -565,7 +578,9 @@ class CounterController extends Controller
             'skipped_today' => Queue::where('counter_id', $counter->id)
                 ->where('status', 'skipped')
                 ->whereDate('skipped_at', $today)
-                ->count()
+                ->count(),
+            'avg_wait_time' => round($avgWaitTime ?? 0, 1),
+            'avg_service_time' => round($avgServiceTime ?? 0, 1)
         ];
     }
 

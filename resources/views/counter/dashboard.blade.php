@@ -59,91 +59,51 @@
         </div>
     </div>
 
-    <!-- Key Metrics Section -->
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-    <x-counter.metric-card 
-        title="In Queue"
-        value="{{ $stats['waiting'] ?? 0 }}"
-        icon="users"
-        color="amber"
-        tooltip="Waiting customers"
-    />
-    
-    <x-counter.metric-card 
-        title="Completed"
-        value="{{ $stats['completed_today'] ?? 0 }}"
-        icon="check-double"
-        color="green"
-        tooltip="Today"
-    />
-    
-    <x-counter.metric-card 
-        title="Now Serving"
-        value="{{ $currentNumber ?? '---' }}"
-        icon="user-check"
-        color="blue"
-        tooltip="Active queue"
-    />
-    
-    <x-counter.metric-card 
-        title="Total Served"
-        value="{{ $stats['total_served'] ?? 0 }}"
-        icon="chart-line"
-        color="purple"
-        tooltip="All time"
-    />
 
-        <!-- Completed Today -->
-        <div class="bg-white rounded-xl shadow-md p-6 border-t-4 border-green-500 hover:shadow-lg transition-all">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Completed</p>
-                    <p class="text-4xl font-bold text-gray-900" id="completedCount">{{ $stats['completed_today'] ?? 0 }}</p>
-                    <p class="text-xs text-gray-500 mt-2">Today</p>
-                </div>
-                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-                    <i class="fas fa-check-double text-2xl text-green-600"></i>
-                </div>
-            </div>
-        </div>
-
-        <!-- Current Queue -->
-        <div class="bg-white rounded-xl shadow-md p-6 border-t-4 border-blue-500 hover:shadow-lg transition-all">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Now Serving</p>
-                    <p class="text-4xl font-bold text-gray-900" id="currentQueue">
-                        @if($stats['current_queue'])
-                            @php 
-                                $queueParts = explode('-', $stats['current_queue']->queue_number);
-                                $currentNumber = $queueParts[array_key_last($queueParts)];
-                            @endphp
-                            {{ $currentNumber }}
-                        @else
-                            ---
-                        @endif
-                    </p>
-                    <p class="text-xs text-gray-500 mt-2">Active queue</p>
-                </div>
-                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                    <i class="fas fa-user-check text-2xl text-blue-600"></i>
-                </div>
-            </div>
-        </div>
-
-        <!-- Total Served -->
-        <div class="bg-white rounded-xl shadow-md p-6 border-t-4 border-purple-500 hover:shadow-lg transition-all">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Total Served</p>
-                    <p class="text-4xl font-bold text-gray-900" id="totalServed">{{ $stats['total_served'] ?? 0 }}</p>
-                    <p class="text-xs text-gray-500 mt-2">All time</p>
-                </div>
-                <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center">
-                    <i class="fas fa-chart-line text-2xl text-purple-600"></i>
-                </div>
-            </div>
-        </div>
+    <!-- Unified Key Metrics Section -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
+        <x-counter.metric-card 
+            title="In Queue"
+            value="{{ $stats['waiting'] ?? 0 }}"
+            icon="users"
+            color="amber"
+            tooltip="Waiting customers"
+        />
+        <x-counter.metric-card 
+            title="Completed Today"
+            value="{{ $stats['completed_today'] ?? 0 }}"
+            icon="check-double"
+            color="green"
+            tooltip="Completed today"
+        />
+        <x-counter.metric-card 
+            title="Now Serving"
+            value="{{ isset($stats['current_queue']) ? (explode('-', $stats['current_queue']->queue_number)[array_key_last(explode('-', $stats['current_queue']->queue_number))]) : '---' }}"
+            icon="user-check"
+            color="blue"
+            tooltip="Active queue"
+        />
+        <x-counter.metric-card 
+            title="Total Served"
+            value="{{ $stats['total_served'] ?? 0 }}"
+            icon="chart-line"
+            color="purple"
+            tooltip="All time"
+        />
+        <x-counter.metric-card 
+            title="Avg Wait (min)"
+            value="{{ $stats['avg_wait_time'] ?? 0 }}"
+            icon="clock"
+            color="cyan"
+            tooltip="Average wait time today"
+        />
+        <x-counter.metric-card 
+            title="Avg Service (min)"
+            value="{{ $stats['avg_service_time'] ?? 0 }}"
+            icon="stopwatch"
+            color="orange"
+            tooltip="Average service time today"
+        />
     </div>
 
     <!-- Analytics Charts Section -->
