@@ -3,26 +3,32 @@
 @section('title', 'Service Station')
 
 @section('content')
-<div class="min-h-screen flex flex-col p-4 bg-gray-50 overflow-hidden">
-    <!-- Header with Logo and Organization Name -->
-    <div id="panelHeader" class="w-full mb-4">
-        <div class="bg-white rounded-lg shadow-md p-4">
-            <div class="flex items-center justify-between">
+<div class="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <!-- Modern Header -->
+    <div id="panelHeader" class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between py-4">
                 <div class="flex items-center space-x-4">
                     @if($settings->logo_url)
-                        <img src="{{ $settings->logo_url }}" alt="Organization Logo" class="h-12 w-auto">
+                        <img src="{{ $settings->logo_url }}" alt="Organization Logo" class="h-10 w-auto">
                     @endif
-                    <div>
-                        <h1 class="text-2xl font-bold text-gray-800">{{ $organization->organization_name ?? 'QMS' }}</h1>
-                        <p class="text-sm text-gray-600">Counter {{ $counter->counter_number }} - {{ $counter->display_name }}</p>
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-phone-alt text-white text-sm"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-xl font-bold text-gray-900">{{ $organization->organization_name ?? 'QMS' }}</h1>
+                            <p class="text-sm text-gray-600">Counter {{ $counter->counter_number }} - {{ $counter->display_name }}</p>
+                        </div>
                     </div>
                 </div>
-                <div class="flex items-start space-x-3">
+                <div class="flex items-center space-x-4">
                     <div class="text-right">
                         <div class="text-lg font-semibold text-gray-700" id="headerTime"></div>
                         <div class="text-xs text-gray-500" id="headerDate"></div>
                     </div>
-                    <button id="btnToggleMinimize" type="button" onclick="toggleMinimize()" class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition" title="Minimize">
+                    <button id="btnToggleMinimize" type="button" onclick="toggleMinimize()" 
+                            class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors" title="Minimize">
                         <i class="fas fa-window-minimize"></i>
                     </button>
                 </div>
@@ -30,47 +36,142 @@
         </div>
     </div>
 
-    <!-- Main Content -->
-    <div id="panelMain" class="flex-1 flex items-center justify-center">
-        <div class="w-full max-w-3xl">
-            <div class="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-xl p-6 border-2 border-white">
-            <div class="text-center">
-                <p class="text-white text-sm mb-2">NOW SERVING</p>
-                <div id="currentNumber" class="responsive-queue-number font-extrabold text-white drop-shadow-2xl">---</div>
-                <form onsubmit="return false;" autocomplete="off">
-                    @csrf
-                <div class="grid grid-cols-5 gap-2 mt-6 max-w-xl mx-auto">
-                    <button type="button" id="btnNotify" onclick="return notifyCustomer(this, event);" class="bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-3 py-2 rounded-lg font-semibold text-sm transition" disabled>
-                        <i class="fas fa-bell mr-2"></i>Notify
-                    </button>
-                    <button type="button" id="btnSkip" onclick="skipCurrent()" class="bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-3 py-2 rounded-lg font-semibold text-sm transition" disabled>
-                        <i class="fas fa-forward mr-2"></i>Skip
-                    </button>
-                    <button type="button" id="btnComplete" onclick="moveToNext(this)" class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-3 py-2 rounded-lg font-semibold text-sm transition" disabled>
-                        <i class="fas fa-check-circle mr-2"></i>Complete
-                    </button>
-                    <button type="button" id="btnTransfer" onclick="openTransferModal()" class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-3 py-2 rounded-lg font-semibold text-sm transition" disabled>
-                        <i class="fas fa-exchange-alt mr-2"></i>Transfer
-                    </button>
-                    <button type="button" id="btnCallNext" onclick="callNext(this)" class="bg-white text-indigo-700 hover:bg-gray-100 disabled:bg-gray-400 disabled:text-gray-600 disabled:cursor-not-allowed px-3 py-2 rounded-lg font-semibold text-sm transition" disabled>
-                        <i class="fas fa-bell mr-2"></i>Call Next
-                    </button>
+    <!-- Main Service Panel -->
+    <div id="panelMain" class="flex-1 p-6">
+        <div class="max-w-6xl mx-auto">
+            <!-- Current Queue Display -->
+            <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 mb-6">
+                <div class="text-center">
+                    <div class="mb-4">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                            <i class="fas fa-user-check mr-2"></i>
+                            NOW SERVING
+                        </span>
+                    </div>
+                    <div id="currentNumber" class="text-8xl font-extrabold text-gray-900 mb-6 tracking-wider">---</div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 max-w-4xl mx-auto">
+                        <button type="button" id="btnCallNext" onclick="callNext(this)" 
+                                class="flex items-center justify-center px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-all duration-200 shadow-sm hover:shadow-md" disabled>
+                            <i class="fas fa-bell mr-2"></i>
+                            Call Next
+                        </button>
+                        
+                        <button type="button" id="btnNotify" onclick="return notifyCustomer(this, event);" 
+                                class="flex items-center justify-center px-4 py-3 bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-all duration-200 shadow-sm hover:shadow-md" disabled>
+                            <i class="fas fa-bell mr-2"></i>
+                            Notify
+                        </button>
+                        
+                        <button type="button" id="btnComplete" onclick="moveToNext(this)" 
+                                class="flex items-center justify-center px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-all duration-200 shadow-sm hover:shadow-md" disabled>
+                            <i class="fas fa-check-circle mr-2"></i>
+                            Complete
+                        </button>
+                        
+                        <button type="button" id="btnSkip" onclick="skipCurrent()" 
+                                class="flex items-center justify-center px-4 py-3 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-all duration-200 shadow-sm hover:shadow-md" disabled>
+                            <i class="fas fa-forward mr-2"></i>
+                            Skip
+                        </button>
+                        
+                        <button type="button" id="btnTransfer" onclick="openTransferModal()" 
+                                class="flex items-center justify-center px-4 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-all duration-200 shadow-sm hover:shadow-md" disabled>
+                            <i class="fas fa-exchange-alt mr-2"></i>
+                            Transfer
+                        </button>
+                    </div>
                 </div>
-                </form>
             </div>
-        </div>
-        <div class="grid grid-cols-2 gap-4 mt-4">
-            <div class="bg-white rounded-lg shadow p-4">
-                <h3 class="text-base font-bold mb-3">Waiting</h3>
-                <div id="waitingList" class="space-y-2 max-h-40 overflow-hidden"></div>
+
+            <!-- Queue Lists -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Waiting Queue -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">
+                            <i class="fas fa-users text-amber-600 mr-2"></i>
+                            Waiting Queue
+                        </h3>
+                        <span id="waitingCount" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                            0
+                        </span>
+                    </div>
+                    <div id="waitingList" class="space-y-2 max-h-80 overflow-y-auto">
+                        <!-- Waiting queue items will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Skipped Queue -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">
+                            <i class="fas fa-clock text-orange-600 mr-2"></i>
+                            Skipped Queue
+                        </h3>
+                        <span id="skippedCount" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                            0
+                        </span>
+                    </div>
+                    <div id="skippedList" class="space-y-2 max-h-80 overflow-y-auto">
+                        <!-- Skipped queue items will be populated here -->
+                    </div>
+                </div>
             </div>
-            <div class="bg-white rounded-lg shadow p-4">
-                <h3 class="text-base font-bold mb-3">Skipped</h3>
-                <div id="skippedList" class="space-y-2 max-h-40 overflow-hidden"></div>
+
+            <!-- Quick Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-user-check text-blue-600"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-gray-600">Served Today</p>
+                            <p class="text-xl font-bold text-gray-900" id="servedToday">0</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-clock text-green-600"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-gray-600">Avg Wait</p>
+                            <p class="text-xl font-bold text-gray-900" id="avgWait">0m</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-stopwatch text-purple-600"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-gray-600">Avg Service</p>
+                            <p class="text-xl font-bold text-gray-900" id="avgService">0m</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-chart-line text-indigo-600"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-gray-600">Efficiency</p>
+                            <p class="text-xl font-bold text-gray-900" id="efficiency">100%</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-</div>
 </div>
 
     <!-- Minimized dock bar (for easy corner docking) -->

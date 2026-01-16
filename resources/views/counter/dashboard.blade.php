@@ -1,98 +1,123 @@
 @extends('layouts.app')
 
 @section('title', 'Counter Dashboard')
-@section('page-title', 'Counter Dashboard - Analytics & Performance')
+@section('page-title', 'Counter Dashboard')
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
-    <div class="flex justify-end items-center mb-6">
-        <button type="button" id="onlineBtn" 
-                class="px-4 py-2 rounded {{ $counter->is_online ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700' }} text-white flex items-center"
-                onclick="toggleOnline()">
-            <i class="fas fa-power-off mr-2"></i>
-            <span id="onlineText">{{ $counter->is_online ? 'Go Offline' : 'Go Online' }}</span>
-            <span id="onlineSpinner" class="hidden ml-2"><i class="fas fa-spinner fa-spin"></i></span>
-        </button>
+<div class="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <!-- Modern Header -->
+    <div class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-6">
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-desktop text-white text-xl"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-900">Counter {{ $counter->counter_number }}</h1>
+                            <p class="text-sm text-gray-600">{{ $counter->display_name }} • {{ $organization->organization_name }}</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Status Badge -->
+                    <div class="flex items-center space-x-2 px-3 py-1 rounded-full {{ $counter->is_online ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                        <div class="w-2 h-2 rounded-full {{ $counter->is_online ? 'bg-green-500 animate-pulse' : 'bg-red-500' }}"></div>
+                        <span class="text-sm font-medium">{{ $counter->is_online ? 'Online' : 'Offline' }}</span>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex items-center space-x-3">
+                    <a href="{{ route('counter.panel', ['organization_code' => request()->route('organization_code')]) }}" 
+                       class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md">
+                        <i class="fas fa-phone-alt mr-2"></i>
+                        Service Panel
+                    </a>
+                    
+                    <button id="onlineBtn" type="button" onclick="toggleOnlineStatus()"
+                            class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md
+                            {{ $counter->is_online ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white' }}">
+                        <i class="fas {{ $counter->is_online ? 'fa-power-off' : 'fa-plug' }} mr-2"></i>
+                        <span id="onlineText">{{ $counter->is_online ? 'Go Offline' : 'Go Online' }}</span>
+                        <span id="onlineSpinner" class="hidden ml-2"><i class="fas fa-spinner fa-spin"></i></span>
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <div class="bg-gradient-to-br from-yellow-400 to-orange-500 p-6 rounded-xl shadow-lg transform hover:scale-105 transition-all">
-            <div class="flex items-center justify-between">
-                <div>
-                    <div class="text-orange-100 text-sm font-medium mb-1">Waiting</div>
-                    <div class="text-4xl font-bold text-white" id="waitingCount">{{ $stats['waiting'] }}</div>
-                    <div class="text-orange-100 text-xs mt-2"><i class="fas fa-clock"></i> In Queue</div>
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Key Metrics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Current Queue Card -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all duration-200">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-user-check text-blue-600 text-xl"></i>
+                    </div>
+                    <span class="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full font-medium">Now Serving</span>
                 </div>
-                <div class="p-4 bg-white bg-opacity-20 rounded-full">
-                    <i class="fas fa-hourglass-half text-white text-3xl"></i>
-                </div>
-            </div>
-        </div>
-        <div class="bg-gradient-to-br from-green-400 to-green-600 p-6 rounded-xl shadow-lg transform hover:scale-105 transition-all">
-            <div class="flex items-center justify-between">
-                <div>
-                    <div class="text-green-100 text-sm font-medium mb-1">Completed Today</div>
-                    <div class="text-4xl font-bold text-white" id="completedCount">{{ $stats['completed_today'] }}</div>
-                    <div class="text-green-100 text-xs mt-2"><i class="fas fa-check-circle"></i> Served</div>
-                </div>
-                <div class="p-4 bg-white bg-opacity-20 rounded-full">
-                    <i class="fas fa-check-double text-white text-3xl"></i>
-                </div>
-            </div>
-        </div>
-        <div class="bg-gradient-to-br from-blue-500 to-indigo-600 p-6 rounded-xl shadow-lg transform hover:scale-105 transition-all">
-            <div class="flex items-center justify-between">
-                <div>
-                    <div class="text-blue-100 text-sm font-medium mb-1">Current Queue</div>
+                <div class="space-y-1">
                     @php
                         $formatCounterQueue = function ($queueNumber, $counterNumber) {
-                            if (!$queueNumber) return 'None';
+                            if (!$queueNumber) return '---';
                             $parts = explode('-', $queueNumber);
                             $suffix = count($parts) ? end($parts) : $queueNumber;
                             return $suffix ?: $queueNumber;
                         };
                     @endphp
-                    <div class="text-3xl font-bold text-white" id="currentQueue">
-                        {{ $stats['current_queue'] ? $formatCounterQueue($stats['current_queue']->queue_number, $counter->counter_number) : 'None' }}
+                    <div class="text-3xl font-bold text-gray-900" id="currentQueue">
+                        {{ $stats['current_queue'] ? $formatCounterQueue($stats['current_queue']->queue_number, $counter->counter_number) : '---' }}
                     </div>
-                </div>
-
-                <!-- Right: Actions -->
-                <div class="flex items-center space-x-4">
-                    <!-- Status Indicator -->
-                    <div class="flex items-center space-x-2">
-                        <div class="w-3 h-3 rounded-full {{ $counter->is_online ? 'bg-green-500 animate-pulse' : 'bg-red-500' }}"></div>
-                        <span class="text-sm font-medium {{ $counter->is_online ? 'text-green-700' : 'text-red-700' }}">
-                            {{ $counter->is_online ? 'Online' : 'Offline' }}
-                        </span>
-                    </div>
-
-                    <!-- Quick Actions -->
-                    <div class="flex items-center space-x-2">
-                        <a href="{{ route('counter.panel', ['organization_code' => request()->route('organization_code')]) }}" 
-                           class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
-                            <i class="fas fa-phone-alt mr-2"></i>
-                            Service Panel
-                        </a>
-                        
-                        <button id="onlineBtn" type="button" onclick="toggleOnlineStatus()"
-                                class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors
-                                {{ $counter->is_online ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white' }}">
-                            <i class="fas {{ $counter->is_online ? 'fa-power-off' : 'fa-plug' }} mr-2"></i>
-                            <span id="onlineText">{{ $counter->is_online ? 'Go Offline' : 'Go Online' }}</span>
-                            <span id="onlineSpinner" class="hidden ml-2"><i class="fas fa-spinner fa-spin"></i></span>
-                        </button>
-                    </div>
+                    <p class="text-sm text-gray-600">Current Queue Number</p>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Main Dashboard Content -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- Quick Stats Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-8">
+            <!-- Waiting Queue Card -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all duration-200">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-users text-amber-600 text-xl"></i>
+                    </div>
+                    <span class="text-xs bg-amber-50 text-amber-700 px-2 py-1 rounded-full font-medium">Waiting</span>
+                </div>
+                <div class="space-y-1">
+                    <div class="text-3xl font-bold text-gray-900" id="waitingCount">{{ $stats['waiting'] ?? 0 }}</div>
+                    <p class="text-sm text-gray-600">Customers in Queue</p>
+                </div>
+            </div>
+
+            <!-- Completed Today Card -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all duration-200">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-check-double text-green-600 text-xl"></i>
+                    </div>
+                    <span class="text-xs bg-green-50 text-green-700 px-2 py-1 rounded-full font-medium">Today</span>
+                </div>
+                <div class="space-y-1">
+                    <div class="text-3xl font-bold text-gray-900" id="completedCount">{{ $stats['completed_today'] ?? 0 }}</div>
+                    <p class="text-sm text-gray-600">Completed Services</p>
+                </div>
+            </div>
+
+            <!-- Average Wait Time Card -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all duration-200">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-clock text-purple-600 text-xl"></i>
+                    </div>
+                    <span class="text-xs bg-purple-50 text-purple-700 px-2 py-1 rounded-full font-medium">Average</span>
+                </div>
+                <div class="space-y-1">
+                    <div class="text-3xl font-bold text-gray-900">{{ $stats['avg_wait_time'] ?? 0 }}</div>
+                    <p class="text-sm text-gray-600">Minutes Wait Time</p>
+                </div>
+            </div>
+        </div>        <!-- Additional Metrics Row -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
                 <div class="flex items-center justify-between">
                     <div>
