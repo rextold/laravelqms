@@ -4,11 +4,118 @@
 
 @section('content')
 <div class="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <!-- Side Menu Overlay -->
+    <div id="sideMenuOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden transition-opacity duration-300" onclick="toggleSideMenu()"></div>
+
+    <!-- Side Menu -->
+    <div id="sideMenu" class="fixed left-0 top-0 h-full w-80 bg-white shadow-2xl transform -translate-x-full transition-transform duration-300 ease-in-out z-50">
+        <div class="flex flex-col h-full">
+            <!-- Side Menu Header -->
+            <div class="bg-gradient-to-br from-blue-600 to-indigo-700 text-white p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-phone-alt text-white"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold">Counter Panel</h2>
+                            <p class="text-sm text-blue-100">Counter {{ $counter->counter_number }}</p>
+                        </div>
+                    </div>
+                    <button onclick="toggleSideMenu()" class="text-white hover:text-blue-200 transition-colors">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <!-- Online Status -->
+                <div class="flex items-center justify-between bg-white bg-opacity-10 rounded-lg p-3">
+                    <span class="text-sm font-medium">Status</span>
+                    <div class="flex items-center space-x-2">
+                        <div id="sideMenuStatus" class="w-2 h-2 bg-green-400 rounded-full"></div>
+                        <span id="sideMenuStatusText" class="text-sm">Online</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Side Menu Navigation -->
+            <div class="flex-1 overflow-y-auto">
+                <!-- Quick Actions -->
+                <div class="p-4 border-b border-gray-100">
+                    <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Quick Actions</h3>
+                    <div class="space-y-2">
+                        <button onclick="callNext(document.getElementById('btnCallNext')); toggleSideMenu();" 
+                                class="w-full flex items-center space-x-3 px-4 py-3 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition-colors">
+                            <i class="fas fa-bell"></i>
+                            <span class="font-medium">Call Next</span>
+                        </button>
+                        <button onclick="moveToNext(document.getElementById('btnComplete')); toggleSideMenu();" 
+                                class="w-full flex items-center space-x-3 px-4 py-3 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg transition-colors">
+                            <i class="fas fa-check-circle"></i>
+                            <span class="font-medium">Complete</span>
+                        </button>
+                        <button onclick="openSkipModal(); toggleSideMenu();" 
+                                class="w-full flex items-center space-x-3 px-4 py-3 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-lg transition-colors">
+                            <i class="fas fa-forward"></i>
+                            <span class="font-medium">Skip</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Quick Stats -->
+                <div class="p-4 border-b border-gray-100">
+                    <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Quick Stats</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            <div class="text-2xl font-bold text-gray-900" id="sideMenuServed">0</div>
+                            <div class="text-xs text-gray-600">Served Today</div>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            <div class="text-2xl font-bold text-gray-900" id="sideMenuWaiting">0</div>
+                            <div class="text-xs text-gray-600">In Queue</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation -->
+                <div class="p-4">
+                    <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Navigation</h3>
+                    <nav class="space-y-1">
+                        <a href="/{{ $organization->organization_code ?? 'admin' }}/dashboard" 
+                           class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                            <i class="fas fa-chart-bar"></i>
+                            <span>Dashboard</span>
+                        </a>
+                        <a href="/{{ $organization->organization_code ?? 'admin' }}/account/settings" 
+                           class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                            <i class="fas fa-cog"></i>
+                            <span>Settings</span>
+                        </a>
+                        <a href="/{{ $organization->organization_code ?? 'admin' }}/logout" 
+                           class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                            <i class="fas fa-sign-out-alt"></i>
+                            <span>Logout</span>
+                        </a>
+                    </nav>
+                </div>
+            </div>
+
+            <!-- Side Menu Footer -->
+            <div class="p-4 border-t border-gray-100 bg-gray-50">
+                <div class="text-xs text-gray-500 text-center">
+                    Queue Management System
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modern Header -->
     <div id="panelHeader" class="bg-white shadow-sm border-b border-gray-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between py-4">
                 <div class="flex items-center space-x-4">
+                    <button onclick="toggleSideMenu()" class="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors" title="Menu">
+                        <i class="fas fa-bars"></i>
+                    </button>
                     @if($settings->logo_url)
                         <img src="{{ $settings->logo_url }}" alt="Organization Logo" class="h-10 w-auto">
                     @endif
@@ -158,7 +265,7 @@
                     </div>
                 </div>
                 
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 group relative">
                     <div class="flex items-center">
                         <div class="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
                             <i class="fas fa-chart-line text-indigo-600"></i>
@@ -166,6 +273,17 @@
                         <div class="ml-3">
                             <p class="text-sm font-medium text-gray-600">Efficiency</p>
                             <p class="text-xl font-bold text-gray-900" id="efficiency">100%</p>
+                        </div>
+                    </div>
+                    <!-- Keyboard shortcut hint -->
+                    <div class="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div class="bg-gray-800 text-white text-xs px-2 py-1 rounded shadow-lg">
+                            <div class="font-semibold mb-1">Keyboard Shortcuts:</div>
+                            <div>N = Call Next</div>
+                            <div>C = Complete</div>
+                            <div>S = Skip</div>
+                            <div>T = Transfer</div>
+                            <div>M = Menu</div>
                         </div>
                     </div>
                 </div>
@@ -423,10 +541,67 @@ function playNotificationSound() {
 }
 
 // ============================================================
+// SIDE MENU FUNCTIONS
+// ============================================================
+
+function toggleSideMenu() {
+    const sideMenu = document.getElementById('sideMenu');
+    const overlay = document.getElementById('sideMenuOverlay');
+    
+    if (sideMenu.classList.contains('-translate-x-full')) {
+        // Open menu
+        sideMenu.classList.remove('-translate-x-full');
+        overlay.classList.remove('hidden');
+        setTimeout(() => {
+            overlay.classList.add('opacity-100');
+        }, 10);
+    } else {
+        // Close menu
+        sideMenu.classList.add('-translate-x-full');
+        overlay.classList.remove('opacity-100');
+        setTimeout(() => {
+            overlay.classList.add('hidden');
+        }, 300);
+    }
+}
+
+function updateSideMenuStats(data) {
+    // Update served today count
+    const servedToday = data.served_today || 0;
+    const sideMenuServed = document.getElementById('sideMenuServed');
+    if (sideMenuServed) sideMenuServed.textContent = servedToday;
+    
+    // Update waiting count
+    const waitingCount = data.waiting_queues ? data.waiting_queues.length : 0;
+    const sideMenuWaiting = document.getElementById('sideMenuWaiting');
+    if (sideMenuWaiting) sideMenuWaiting.textContent = waitingCount;
+    
+    // Update online status
+    const sideMenuStatus = document.getElementById('sideMenuStatus');
+    const sideMenuStatusText = document.getElementById('sideMenuStatusText');
+    
+    if (sideMenuStatus && sideMenuStatusText) {
+        // Check if counter is online (you may need to adjust this based on your data structure)
+        const isOnline = data.online_counters && data.online_counters.some(counter => counter.id == COUNTER_ID);
+        
+        if (isOnline) {
+            sideMenuStatus.className = 'w-2 h-2 bg-green-400 rounded-full';
+            sideMenuStatusText.textContent = 'Online';
+        } else {
+            sideMenuStatus.className = 'w-2 h-2 bg-red-400 rounded-full';
+            sideMenuStatusText.textContent = 'Offline';
+        }
+    }
+}
+
+// ============================================================
 // DATA RENDERING
 // ============================================================
 
 function renderLists(data) {
+    // Update side menu stats
+    updateSideMenuStats(data);
+    
     // Current queue
     currentQueueData = data.current_queue;
     const current = data.current_queue ? formatDisplayQueue(data.current_queue.queue_number) : '---';
@@ -455,6 +630,17 @@ function renderLists(data) {
     if (btnComplete) btnComplete.disabled = !hasCurrentQueue || isButtonCooling(btnComplete);
     if (btnTransfer) btnTransfer.disabled = !hasCurrentQueue || onlineCounters.length === 0 || isButtonCooling(btnTransfer);
     if (btnCallNext) btnCallNext.disabled = !hasWaitingQueues || hasCurrentQueue || isButtonCooling(btnCallNext);
+
+    // Update waiting count in side menu
+    const waitingCount = document.getElementById('waitingCount');
+    if (waitingCount) {
+        waitingCount.textContent = hasWaitingQueues ? data.waiting_queues.length : '0';
+    }
+
+    // Update served today in side menu and main panel
+    const servedToday = data.served_today || 0;
+    const servedTodayMain = document.getElementById('servedToday');
+    if (servedTodayMain) servedTodayMain.textContent = servedToday;
 
     // Waiting queues
     const waitingList = document.getElementById('waitingList');
@@ -828,6 +1014,62 @@ function closeTransferModal() {
 }
 
 // ============================================================
+// KEYBOARD SHORTCUTS
+// ============================================================
+
+document.addEventListener('keydown', function(event) {
+    // Only handle shortcuts when not typing in input fields
+    if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+        return;
+    }
+    
+    // Check if side menu is open - close it with Escape
+    const sideMenu = document.getElementById('sideMenu');
+    if (!sideMenu.classList.contains('-translate-x-full') && event.key === 'Escape') {
+        toggleSideMenu();
+        return;
+    }
+    
+    // Counter action shortcuts (only when side menu is closed)
+    if (sideMenu.classList.contains('-translate-x-full')) {
+        switch(event.key.toLowerCase()) {
+            case 'n': // Call Next
+                event.preventDefault();
+                const btnCallNext = document.getElementById('btnCallNext');
+                if (btnCallNext && !btnCallNext.disabled) {
+                    callNext(btnCallNext);
+                }
+                break;
+            case 'c': // Complete
+                event.preventDefault();
+                const btnComplete = document.getElementById('btnComplete');
+                if (btnComplete && !btnComplete.disabled) {
+                    moveToNext(btnComplete);
+                }
+                break;
+            case 's': // Skip
+                event.preventDefault();
+                const btnSkip = document.getElementById('btnSkip');
+                if (btnSkip && !btnSkip.disabled) {
+                    openSkipModal();
+                }
+                break;
+            case 't': // Transfer
+                event.preventDefault();
+                const btnTransfer = document.getElementById('btnTransfer');
+                if (btnTransfer && !btnTransfer.disabled) {
+                    openTransferModal();
+                }
+                break;
+            case 'm': // Menu
+                event.preventDefault();
+                toggleSideMenu();
+                break;
+        }
+    }
+});
+
+// ============================================================
 // INITIALIZATION
 // ============================================================
 
@@ -862,6 +1104,12 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('offline', function() {
         console.warn('Network disconnected - using cached data');
     });
+    
+    // Add keyboard shortcut help tooltip
+    const header = document.getElementById('panelHeader');
+    if (header) {
+        header.title = 'Keyboard shortcuts: N (Call Next), C (Complete), S (Skip), T (Transfer), M (Menu), ESC (Close Menu)';
+    }
 });
 </script>
 @endpush
