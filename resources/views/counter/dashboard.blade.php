@@ -253,226 +253,251 @@
 
 @push('scripts')
 <script>
-// Modern Dashboard JavaScript
-class CounterDashboard {
-    constructor(config) {
-        this.orgCode = config.orgCode;
-        this.counterId = config.counterId;
-        this.charts = {};
-        this.refreshInterval = config.refreshInterval || 3000;
-        this.refreshCount = 0;
-        
-        this.init();
-    }
+let isOnline = {{ $counter->is_online ? 'true' : 'false' }};
+const COUNTER_NUM = {{ $counter->counter_number }};
 
-    init() {
-        this.initCharts();
-        this.startAutoRefresh();
-        this.updateTimestamp();
-    }
+// Periodically refresh dashboard numbers without manual reload
+const REFRESH_MS = 3000;
+let refreshTimer = null;
 
-    initCharts() {
-        // Hourly Chart
-        const hourlyCtx = document.getElementById('hourlyChart');
-        if (hourlyCtx) {
-            this.charts.hourly = new Chart(hourlyCtx, {
-                type: 'line',
-                data: {
-                    labels: ['8AM', '10AM', '12PM', '2PM', '4PM', '6PM'],
-                    datasets: [{
-                        label: 'Completions',
-                        data: [12, 19, 15, 25, 22, 18],
-                        borderColor: '#3B82F6',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        tension: 0.4,
-                        fill: true
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: {
-                                color: '#F3F4F6'
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false
-                            }
-                        }
-                    }
-                }
-            });
+function startAutoRefresh() {
+    refreshDashboardData();
+    refreshTimer = setInterval(refreshDashboardData, REFRESH_MS);
+}
+
+function refreshDashboardData() {
+    fetch('{{ route('counter.data', ['organization_code' => request()->route('organization_code')]) }}', {
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json' }
+    })
+    .then(res => res.ok ? res.json() : Promise.reject(res))
+    .then(data => {
+        if (!data.success) return;
+        document.getElementById('waitingCount').textContent = data.stats.waiting ?? 0;
+        document.getElementById('completedCount').textContent = data.stats.completed_today ?? 0;
+        document.getElementById('currentQueue').textContent = data.current_queue ? formatDisplayQueue(data.current_queue.queue_number) : 'None';
+        if (typeof data.is_online === 'boolean') {
+            isOnline = data.is_online;
+            updateOnlineButton();
         }
+    })
+    .catch(() => {
+        // swallow errors to avoid breaking the interval
+    });
+}
 
-        // Weekly Chart
-        const weeklyCtx = document.getElementById('weeklyChart');
-        if (weeklyCtx) {
-            this.charts.weekly = new Chart(weeklyCtx, {
-                type: 'bar',
-                data: {
-                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                    datasets: [{
-                        label: 'Total Served',
-                        data: [65, 78, 82, 91, 95, 45, 32],
-                        backgroundColor: '#10B981',
-                        borderRadius: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: {
-                                color: '#F3F4F6'
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false
-                            }
-                        }
-                    }
-                }
-            });
+function toggleOnline() {
+    const btn = document.getElementById('onlineBtn');
+    const spinner = document.getElementById('onlineSpinner');
+    btn.disabled = true;
+    spinner.classList.remove('hidden');
+
+    fetch('{{ route('counter.toggle-online', ['organization_code' => request()->route('organization_code')]) }}', {
+        method: 'GET',
+        credentials: 'same-origin',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
         }
-
-        // Wait Time Chart
-        const waitTimeCtx = document.getElementById('waitTimeChart');
-        if (waitTimeCtx) {
-            this.charts.waitTime = new Chart(waitTimeCtx, {
-                type: 'line',
-                data: {
-                    labels: ['8AM', '10AM', '12PM', '2PM', '4PM', '6PM'],
-                    datasets: [{
-                        label: 'Wait Time (min)',
-                        data: [5, 8, 12, 15, 10, 7],
-                        borderColor: '#F59E0B',
-                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                        tension: 0.4,
-                        fill: true
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'Minutes'
-                            },
-                            grid: {
-                                color: '#F3F4F6'
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false
-                            }
-                        }
-                    }
-                }
-            });
+    })
+    .then(response => response.ok ? response.json() : Promise.reject(response))
+    .then(data => {
+        if (data.success) {
+            isOnline = data.is_online;
+            updateOnlineButton();
+            // No hard reload needed; update button instantly
+        } else {
+            throw new Error('Toggle failed');
         }
+    })
+    .catch(() => {
+        alert('Could not update status. Please try again.');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        spinner.classList.add('hidden');
+    });
+}
 
-        // Peak Hours Chart
-        const peakHoursCtx = document.getElementById('peakHoursChart');
-        if (peakHoursCtx) {
-            this.charts.peakHours = new Chart(peakHoursCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Morning', 'Afternoon', 'Evening'],
-                    datasets: [{
-                        data: [35, 45, 20],
-                        backgroundColor: [
-                            '#8B5CF6',
-                            '#A78BFA',
-                            '#C4B5FD'
-                        ],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                padding: 20,
-                                usePointStyle: true
-                            }
-                        }
-                    }
-                }
-            });
-        }
-    }
+function formatDisplayQueue(queueNumber) {
+    if (!queueNumber) return 'None';
+    const parts = String(queueNumber).split('-');
+    const suffix = parts.length ? (parts[parts.length - 1] || queueNumber) : queueNumber;
+    return suffix;
+}
 
-    startAutoRefresh() {
-        setInterval(() => {
-            this.refreshData();
-        }, this.refreshInterval);
-    }
-
-    refreshData() {
-        // Update timestamp
-        this.updateTimestamp();
-        this.refreshCount++;
-        
-        // Update counter
-        const counterEl = document.getElementById('updateCounter');
-        if (counterEl) {
-            counterEl.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
-        }
-
-        // Here you would typically fetch new data from the server
-        // For now, we'll just update the timestamp
-        console.log(`Dashboard refreshed #${this.refreshCount}`);
-    }
-
-    updateTimestamp() {
-        const now = new Date();
-        const timeString = now.toLocaleTimeString();
-        const dateString = now.toLocaleDateString();
-        
-        // Update any time displays if they exist
-        const timeEl = document.getElementById('headerTime');
-        const dateEl = document.getElementById('headerDate');
-        
-        if (timeEl) timeEl.textContent = timeString;
-        if (dateEl) dateEl.textContent = dateString;
+function updateOnlineButton() {
+    const btn = document.getElementById('onlineBtn');
+    const text = document.getElementById('onlineText');
+    const base = 'px-4 py-2 rounded text-white flex items-center';
+    if (isOnline) {
+        btn.className = `${base} bg-red-600 hover:bg-red-700`;
+        text.textContent = 'Go Offline';
+    } else {
+        btn.className = `${base} bg-green-600 hover:bg-green-700`;
+        text.textContent = 'Go Online';
     }
 }
 
-// Initialize dashboard when DOM is loaded
+// Initialize Charts
 document.addEventListener('DOMContentLoaded', function() {
-    const dashboard = new CounterDashboard({
-        orgCode: '{{ request()->route('organization_code') }}',
-        counterId: {{ $counter->id }},
-        refreshInterval: 3000
+    startAutoRefresh();
+    
+    // Prevent form submission and use AJAX instead
+    const onlineForm = document.getElementById('onlineForm');
+    if (onlineForm) {
+        onlineForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            toggleOnline();
+        });
+    }
+    // Hourly Completions Chart
+    const hourlyCtx = document.getElementById('hourlyChart').getContext('2d');
+    new Chart(hourlyCtx, {
+        type: 'bar',
+        data: {
+            labels: ['12am', '1am', '2am', '3am', '4am', '5am', '6am', '7am', '8am', '9am', '10am', '11am', '12pm', '1pm', '2pm', '3pm', '4pm', '5pm', '6pm', '7pm', '8pm', '9pm', '10pm', '11pm'],
+            datasets: [{
+                label: 'Completions',
+                data: {{ json_encode($analyticsData['hourly']) }},
+                backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                borderColor: 'rgba(59, 130, 246, 1)',
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: '#666' }
+                },
+                x: {
+                    ticks: { color: '#666' }
+                }
+            }
+        }
+    });
+
+    // Weekly Trend Chart
+    const weeklyCtx = document.getElementById('weeklyChart').getContext('2d');
+    new Chart(weeklyCtx, {
+        type: 'line',
+        data: {
+            labels: {{ json_encode($analyticsData['weekly_days']) }},
+            datasets: [{
+                label: 'Daily Completions',
+                data: {{ json_encode($analyticsData['weekly']) }},
+                borderColor: 'rgba(34, 197, 94, 1)',
+                backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 4,
+                pointBackgroundColor: 'rgba(34, 197, 94, 1)',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { display: true, labels: { color: '#666' } }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: '#666' }
+                },
+                x: {
+                    ticks: { color: '#666' }
+                }
+            }
+        }
+    });
+
+    // Average Wait Time Chart
+    const waitTimeCtx = document.getElementById('waitTimeChart').getContext('2d');
+    new Chart(waitTimeCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ json_encode($analyticsData['weekly_days']) }},
+            datasets: [{
+                label: 'Average Wait Time (min)',
+                data: {{ json_encode($analyticsData['wait_time']) }},
+                backgroundColor: [
+                    'rgba(251, 146, 60, 0.7)',
+                    'rgba(251, 146, 60, 0.7)',
+                    'rgba(251, 146, 60, 0.7)',
+                    'rgba(251, 146, 60, 0.7)',
+                    'rgba(251, 146, 60, 0.7)',
+                    'rgba(34, 197, 94, 0.7)',
+                    'rgba(34, 197, 94, 0.7)'
+                ],
+                borderColor: 'rgba(251, 146, 60, 1)',
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: '#666' }
+                },
+                x: {
+                    ticks: { color: '#666' }
+                }
+            }
+        }
+    });
+
+    // Queue Distribution Chart
+    const peakHoursCtx = document.getElementById('peakHoursChart').getContext('2d');
+    new Chart(peakHoursCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Peak Hours (9am-5pm)', 'Morning (6am-9am)', 'Evening (5pm-9pm)', 'Night (9pm-6am)'],
+            datasets: [{
+                data: {{ json_encode($analyticsData['peak_hours']) }},
+                backgroundColor: [
+                    'rgba(168, 85, 247, 0.8)',
+                    'rgba(59, 130, 246, 0.8)',
+                    'rgba(251, 146, 60, 0.8)',
+                    'rgba(156, 163, 175, 0.8)'
+                ],
+                borderColor: [
+                    'rgba(168, 85, 247, 1)',
+                    'rgba(59, 130, 246, 1)',
+                    'rgba(251, 146, 60, 1)',
+                    'rgba(156, 163, 175, 1)'
+                ],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'bottom',
+                    labels: { color: '#666', padding: 15 }
+                }
+            }
+        }
     });
 });
 

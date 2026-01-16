@@ -142,36 +142,28 @@ Route::prefix('{organization_code}')->group(function () {
         // Counter routes
         Route::prefix('counter')->name('counter.')->middleware(['organization.context'])->group(function () {
             Route::get('/data', [CounterController::class, 'getData'])->name('data')->middleware('allow.public');
-            Route::middleware('role:counter')->group(function () {
-                Route::get('/dashboard', [CounterController::class, 'dashboard'])->name('dashboard');
-                Route::get('/panel', [CounterController::class, 'callView'])->name('panel');
-                Route::get('/view', function () {
-                    return redirect()->to(route('counter.panel', ['organization_code' => request()->route('organization_code')]));
-                })->name('view');
-                
-                Route::post('/toggle-online', [CounterController::class, 'toggleOnline'])->name('toggle-online');
-                Route::get('/toggle-online', [CounterController::class, 'toggleOnline']);
-                
-                Route::post('/call-next', [CounterController::class, 'callNext'])->name('call-next');
-                Route::get('/call-next', [CounterController::class, 'callNext']);
-                
-                Route::post('/move-next', [CounterController::class, 'moveToNext'])->name('move-next');
-                Route::get('/move-next', [CounterController::class, 'moveToNext']);
-                
-                Route::post('/transfer', [CounterController::class, 'transferQueue'])->name('transfer');
-                Route::get('/transfer', [CounterController::class, 'transferQueue']);
-                
-                Route::post('/notify', [CounterController::class, 'notifyCustomer'])->name('notify');
-                Route::get('/notify', [CounterController::class, 'notifyCustomer']);
-                
-                Route::post('/skip', [CounterController::class, 'skipQueue'])->name('skip');
-                Route::get('/skip', [CounterController::class, 'skipQueue']);
-                
-                Route::post('/recall', [CounterController::class, 'recallQueue'])->name('recall');
-                Route::get('/recall', [CounterController::class, 'recallQueue']);
-                
-                Route::post('/auto-logout', [CounterController::class, 'autoLogout'])->name('auto-logout');
+        });
+        // All other counter routes require organization context and role:counter
+        Route::middleware(['organization.context', 'role:counter'])->prefix('counter')->name('counter.')->group(function () {
+            Route::get('/dashboard', [CounterController::class, 'dashboard'])->name('dashboard');
+            // Counter single-frame calling view now at /counter/panel
+            Route::get('/panel', [CounterController::class, 'callView'])->name('panel');
+            // Backward-compatible redirect from /view to /panel
+            Route::get('/view', function () {
+                return redirect()->to(route('counter.panel', ['organization_code' => request()->route('organization_code')]));
+            })->name('view');
+            Route::post('/toggle-online', [CounterController::class, 'toggleOnline'])->name('toggle-online');
+            Route::post('/call-next', [CounterController::class, 'callNext'])->name('call-next');
+            Route::post('/move-next', [CounterController::class, 'moveToNext'])->name('move-next');
+            Route::post('/transfer', [CounterController::class, 'transferQueue'])->name('transfer');
+            Route::post('/notify', [CounterController::class, 'notifyCustomer'])->name('notify');
+            // Fallback for accidental GET requests to /notify
+            Route::get('/notify', function () {
+                return redirect()->to(route('counter.panel', ['organization_code' => request()->route('organization_code')]))
+                    ->with('error', 'Notify action must use POST.');
             });
+            Route::post('/skip', [CounterController::class, 'skipQueue'])->name('skip');
+            Route::post('/recall', [CounterController::class, 'recallQueue'])->name('recall');
         });
     });
 });
