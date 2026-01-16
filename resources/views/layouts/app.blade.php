@@ -252,12 +252,7 @@
                                         </span>
                                     </a>
                                 </div>
-                            </div>                          @elseif(auth()->user()->isCounter())
-                              <a href="{{ route('counter.panel', ['organization_code' => $orgCode]) }}" class="sidebar-link flex items-center px-6 py-3 {{ request()->routeIs('counter.panel') ? 'active' : '' }}">
-                                  <i class="fas fa-phone-alt w-5"></i>
-                                  <span class="ml-3 sidebar-text">Service Panel</span>
-                              </a>
-                        @endif
+                            </div>                        @endif
                     @endauth
                 </nav>
 
