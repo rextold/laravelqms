@@ -1,46 +1,14 @@
-@extends('layouts.app')
+@extends('layouts.counter')
 
 @section('title', 'Service Station')
 
 @section('content')
 <div class="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-    <!-- Modern Header -->
-    <div id="panelHeader" class="bg-white shadow-sm border-b border-gray-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between py-4">
-                <div class="flex items-center space-x-4">
-                    @if($settings->logo_url)
-                        <img src="{{ $settings->logo_url }}" alt="Organization Logo" class="h-10 w-auto">
-                    @endif
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
-                            <i class="fas fa-phone-alt text-white text-sm"></i>
-                        </div>
-                        <div>
-                            <h1 class="text-xl font-bold text-gray-900">{{ $organization->organization_name ?? 'QMS' }}</h1>
-                            <p class="text-sm text-gray-600">Counter {{ $counter->counter_number }} - {{ $counter->display_name }}</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <div class="text-right">
-                        <div class="text-lg font-semibold text-gray-700" id="headerTime"></div>
-                        <div class="text-xs text-gray-500" id="headerDate"></div>
-                    </div>
-                    <button id="btnToggleMinimize" type="button" onclick="toggleMinimize()" 
-                            class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors" title="Minimize">
-                        <i class="fas fa-window-minimize"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Main Service Panel -->
     <div id="panelMain" class="flex-1 p-6">
         <div class="max-w-6xl mx-auto">
             <!-- Current Queue Display -->
-            <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 mb-6">
+            <div class="glass-card p-8 mb-6">
                 <div class="text-center">
                     <div class="mb-4">
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
@@ -48,36 +16,36 @@
                             NOW SERVING
                         </span>
                     </div>
-                    <div id="currentNumber" class="text-8xl font-extrabold text-gray-900 mb-6 tracking-wider">---</div>
+                    <div id="currentNumber" class="queue-number font-extrabold text-gray-900 mb-6 tracking-wider">---</div>
                     
                     <!-- Action Buttons -->
                     <div class="grid grid-cols-2 md:grid-cols-5 gap-3 max-w-4xl mx-auto">
                         <button type="button" id="btnCallNext" onclick="callNext(this)" 
-                                class="flex items-center justify-center px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-all duration-200 shadow-sm hover:shadow-md" disabled>
+                                class="counter-btn flex items-center justify-center px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" disabled>
                             <i class="fas fa-bell mr-2"></i>
                             Call Next
                         </button>
                         
                         <button type="button" id="btnNotify" onclick="return notifyCustomer(this, event);" 
-                                class="flex items-center justify-center px-4 py-3 bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-all duration-200 shadow-sm hover:shadow-md" disabled>
+                                class="counter-btn flex items-center justify-center px-4 py-3 bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" disabled>
                             <i class="fas fa-bell mr-2"></i>
                             Notify
                         </button>
                         
                         <button type="button" id="btnComplete" onclick="moveToNext(this)" 
-                                class="flex items-center justify-center px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-all duration-200 shadow-sm hover:shadow-md" disabled>
+                                class="counter-btn flex items-center justify-center px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" disabled>
                             <i class="fas fa-check-circle mr-2"></i>
                             Complete
                         </button>
                         
                         <button type="button" id="btnSkip" onclick="skipCurrent()" 
-                                class="flex items-center justify-center px-4 py-3 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-all duration-200 shadow-sm hover:shadow-md" disabled>
+                                class="counter-btn flex items-center justify-center px-4 py-3 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" disabled>
                             <i class="fas fa-forward mr-2"></i>
                             Skip
                         </button>
                         
                         <button type="button" id="btnTransfer" onclick="openTransferModal()" 
-                                class="flex items-center justify-center px-4 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-all duration-200 shadow-sm hover:shadow-md" disabled>
+                                class="counter-btn flex items-center justify-center px-4 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" disabled>
                             <i class="fas fa-exchange-alt mr-2"></i>
                             Transfer
                         </button>
@@ -98,7 +66,7 @@
                             0
                         </span>
                     </div>
-                    <div id="waitingList" class="space-y-2 max-h-80 overflow-y-auto">
+                    <div id="waitingList" class="queue-list max-h-80 overflow-y-auto">
                         <!-- Waiting queue items will be populated here -->
                     </div>
                 </div>
@@ -114,7 +82,7 @@
                             0
                         </span>
                     </div>
-                    <div id="skippedList" class="space-y-2 max-h-80 overflow-y-auto">
+                    <div id="skippedList" class="queue-list max-h-80 overflow-y-auto">
                         <!-- Skipped queue items will be populated here -->
                     </div>
                 </div>
@@ -223,8 +191,11 @@
 
         <!-- Footer -->
         <div class="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3 border-t border-gray-200">
-            <button type="button" onclick="closeTransferModal()" class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold transition">Cancel</button>
-        </div>
+                        <button type="button" onclick="closeTransferModal()" class="counter-btn px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold">Cancel</button>
+                        <button type="button" onclick="confirmTransfer()" class="counter-btn px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold">
+                            <i class="fas fa-exchange-alt mr-2"></i>Transfer Customer
+                        </button>
+                    </div>
     </div>
 </div>
 
@@ -255,8 +226,8 @@
 
         <!-- Footer -->
         <div class="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3 border-t border-gray-200">
-            <button type="button" onclick="closeSkipModal()" class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold transition">Cancel</button>
-            <button type="button" onclick="confirmSkip(this)" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold transition">
+            <button type="button" onclick="closeSkipModal()" class="counter-btn px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold">Cancel</button>
+            <button type="button" onclick="confirmSkip(this)" class="counter-btn px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold">
                 <i class="fas fa-forward mr-2"></i>Skip Queue
             </button>
         </div>
@@ -369,25 +340,7 @@ function runActionWithCooldown(btnEl, actionFn, seconds = ACTION_COOLDOWN_SECOND
         });
 }
 
-function updateHeaderTime() {
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: true 
-    });
-    const dateStr = now.toLocaleDateString('en-US', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-    });
-    
-    const headerTime = document.getElementById('headerTime');
-    const headerDate = document.getElementById('headerDate');
-    if (headerTime) headerTime.textContent = timeStr;
-    if (headerDate) headerDate.textContent = dateStr;
-}
+
 
 function formatDisplayQueue(queueNumber) {
     if (!queueNumber) return '---';
@@ -473,11 +426,17 @@ function renderLists(data) {
         waitingList.innerHTML = '';
         if (data.waiting_queues && Array.isArray(data.waiting_queues)) {
             data.waiting_queues.forEach(w => {
-                const row = document.createElement('div');
-                row.className = 'p-3 border rounded flex justify-between items-center';
-                row.innerHTML = `<span class="font-semibold">${formatDisplayQueue(w.queue_number)}</span>`;
-                waitingList.appendChild(row);
-            });
+                        const row = document.createElement('div');
+                        row.className = 'queue-item';
+                        row.innerHTML = `
+                            <div class="flex items-center">
+                                <span class="text-lg font-bold text-gray-800 mr-3">${formatDisplayQueue(w.queue_number)}</span>
+                                <span class="text-gray-600">${w.customer_name || 'Customer'}</span>
+                            </div>
+                            <span class="text-sm text-gray-500">${new Date(w.created_at).toLocaleTimeString()}</span>
+                        `;
+                        waitingList.appendChild(row);
+                    });
         }
     }
 
@@ -488,10 +447,16 @@ function renderLists(data) {
         if (data.skipped && Array.isArray(data.skipped)) {
             data.skipped.forEach(s => {
                 const row = document.createElement('div');
-                row.className = 'p-3 border rounded flex justify-between items-center bg-orange-50';
+                row.className = 'queue-item bg-orange-50';
                 row.innerHTML = `
-                    <span class="font-semibold text-orange-700">${formatDisplayQueue(s.queue_number)}</span>
-                    <button type="button" class="bg-blue-600 text-white px-3 py-1 rounded text-sm" onclick="recallQueue(${s.id}, event)">Recall</button>
+                    <div class="flex items-center">
+                        <span class="text-lg font-bold text-orange-700 mr-3">${formatDisplayQueue(s.queue_number)}</span>
+                        <span class="text-gray-600">${s.customer_name || 'Customer'}</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm text-gray-500">${new Date(s.created_at).toLocaleTimeString()}</span>
+                        <button type="button" class="bg-blue-600 text-white px-3 py-1 rounded text-sm" onclick="recallQueue(${s.id}, event)">Recall</button>
+                    </div>
                 `;
                 skippedList.appendChild(row);
             });
@@ -849,7 +814,7 @@ function openTransferModal() {
     const countersList = document.getElementById('countersList');
 
     countersList.innerHTML = onlineCounters.map(counter => `
-        <button type="button" onclick="confirmTransfer(${counter.id})" class="w-full p-3 border-2 border-gray-200 hover:border-blue-500 hover:bg-blue-50 rounded-lg text-left transition">
+        <button type="button" onclick="confirmTransfer(${counter.id})" class="queue-item hover:bg-blue-50 cursor-pointer">
             <div class="font-semibold text-gray-800">Counter ${counter.counter_number}</div>
             <div class="text-sm text-gray-600">${counter.display_name}</div>
         </button>
@@ -878,18 +843,9 @@ function closeTransferModal() {
 // ============================================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    updateHeaderTime();
-    setInterval(updateHeaderTime, 1000);
-
     // Rapid polling for real-time updates
     setInterval(fetchData, FETCH_INTERVAL);
     fetchData(); // Initial fetch
-
-    // Restore minimized state
-    try {
-        const saved = localStorage.getItem('counterPanelMinimized');
-        if (saved === '1') setMinimized(true);
-    } catch (e) {}
 
     // Handle visibility changes
     document.addEventListener('visibilitychange', function() {
