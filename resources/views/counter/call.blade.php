@@ -405,7 +405,9 @@ function fetchData() {
     } catch (e) {
         counterFetchController = null;
     }
-
+    const url = new URL(`/${ORG_CODE}/counter/data`, window.location.origin);
+    url.searchParams.append('counter_id', COUNTER_ID);
+    
     fetch(url, {
         method: 'GET',
         headers: {
