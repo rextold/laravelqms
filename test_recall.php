@@ -1,5 +1,7 @@
 <?php
 
+echo "DEBUG: Script execution started.\n";
+
 require_once 'vendor/autoload.php';
 
 use Illuminate\Foundation\Application;
@@ -9,18 +11,23 @@ use App\Models\User;
 use App\Models\Queue;
 
 // Bootstrap Laravel
+echo "DEBUG: Bootstrapping Laravel...\n";
 $app = require_once 'bootstrap/app.php';
 $app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
+echo "DEBUG: Laravel bootstrapped.\n";
 
 echo "Testing Recall Functionality\n";
 echo "============================\n\n";
 
 // Find a counter user
+echo "DEBUG: Finding a counter user...\n";
 $counter = User::where('role', 'counter')->first();
+
 if (!$counter) {
     echo "❌ No counter users found. Please run php artisan db:seed first.\n";
     exit(1);
 }
+echo "DEBUG: Found counter user.\n";
 
 echo "✅ Found counter: {$counter->username} (ID: {$counter->id})\n";
 
@@ -81,7 +88,8 @@ if ($currentQueueCheck) {
 $request = Request::create('/counter/recall', 'GET', ['queue_id' => $queue->id]);
 
 // Test the recall functionality
-$controller = new CounterController(app(\App\Services\QueueService::class));
+$queueService = app(\App\Services\QueueService::class);
+$controller = new CounterController($queueService);
 
 echo "🔄 Attempting to recall queue {$queue->queue_number}...\n";
 
