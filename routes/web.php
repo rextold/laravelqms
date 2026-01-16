@@ -78,7 +78,7 @@ Route::prefix('{organization_code}')->group(function () {
         Route::get('/counters', [KioskController::class, 'counters'])->name('counters');
         Route::get('/generate-queue', [KioskController::class, 'generateQueue'])->name('generate');
     });
-    
+
     // Monitor Display (public, read-only)
     Route::prefix('monitor')->name('monitor.')->middleware(['organization.context', 'allow.public'])->group(function () {
         Route::get('/', [MonitorController::class, 'index'])->name('index');
@@ -88,6 +88,7 @@ Route::prefix('{organization_code}')->group(function () {
     // Public counter data endpoint - accessible without authentication
     Route::prefix('counter')->name('counter.')->middleware(['organization.context', 'allow.public'])->group(function () {
         Route::get('/data', [CounterController::class, 'getData'])->name('data');
+        
     });
     
     // Protected routes - auth middleware runs FIRST, then organization context
