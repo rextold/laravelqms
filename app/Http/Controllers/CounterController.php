@@ -37,7 +37,7 @@ class CounterController extends Controller
             'is_online' => $counter->is_online
         ]);
     }
-}
+
     public function callNext()
     {
         $counter = auth()->user();
