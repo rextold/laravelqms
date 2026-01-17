@@ -622,26 +622,28 @@ function toggleMinimize(force) {
 }
 
 // ============================================================
-// COUNTER ACTIONS - ALL USING GET REQUESTS
+// COUNTER ACTIONS - ALL USING POST REQUESTS
 // ============================================================
 
 function makeCounterRequest(action, params = {}) {
     const url = new URL(`/${ORG_CODE}/counter/${action}`, window.location.origin);
     
-    // Add query parameters
+    // Prepare form data for POST request
+    const formData = new FormData();
     Object.keys(params).forEach(key => {
         if (params[key] !== undefined && params[key] !== null) {
-            url.searchParams.append(key, params[key]);
+            formData.append(key, params[key]);
         }
     });
 
     return fetch(url.toString(), {
-        method: 'GET',
+        method: 'POST',
         headers: {
             'Accept': 'application/json',
             'X-Requested-With': 'XMLHttpRequest',
             'X-CSRF-TOKEN': csrfToken || ''
         },
+        body: formData,
         credentials: 'same-origin'
     })
         .then(response => {
