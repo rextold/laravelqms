@@ -16,7 +16,6 @@
                             NOW SERVING
                         </span>
                     </div>
-                    
                     <div id="currentNumber" class="queue-number font-extrabold text-gray-900 mb-6 tracking-wider">---</div>
                     
                     <!-- Action Buttons -->
