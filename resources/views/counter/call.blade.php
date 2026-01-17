@@ -338,8 +338,10 @@ function runActionWithCooldown(btnEl, actionFn, seconds = ACTION_COOLDOWN_SECOND
             if (err.message && err.message.includes('403')) {
                 console.warn('Access error (HTTP 403) - automatic retry in progress');
                 return;
-            }            // Only log for non-403 errors
-            console.log(err?.message || 'Action failed. Please try again.');
+            }
+            
+            // Only alert for non-403 errors
+            alert(err || 'Action failed. Please try again.');
         });
 }
 
@@ -714,8 +716,10 @@ function callNext(btnEl) {
 }
 
 function recallQueue(queueId, event) {
-    if (event) event.preventDefault();    if (!queueId) {
-        console.log('Invalid queue ID');
+    if (event) event.preventDefault();
+    
+    if (!queueId) {
+        alert('Invalid queue ID');
         return;
     }
 
@@ -728,7 +732,7 @@ function recallQueue(queueId, event) {
                 // Silently retry
                 fetchData();
             } else {
-                console.log(data?.message || 'Recall failed');
+                alert(data?.message || 'Recall failed');
                 fetchData();
             }
         });
