@@ -427,9 +427,7 @@
                 <div class="text-center flex-shrink-0 mb-2">
                     <div class="flex items-center justify-center gap-2 sm:gap-3 mb-2">
                         @if($settings->company_logo)
-                            @if(str_starts_with($settings->company_logo, 'http://') || str_starts_with($settings->company_logo, 'https://'))
-                                <img src="{{ $settings->logo_url }}" alt="Organization Logo" class="h-10 w-auto rounded-lg shadow-sm">
-                            @endif
+                            <img src="{{ $settings->logo_url }}" alt="Organization Logo" class="h-10 w-auto rounded-lg shadow-sm">
                         @else
                             <div class="logo-size flex items-center justify-center rounded-lg" style="background: rgba(255,255,255,0.2); max-height: 50px;">
                                 <i class="fas fa-building text-white text-2xl"></i>
