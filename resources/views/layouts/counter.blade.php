@@ -16,7 +16,7 @@
     <title>@yield('title', 'Queue Management System')</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script>
+    <script nonce="{{ session('csp_nonce', '') }}">
         // Global AJAX setup for CSRF token
         $.ajaxSetup({
             headers: {
@@ -25,7 +25,7 @@
         });
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
+    <style nonce="{{ session('csp_nonce', '') }}">
         /* Counter-specific styles - no sidebar needed */
         .counter-layout {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -193,13 +193,13 @@
                         </div>
                         
                         <!-- Minimize/Restore button -->
-                        <button id="btnToggleMinimize" type="button" onclick="toggleMinimize()" 
+                        <button id="btnToggleMinimize" type="button" 
                                 class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors" title="Minimize">
                             <i class="fas fa-window-minimize"></i>
                         </button>
                         
                         <!-- Logout button -->
-                        <a href="#" onclick="handleLogout(event)" 
+                        <a href="#" id="logoutBtn" 
                            class="px-3 py-2 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 transition-colors" title="Logout">
                             <i class="fas fa-sign-out-alt"></i>
                         </a>
@@ -221,7 +221,7 @@
             <div class="text-xs text-gray-500">Now</div>
             <div id="dockCurrentNumber" class="text-xl font-extrabold text-gray-900">---</div>
         </div>
-        <button type="button" onclick="toggleMinimize(false)" class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition" title="Restore">
+        <button type="button" id="dockRestoreBtn" class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition" title="Restore">
             <i class="fas fa-window-restore"></i>
         </button>
     </div>
@@ -229,7 +229,7 @@
     <!-- Authentication Error Modal -->
     @include('components.auth-error-modal')
 
-    <script>
+    <script nonce="{{ session('csp_nonce', '') }}">
         // Auto-refresh CSRF token every 30 minutes to prevent page expiration
         function refreshCSRFToken() {
             fetch('/refresh-csrf', {

@@ -48,6 +48,19 @@ Route::middleware('guest')->group(function () {
 // GET /logout route for GET method logout
 Route::get('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
+// Test routes
+Route::get('/test-csrf', function () {
+    return view('test.csrf-test');
+});
+
+Route::post('/test-csrf-endpoint', function (Illuminate\Http\Request $request) {
+    return response()->json([
+        'success' => true,
+        'message' => 'CSRF token validation successful',
+        'data' => $request->all()
+    ]);
+});
+
 // SuperAdmin routes (no company code in URL)
 Route::middleware(['auth', 'role:superadmin'])->prefix('superadmin')->name('superadmin.')->group(function () {
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
