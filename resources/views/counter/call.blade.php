@@ -257,6 +257,8 @@ let currentQueueData = null;
 let onlineCounters = [];
 let selectedTransferQueueId = null;
 let lastErrorTime = 0;
+let counterFetchInFlight = false;
+let counterFetchController = null;
 
 const ACTION_COOLDOWN_SECONDS = 3;
 const buttonCooldowns = new Map();
