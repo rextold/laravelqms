@@ -2,41 +2,36 @@
 
 <!-- Action Buttons -->
 <div class="grid grid-cols-2 md:grid-cols-5 gap-3 max-w-4xl mx-auto">
-    <button type="button" id="btnCallNext" 
-            class="counter-btn action-btn flex items-center justify-center px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" 
-            data-action="call-next"
+    <button type="button" id="btnCallNext" onclick="callNext(this)" 
+            class="counter-btn flex items-center justify-center px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" 
             {{ $disabled ? 'disabled' : '' }}>
         <i class="fas fa-bell mr-2"></i>
         Call Next
     </button>
     
-    <button type="button" id="btnNotify" 
-            class="counter-btn action-btn flex items-center justify-center px-4 py-3 bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" 
-            data-action="notify"
+    <button type="button" id="btnNotify" onclick="return notifyCustomer(this, event);" 
+            class="counter-btn flex items-center justify-center px-4 py-3 bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" 
             {{ $disabled ? 'disabled' : '' }}>
         <i class="fas fa-bell mr-2"></i>
         Notify
     </button>
     
-    <button type="button" id="btnComplete" 
-            class="counter-btn action-btn flex items-center justify-center px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" 
-            data-action="complete"
+    <button type="button" id="btnComplete" onclick="moveToNext(this)" 
+            class="counter-btn flex items-center justify-center px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" 
             {{ $disabled ? 'disabled' : '' }}>
         <i class="fas fa-check-circle mr-2"></i>
         Complete
     </button>
     
-    <button type="button" id="btnSkip" 
-            class="counter-btn action-btn flex items-center justify-center px-4 py-3 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" 
-            data-action="skip"
+    <button type="button" id="btnSkip" onclick="skipCurrent()" 
+            class="counter-btn flex items-center justify-center px-4 py-3 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" 
             {{ $disabled ? 'disabled' : '' }}>
         <i class="fas fa-forward mr-2"></i>
         Skip
     </button>
     
-    <button type="button" id="btnTransfer" 
-            class="counter-btn action-btn flex items-center justify-center px-4 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" 
-            data-action="transfer"
+    <button type="button" id="btnTransfer" onclick="openTransferModal()" 
+            class="counter-btn flex items-center justify-center px-4 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" 
             {{ $disabled ? 'disabled' : '' }}>
         <i class="fas fa-exchange-alt mr-2"></i>
         Transfer
@@ -44,7 +39,7 @@
 </div>
 
 @push('scripts')
-<script nonce="{{ session('csp_nonce', '') }}">
+<script>
 // Enhanced button state management with CSRF validation
 function updateButtonStates(isOnline) {
     const buttons = ['btnCallNext', 'btnNotify', 'btnComplete', 'btnSkip', 'btnTransfer'];
@@ -171,7 +166,7 @@ function openTransferModal() {
     const countersList = document.getElementById('countersList');
 
     countersList.innerHTML = onlineCounters.map(counter => `
-        <button type="button" data-counter-id="${counter.id}" class="transfer-counter-btn queue-item hover:bg-blue-50 cursor-pointer">
+        <button type="button" onclick="confirmTransfer(${counter.id})" class="queue-item hover:bg-blue-50 cursor-pointer">
             <div class="font-semibold text-gray-800">Counter ${counter.counter_number}</div>
             <div class="text-sm text-gray-600">${counter.display_name}</div>
         </button>
@@ -183,62 +178,6 @@ function openTransferModal() {
         content.classList.remove('scale-95', 'opacity-0');
         content.classList.add('scale-100', 'opacity-100');
     }, 10);
-    
-    // Add event listeners for transfer counter buttons (CSP-compliant)
-    setTimeout(() => {
-        document.querySelectorAll('.transfer-counter-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const counterId = this.getAttribute('data-counter-id');
-                if (counterId) {
-                    confirmTransfer(counterId);
-                }
-            });
-        });
-    }, 100);
 }
-
-// Add event listeners for action buttons (CSP-compliant)
-document.addEventListener('DOMContentLoaded', function() {
-    // Call Next button
-    const btnCallNext = document.getElementById('btnCallNext');
-    if (btnCallNext) {
-        btnCallNext.addEventListener('click', function(e) {
-            callNext(this);
-        });
-    }
-    
-    // Notify button
-    const btnNotify = document.getElementById('btnNotify');
-    if (btnNotify) {
-        btnNotify.addEventListener('click', function(e) {
-            e.preventDefault();
-            notifyCustomer(this, e);
-        });
-    }
-    
-    // Complete button
-    const btnComplete = document.getElementById('btnComplete');
-    if (btnComplete) {
-        btnComplete.addEventListener('click', function(e) {
-            moveToNext(this);
-        });
-    }
-    
-    // Skip button
-    const btnSkip = document.getElementById('btnSkip');
-    if (btnSkip) {
-        btnSkip.addEventListener('click', function(e) {
-            skipCurrent();
-        });
-    }
-    
-    // Transfer button
-    const btnTransfer = document.getElementById('btnTransfer');
-    if (btnTransfer) {
-        btnTransfer.addEventListener('click', function(e) {
-            openTransferModal();
-        });
-    }
-});
 </script>
 @endpush

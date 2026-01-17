@@ -9,11 +9,6 @@
 @endphp
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'nonce-{{ $nonce }}' https://cdn.tailwindcss.com https://code.jquery.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; img-src 'self' data: https:;">
 
-{{-- Store nonce globally for inline scripts --}}
-<script nonce="{{ $nonce }}">
-window.CSP_NONCE = '{{ $nonce }}';
-</script>
-
 {{-- Enhanced AJAX Setup with CSRF Protection --}}
 <script nonce="{{ $nonce }}">
 // Enhanced CSRF Protection for Counter Operations
