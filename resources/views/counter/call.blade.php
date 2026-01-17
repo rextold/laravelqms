@@ -668,9 +668,10 @@ function makeCounterRequest(action, params = {}) {
 function notifyCustomer(btnEl, event) {
     if (event) event.preventDefault();
     return runActionWithCooldown(btnEl, () =>
-        makeCounterRequest('notify')
+        makeCounterRequest('notify', { counter_id: COUNTER_ID })
             .then((data) => {
                 if (data && data.success) {
+                    console.log('Notify successful for counter ID:', data.counter_id);
                     playNotificationSound();
                     fetchData();
                 } else if (data && data.suppressed) {

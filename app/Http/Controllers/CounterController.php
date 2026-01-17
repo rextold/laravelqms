@@ -429,17 +429,63 @@ class CounterController extends Controller
                 'message' => $e->getMessage()
             ], 500);
         }
-    }
-
-    /**
+    }    /**
      * Notify customer (placeholder for future implementation)
      */
     public function notifyCustomer(Request $request)
     {
+        $user = Auth::user();
+        $organization = $request->attributes->get('organization');
+        
+        if (!$user->isCounter()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Access denied. Counter role required.'
+            ], 403);
+        }
+
+        // Get counter ID from request or use authenticated user's ID
+        $counterId = $request->input('counter_id', $user->id);
+        
+        // Log the counter ID for debugging
+        Log::info('Notify customer request received', [
+            'counter_id' => $counterId,
+            'user_id' => $user->id,
+            'user_counter_number' => $user->counter_number,
+            'organization_id' => $organization->id,
+            'request_data' => $request->all()
+        ]);
+
+        // Get current queue for this counter
+        $currentQueue = Queue::where('counter_id', $user->id)
+            ->whereIn('status', ['called', 'serving'])
+            ->orderBy('called_at', 'desc')
+            ->first();
+
+        if (!$currentQueue) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No current queue to notify'
+            ]);
+        }
+
+        // Update notified_at timestamp
+        $currentQueue->notified_at = now();
+        $currentQueue->save();
+
+        Log::info('Customer notified successfully', [
+            'counter_id' => $counterId,
+            'queue_id' => $currentQueue->id,
+            'queue_number' => $currentQueue->queue_number,
+            'notified_at' => $currentQueue->notified_at
+        ]);
+
         // Placeholder for SMS/notification functionality
         return response()->json([
             'success' => true,
-            'message' => 'Customer notification sent'
+            'message' => 'Customer notification sent',
+            'counter_id' => $counterId,
+            'queue_number' => $currentQueue->queue_number
         ]);
     }
 
