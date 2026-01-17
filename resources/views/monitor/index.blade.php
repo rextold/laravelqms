@@ -281,23 +281,50 @@
         }
         .waiting-list-row {
             display: flex;
-            align-items: baseline;
+            align-items: center;
             gap: 1rem;
             font-size: 1.5rem;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid rgba(245, 158, 11, 0.1);
+        }
+        .waiting-list-row:last-child {
+            border-bottom: none;
         }
         .counter-name {
             font-weight: 600;
             color: #f59e0b;
             white-space: nowrap;
+            min-width: fit-content;
+            flex-shrink: 0;
         }
         .queue-numbers {
             display: flex;
-            flex-wrap: wrap;
-            gap: 1rem;
+            flex-wrap: nowrap;
+            gap: 0.75rem;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding-right: 0.5rem;
+            min-width: 0;
+        }
+        .queue-numbers::-webkit-scrollbar {
+            height: 3px;
+        }
+        .queue-numbers::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .queue-numbers::-webkit-scrollbar-thumb {
+            background: rgba(245, 158, 11, 0.4);
+            border-radius: 3px;
         }
         .waiting-queue-number-text {
             font-weight: 600;
             color: #fff;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            white-space: nowrap;
+            flex-shrink: 0;
+            box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
         }
 
         .waiting-empty-state {
@@ -713,10 +740,12 @@
 
             // Waiting queues are returned as a top-level grouped array: data.waiting_queues
             const groups = Array.isArray(waitingGroups) ? waitingGroups : [];
-            const totalWaiting = groups.reduce((sum, g) => {
-                const count = (g && Array.isArray(g.queues)) ? g.queues.length : 0;
-                return sum + count;
-            }, 0);
+            
+            // Filter groups to only show counters WITH waiting queues
+            const groupsWithQueues = groups.filter(group => {
+                const queues = Array.isArray(group.queues) ? group.queues : [];
+                return queues.length > 0;
+            });
 
             // Update Now Serving section with notification detection
             if (servingCounters.length === 0) {
@@ -792,35 +821,32 @@
                 servingList.innerHTML = servingHTML;
             }
 
-            // Update Waiting section - List style
-            if (groups.length === 0) {
+            // Update Waiting section - Only show counters WITH waiting queues
+            if (groupsWithQueues.length === 0) {
                 waitingList.innerHTML = `
                     <div class="text-center text-gray-400 py-4">
                         <i class="fas fa-inbox text-xl opacity-50"></i>
-                        <p class="text-sm mt-1">No counters available</p>
+                        <p class="text-sm mt-1">No waiting customers</p>
                     </div>
                 `;
             } else {
                 let waitingHTML = `<div class="waiting-list-container">`;
-                waitingHTML += groups.map(group => {
+                waitingHTML += groupsWithQueues.map(group => {
                     const counterName = group.display_name || `Counter ${group.counter_number}`;
                     const queues = Array.isArray(group.queues) ? group.queues : [];
-                    const hasWaitingQueues = queues.length > 0;
                     
-                    let content = '';
-                    if (hasWaitingQueues) {
-                        content = queues.map(queue => 
-                            `<span class="waiting-queue-number-text">${queue.queue_number}</span>`
-                        ).join('');
-                    } else {
-                        content = '<span style="color: #10b981; font-size: 1.2rem; font-weight: 600;">Online</span>';
-                    }
+                    // Extract queue numbers and format them
+                    const queueNumbers = queues.map(queue => {
+                        const qNum = queue.queue_number || '';
+                        const parts = String(qNum).split('-');
+                        return parts[parts.length - 1] || qNum;
+                    });
                     
                     return `
                         <div class="waiting-list-row">
                             <span class="counter-name">${counterName}:</span>
                             <div class="queue-numbers">
-                                ${content}
+                                ${queueNumbers.map(num => `<span class="waiting-queue-number-text">${num}</span>`).join('')}
                             </div>
                         </div>
                     `;
