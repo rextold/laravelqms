@@ -513,6 +513,18 @@ class CounterController extends Controller
     {
         // try {
             $organization = $request->attributes->get('organization');
+            
+            // Fallback: if no organization in context, get the first/default organization
+            if (!$organization) {
+                $organization = Organization::first();
+                if (!$organization) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No organization found'
+                    ], 404);
+                }
+            }
+            
             $user = Auth::user();
             $counterId = $request->query('counter_id');
             
