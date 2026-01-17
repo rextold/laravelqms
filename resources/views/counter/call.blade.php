@@ -334,7 +334,7 @@ function runActionWithCooldown(btnEl, actionFn, seconds = ACTION_COOLDOWN_SECOND
             
             // Suppress 403 errors silently - don't interrupt user
             if (err.message && err.message.includes('403')) {
-                console.warn('Access error suppressed - retrying...');
+                console.warn('Access error (HTTP 403) - automatic retry in progress');
                 return;
             }
             
@@ -471,7 +471,7 @@ function renderLists(data) {
 // FETCH & POLLING
 // ============================================================
 
-let counterFetchController = null;
+
 let lastSuccessfulData = null;
 
 function handleFallbackData() {
@@ -578,6 +578,7 @@ function fetchData() {
 // ============================================================
 
 let counterFetchInFlight = false;
+// AbortController for fetch requests
 let counterFetchController = null;
 let lastSuccessfulData = null;
 
