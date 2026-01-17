@@ -427,7 +427,7 @@
                 <div class="text-center flex-shrink-0 mb-2">
                     <div class="flex items-center justify-center gap-2 sm:gap-3 mb-2">
                         @if($settings->company_logo)
-                             @if(isset($settings) && $settings->logo_url)
+                            @if(str_starts_with($settings->company_logo, 'http://') || str_starts_with($settings->company_logo, 'https://'))
                                 <img src="{{ $settings->logo_url }}" alt="Organization Logo" class="h-10 w-auto rounded-lg shadow-sm">
                             @endif
                         @else
