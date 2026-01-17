@@ -427,7 +427,9 @@
                 <div class="text-center flex-shrink-0 mb-2">
                     <div class="flex items-center justify-center gap-2 sm:gap-3 mb-2">
                         @if($settings->company_logo)
-                            <img src="{{ asset('storage/' . $settings->company_logo) }}" alt="{{ $organization->organization_name }}" class="logo-size mx-auto drop-shadow-xl" data-org-logo style="max-height: 50px; height: auto;">
+                             @if(isset($settings) && $settings->logo_url)
+                                <img src="{{ $settings->logo_url }}" alt="Organization Logo" class="h-10 w-auto rounded-lg shadow-sm">
+                            @endif
                         @else
                             <div class="logo-size flex items-center justify-center rounded-lg" style="background: rgba(255,255,255,0.2); max-height: 50px;">
                                 <i class="fas fa-building text-white text-2xl"></i>
@@ -435,7 +437,7 @@
                         @endif
                         <div>
                             <h1 class="title-size font-black drop-shadow-lg animate-fadeInScale leading-tight" 
-                                style="color: var(--text-color); text-shadow: 2px 4px 8px rgba(0,0,0,0.2);" data-org-name>
+                                style="color: #ffffff;" data-org-name>
                                 {{ $organization->organization_name }}
                             </h1>
                             <p class="text-xs sm:text-sm font-bold drop-shadow-md" 
