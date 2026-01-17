@@ -16,13 +16,11 @@
     <meta name="msapplication-config" content="/browserconfig.xml">
     
     <title>@yield('title', 'Queue Management System')</title>
-     <script src="{{ asset('assets/js/tailwind/tailwind-3.4.17.js') }}"></script>
-    <script src="{{ asset('assets/js/jquery/jquery-3.6.0.js') }}"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script>
 
-    <link rel="stylesheet" href="{{ asset('assets/css/all.min.css' ) }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
+    <style nonce="{{ session('csp_nonce') }}">
         /* Counter-specific styles - no sidebar needed */
         .counter-layout {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);

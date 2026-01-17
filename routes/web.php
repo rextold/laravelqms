@@ -48,6 +48,17 @@ Route::middleware('guest')->group(function () {
 // GET /logout route for GET method logout
 Route::get('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
+// Test routes
+Route::get('/test-recall', function () {
+    $queueService = app(\App\Services\QueueService::class);
+    $controller = new \App\Http\Controllers\CounterController($queueService);
+    return $controller->recallQueue(1, null);
+});
+
+Route::get('/test-csp', function () {
+    return view('test.csp-test');
+});
+
 // SuperAdmin routes (no company code in URL)
 Route::middleware(['auth', 'role:superadmin'])->prefix('superadmin')->name('superadmin.')->group(function () {
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
