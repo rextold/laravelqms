@@ -76,15 +76,18 @@
         }
         .header-title h1 {
             color: white;
-            font-size: 1.8rem;
+            font-size: 1.6rem;
             font-weight: 700;
             margin: 0;
             text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            line-height: 1.2;
         }
         .header-title p {
-            color: rgba(255,255,255,0.8);
-            font-size: 0.9rem;
+            color: rgba(255,255,255,0.7);
+            font-size: 0.75rem;
             margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         .header-time {
             color: white;
@@ -545,8 +548,8 @@
                     @endif
                 </div>
                 <div class="header-title">
-                    <h1>Queue Management System</h1>
-                    <p data-org-name>{{ $organization->organization_name }}</p>
+                    <h1 data-org-name>{{ $organization->organization_name }}</h1>
+                    <p>Queue Management System</p>
                 </div>
             </div>
 
@@ -933,7 +936,7 @@
             }
         }
 
-        // Refresh color settings in real-time
+        // Refresh color settings and organization details in real-time
         function updateColorSettings() {
             fetch(`/${orgCode}/admin/organization-settings/api/get`)
                 .then(response => response.json())
@@ -947,6 +950,47 @@
                 .catch(error => console.error('Color settings refresh failed:', error));
         }
 
+        // Update organization name and logo in real-time
+        function updateOrganizationDetails() {
+            fetch(`/${orgCode}/admin/organization-settings/api/get`)
+                .then(response => response.json())
+                .then(data => {
+                    // Update organization name
+                    const orgNameElement = document.querySelector('[data-org-name]');
+                    if (orgNameElement && data.organization_name) {
+                        orgNameElement.textContent = data.organization_name;
+                        document.title = `Queue Display - ${data.organization_name}`;
+                    }
+
+                    // Update organization logo
+                    const logoElement = document.querySelector('.header-logo');
+                    if (logoElement && data.company_logo) {
+                        // Check if logo has changed
+                        const imgElement = logoElement.querySelector('img');
+                        const newLogoUrl = `{{ asset('storage/') }}/${data.company_logo}`;
+                        
+                        if (imgElement) {
+                            if (imgElement.src !== newLogoUrl) {
+                                imgElement.src = newLogoUrl;
+                            }
+                        } else {
+                            // Remove icon and add image if it doesn't exist
+                            const icon = logoElement.querySelector('i');
+                            if (icon) icon.remove();
+                            const img = document.createElement('img');
+                            img.src = newLogoUrl;
+                            img.alt = 'Logo';
+                            img.setAttribute('data-org-logo', '');
+                            logoElement.appendChild(img);
+                        }
+                    } else if (logoElement && !data.company_logo) {
+                        // No logo, show icon instead
+                        logoElement.innerHTML = '<i class="fas fa-tv"></i>';
+                    }
+                })
+                .catch(error => console.error('Organization details refresh failed:', error));
+        }
+
         // Initial load
         refreshMonitorData();
 
@@ -955,6 +999,9 @@
 
         // Refresh colors every 5 seconds
         let colorRefresh = setInterval(updateColorSettings, 5000);
+
+        // Refresh organization details every 5 seconds
+        let orgDetailsRefresh = setInterval(updateOrganizationDetails, 5000);
 
         // Prevent sleep/screensaver and track visibility
         document.addEventListener('visibilitychange', () => {
