@@ -3,22 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Events\CounterStatusUpdated;
-use App\Http\Requests\CounterRequest;
-use App\Http\Resources\CounterResource;
-use App\Http\Resources\QueueResource;
+use App\Events\QueueCalled;
 use App\Models\Queue;
 use App\Models\User;
 use App\Models\Organization;
 use App\Models\OrganizationSetting;
 use App\Services\QueueService;
-use App\Services\CounterService;
 use Carbon\Carbon;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\View\View;
 
 class CounterController extends Controller
 {
