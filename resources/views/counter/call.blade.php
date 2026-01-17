@@ -21,31 +21,31 @@
                     <!-- Action Buttons -->
                     <div class="grid grid-cols-2 md:grid-cols-5 gap-3 max-w-4xl mx-auto">
                         <button type="button" id="btnCallNext" 
-                                class="counter-btn flex items-center justify-center px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" 
+                                class="counter-btn flex items-center justify-center px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" disabled>
                             <i class="fas fa-bell mr-2"></i>
                             Call Next
                         </button>
                         
                         <button type="button" id="btnNotify" 
-                                class="counter-btn flex items-center justify-center px-4 py-3 bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" 
+                                class="counter-btn flex items-center justify-center px-4 py-3 bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" disabled>
                             <i class="fas fa-bell mr-2"></i>
                             Notify
                         </button>
                         
                         <button type="button" id="btnComplete" 
-                                class="counter-btn flex items-center justify-center px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" 
+                                class="counter-btn flex items-center justify-center px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" disabled>
                             <i class="fas fa-check-circle mr-2"></i>
                             Complete
                         </button>
                         
                         <button type="button" id="btnSkip" 
-                                class="counter-btn flex items-center justify-center px-4 py-3 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" 
+                                class="counter-btn flex items-center justify-center px-4 py-3 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" disabled>
                             <i class="fas fa-forward mr-2"></i>
                             Skip
                         </button>
                         
                         <button type="button" id="btnTransfer" 
-                                class="counter-btn flex items-center justify-center px-4 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" 
+                                class="counter-btn flex items-center justify-center px-4 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" disabled>
                             <i class="fas fa-exchange-alt mr-2"></i>
                             Transfer
                         </button>
