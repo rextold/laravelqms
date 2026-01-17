@@ -277,14 +277,14 @@
         .waiting-list-container {
             display: flex;
             flex-direction: column;
-            gap: 1rem;
+            gap: 0.6rem;
         }
         .waiting-list-row {
             display: flex;
             align-items: center;
-            gap: 1rem;
-            font-size: 1.5rem;
-            padding: 0.75rem 0;
+            gap: 0.8rem;
+            font-size: 0.95rem;
+            padding: 0.5rem 0;
             border-bottom: 1px solid rgba(245, 158, 11, 0.1);
         }
         .waiting-list-row:last-child {
@@ -296,35 +296,37 @@
             white-space: nowrap;
             min-width: fit-content;
             flex-shrink: 0;
+            font-size: 0.9rem;
         }
         .queue-numbers {
             display: flex;
             flex-wrap: nowrap;
-            gap: 0.75rem;
+            gap: 0.5rem;
             overflow-x: auto;
             overflow-y: hidden;
             padding-right: 0.5rem;
             min-width: 0;
         }
         .queue-numbers::-webkit-scrollbar {
-            height: 3px;
+            height: 2px;
         }
         .queue-numbers::-webkit-scrollbar-track {
             background: rgba(255, 255, 255, 0.05);
         }
         .queue-numbers::-webkit-scrollbar-thumb {
             background: rgba(245, 158, 11, 0.4);
-            border-radius: 3px;
+            border-radius: 2px;
         }
         .waiting-queue-number-text {
             font-weight: 600;
             color: #fff;
             background: linear-gradient(135deg, #f59e0b, #d97706);
-            padding: 0.4rem 0.8rem;
-            border-radius: 6px;
+            padding: 0.3rem 0.6rem;
+            border-radius: 5px;
             white-space: nowrap;
             flex-shrink: 0;
             box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
+            font-size: 0.8rem;
         }
 
         .waiting-empty-state {
