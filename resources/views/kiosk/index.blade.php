@@ -424,25 +424,31 @@
         <div id="step1" class="step-content animate-fadeInUp">
             <div class="flex flex-col h-full">
                 <!-- Header -->
-                <div class="text-center spacing-md flex-shrink-0">
-                    @if($settings->company_logo)
-                        <div class="spacing-sm">
-                            <img src="{{ asset('storage/' . $settings->company_logo) }}" alt="{{ $organization->organization_name }}" class="logo-size mx-auto drop-shadow-2xl" data-org-logo style="max-height: 60px; height: auto;">
+                <div class="text-center flex-shrink-0 mb-2">
+                    <div class="flex items-center justify-center gap-2 sm:gap-3 mb-2">
+                        @if($settings->company_logo)
+                            <img src="{{ asset('storage/' . $settings->company_logo) }}" alt="{{ $organization->organization_name }}" class="logo-size mx-auto drop-shadow-xl" data-org-logo style="max-height: 50px; height: auto;">
+                        @else
+                            <div class="logo-size flex items-center justify-center rounded-lg" style="background: rgba(255,255,255,0.2); max-height: 50px;">
+                                <i class="fas fa-building text-white text-2xl"></i>
+                            </div>
+                        @endif
+                        <div>
+                            <h1 class="title-size font-black drop-shadow-lg animate-fadeInScale leading-tight" 
+                                style="color: var(--text-color); text-shadow: 2px 4px 8px rgba(0,0,0,0.2);" data-org-name>
+                                {{ $organization->organization_name }}
+                            </h1>
+                            <p class="text-xs sm:text-sm font-bold drop-shadow-md" 
+                               style="color: var(--text-color); opacity: 0.85;">
+                                Queue Kiosk
+                            </p>
                         </div>
-                    @endif
-                    <h1 class="title-size font-black spacing-sm drop-shadow-2xl animate-fadeInScale" 
-                        style="color: var(--text-color); text-shadow: 2px 4px 8px rgba(0,0,0,0.2);">
-                        Queue Kiosk
-                    </h1>
-                    <p class="subtitle-size font-bold spacing-sm drop-shadow-lg" 
-                       style="color: var(--text-color); opacity: 0.95;" data-org-name>
-                        {{ $organization->organization_name }}
-                    </p>
-                    <div class="inline-block glass-card px-4 sm:px-8 py-2 sm:py-4 rounded-xl sm:rounded-2xl">
-                        <p class="btn-text font-semibold flex items-center justify-center" style="color: var(--text-color); opacity: 0.9;">
-                            <i class="fas fa-hand-pointer mr-2 sm:mr-3"></i>
+                    </div>
+                    <div class="inline-block glass-card px-3 sm:px-6 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm">
+                        <p class="font-semibold flex items-center justify-center gap-1.5" style="color: var(--text-color); opacity: 0.9;">
+                            <i class="fas fa-hand-pointer"></i>
                             <span class="hidden sm:inline">Select a counter to get your queue number</span>
-                            <span class="sm:hidden">Tap to select counter</span>
+                            <span class="sm:hidden">Tap to select</span>
                         </p>
                     </div>
                 </div>
