@@ -60,12 +60,27 @@ class KioskController extends Controller
     public function generateQueue(Request $request)
     {
         $organization = Organization::where('organization_code', $request->route('organization_code'))->firstOrFail();
-        $validated = $request->validate([
-            'counter_id' => 'required|exists:users,id',
-        ]);
+        
+        // Get counter_id from query string (GET parameter)
+        $counterId = $request->query('counter_id');
+        
+        if (!$counterId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'The counter id field is required.'
+            ], 422);
+        }
 
-        $counter = User::findOrFail($validated['counter_id']);
+        // Verify counter exists
+        $counter = User::where('id', $counterId)->first();
+        if (!$counter) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Counter not found'
+            ], 404);
+        }
 
+        // Verify counter belongs to organization
         if ((int) $counter->organization_id !== (int) $organization->id) {
             return response()->json([
                 'success' => false,
