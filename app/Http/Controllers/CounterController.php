@@ -25,7 +25,7 @@ class CounterController extends Controller
     }
 
     /**
-     * Show counter call/service panel and dashboard
+     * Show counter call/service panel
      */
     public function callView(Request $request)
     {
@@ -55,21 +55,15 @@ class CounterController extends Controller
 
         // Get organization settings
         $settings = OrganizationSetting::getSettings($organization->id);
-        
-        // Get counter statistics and analytics data
-        $stats = $this->getCounterStats($user);
-        $analyticsData = $this->getAnalyticsData($user);
 
-        return view('counter.dashboard', [
+        return view('counter.call', [
             'counter' => $user,
             'organization' => $organization,
             'settings' => $settings,
             'currentQueue' => $currentQueue,
             'waitingQueues' => $waitingQueues,
             'skippedQueues' => $skippedQueues,
-            'onlineCounters' => $onlineCounters,
-            'stats' => $stats,
-            'analyticsData' => $analyticsData
+            'onlineCounters' => $onlineCounters
         ]);
     }
 
