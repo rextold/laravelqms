@@ -110,15 +110,16 @@ Route::prefix('{organization_code}')->group(function () {
         Route::get('/data', [MonitorController::class, 'getData'])->name('data');
     });
     
-    // Public counter data endpoint - accessible without authentication
-    Route::prefix('counter')->name('counter.')->middleware(['organization.context'])->group(function () {
-        Route::get('/data', [CounterController::class, 'getData'])->name('data');
-        
+    // Public counter data endpoint - accessible without authentication (supports ?counter_id query param)
+    // Used by kiosk, monitor, and counter panel for real-time updates
+    Route::prefix('counter')->name('counter.')->middleware(['organization.context', 'allow.public.counter.data'])->group(function () {
+        Route::get('/data', [CounterController::class, 'getData'])->name('data');    
     });
-    
-    // Direct public access route for counter data (without organization prefix)
-    Route::get('/counter/data', [CounterController::class, 'getData'])->name('counter.public.data');
-    
+});
+
+// Direct public access route for counter data (without organization prefix, uses query parameter)
+// Fallback for direct API access without organization context
+Route::get('/counter/data', [CounterController::class, 'getData'])->name('counter.public.data');    
     // Protected routes - auth middleware runs FIRST, then organization context
     Route::middleware(['auth', 'organization.context'])->group(function () {
         
@@ -172,7 +173,7 @@ Route::prefix('{organization_code}')->group(function () {
             Route::post('/marquee/{marquee}/toggle', [MarqueeController::class, 'toggleActive'])->name('marquee.toggle');
             Route::delete('/marquee/{marquee}', [MarqueeController::class, 'destroy'])->name('marquee.destroy');
         });        // All other counter routes require organization context and role:counter
-        Route::middleware(['organization.context', 'role:counter'])->prefix('counter')->name('counter.')->group(function () {
+        Route::middleware(['auth', 'organization.context', 'role:counter'])->prefix('counter')->name('counter.')->group(function () {
             // Counter single-frame calling view now at /counter/panel
             Route::get('/panel', [CounterController::class, 'callView'])->name('panel');
             // Backward-compatible redirect from /view to /panel
@@ -181,6 +182,7 @@ Route::prefix('{organization_code}')->group(function () {
             })->name('view');
             
             // Counter operations - use POST for state-changing operations
+            // Middleware validates: 1) POST method, 2) Counter role, 3) Online status
             Route::post('/toggle-online', [CounterController::class, 'toggleOnline'])->name('toggle-online');
             Route::post('/call-next', [CounterController::class, 'callNext'])->name('call-next');
             Route::post('/move-next', [CounterController::class, 'moveToNext'])->name('move-next');
@@ -188,15 +190,6 @@ Route::prefix('{organization_code}')->group(function () {
             Route::post('/notify', [CounterController::class, 'notifyCustomer'])->name('notify');
             Route::post('/skip', [CounterController::class, 'skipQueue'])->name('skip');
             Route::post('/recall', [CounterController::class, 'recallQueue'])->name('recall');
-            
-            // Keep GET versions for backward compatibility (will redirect to POST)
-            Route::get('/toggle-online', function() { return response()->json(['error' => 'Use POST method'], 405); });
-            Route::get('/call-next', function() { return response()->json(['error' => 'Use POST method'], 405); });
-            Route::get('/move-next', function() { return response()->json(['error' => 'Use POST method'], 405); });
-            Route::get('/transfer', function() { return response()->json(['error' => 'Use POST method'], 405); });
-            Route::get('/notify', function() { return response()->json(['error' => 'Use POST method'], 405); });
-            Route::get('/skip', function() { return response()->json(['error' => 'Use POST method'], 405); });
-            Route::get('/recall', function() { return response()->json(['error' => 'Use POST method'], 405); });
         });
     });
 });

@@ -508,10 +508,11 @@ class CounterController extends Controller
 
     /**
      * Get counter data for real-time updates (both panel and dashboard)
+     * Supports both authenticated counter users and public requests with counter_id
      */
     public function getData(Request $request)
     {
-        // try {
+        try {
             $organization = $request->attributes->get('organization');
             
             // Fallback: if no organization in context, get the first/default organization
@@ -526,7 +527,8 @@ class CounterController extends Controller
             }
             
             $user = Auth::user();
-            $counterId = $request->query('counter_id');
+            // Support both query parameter and route parameter for counter_id
+            $counterId = $request->query('counter_id') ?? $request->route('counter_id');
             
             // If authenticated counter user, get their specific data
             if ($user && $user->isCounter()) {
