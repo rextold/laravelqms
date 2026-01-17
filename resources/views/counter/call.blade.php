@@ -471,7 +471,6 @@ function renderLists(data) {
 // FETCH & POLLING
 // ============================================================
 
-let counterFetchInFlight = false;
 let counterFetchController = null;
 let lastSuccessfulData = null;
 
