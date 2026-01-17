@@ -20,31 +20,31 @@
                     
                     <!-- Action Buttons -->
                     <div class="grid grid-cols-2 md:grid-cols-5 gap-3 max-w-4xl mx-auto">
-                        <button type="button" id="btnCallNext" onclick="callNext(this)" 
+                        <button type="button" id="btnCallNext" 
                                 class="counter-btn flex items-center justify-center px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" disabled>
                             <i class="fas fa-bell mr-2"></i>
                             Call Next
                         </button>
                         
-                        <button type="button" id="btnNotify" onclick="return notifyCustomer(this, event);" 
+                        <button type="button" id="btnNotify" 
                                 class="counter-btn flex items-center justify-center px-4 py-3 bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" disabled>
                             <i class="fas fa-bell mr-2"></i>
                             Notify
                         </button>
                         
-                        <button type="button" id="btnComplete" onclick="moveToNext(this)" 
+                        <button type="button" id="btnComplete" 
                                 class="counter-btn flex items-center justify-center px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" disabled>
                             <i class="fas fa-check-circle mr-2"></i>
                             Complete
                         </button>
                         
-                        <button type="button" id="btnSkip" onclick="skipCurrent()" 
+                        <button type="button" id="btnSkip" 
                                 class="counter-btn flex items-center justify-center px-4 py-3 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" disabled>
                             <i class="fas fa-forward mr-2"></i>
                             Skip
                         </button>
                         
-                        <button type="button" id="btnTransfer" onclick="openTransferModal()" 
+                        <button type="button" id="btnTransfer" 
                                 class="counter-btn flex items-center justify-center px-4 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" disabled>
                             <i class="fas fa-exchange-alt mr-2"></i>
                             Transfer
@@ -149,12 +149,12 @@
             <div class="text-xs text-gray-500">Now</div>
             <div id="dockCurrentNumber" class="text-xl font-extrabold text-gray-900">---</div>
         </div>
-        <button type="button" onclick="toggleMinimize(false)" class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition" title="Restore">
+        <button type="button" id="dockRestoreBtn" class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition" title="Restore">
             <i class="fas fa-window-restore"></i>
         </button>
     </div>
 
-<style>
+<style nonce="{{ session('csp_nonce', '') }}">
 .responsive-queue-number { font-size: 6rem; }
 @media (orientation: portrait) { .responsive-queue-number { font-size: 4.5rem; } }
 @media (max-width: 768px) and (orientation: portrait) { .responsive-queue-number { font-size: 3rem; } }
@@ -171,7 +171,7 @@
                     <i class="fas fa-exchange-alt text-white text-xl"></i>
                     <h3 class="text-xl font-bold text-white">Transfer Queue</h3>
                 </div>
-                <button type="button" onclick="closeTransferModal()" class="text-white hover:text-gray-200 text-2xl leading-none">&times;</button>
+                <button type="button" id="closeTransferModalBtn" class="text-white hover:text-gray-200 text-2xl leading-none">&times;</button>
             </div>
         </div>
 
@@ -191,8 +191,8 @@
 
         <!-- Footer -->
         <div class="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3 border-t border-gray-200">
-                        <button type="button" onclick="closeTransferModal()" class="counter-btn px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold">Cancel</button>
-                        <button type="button" onclick="confirmTransfer()" class="counter-btn px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold">
+                        <button type="button" id="cancelTransferBtn" class="counter-btn px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold">Cancel</button>
+                        <button type="button" id="confirmTransferBtn" class="counter-btn px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold">
                             <i class="fas fa-exchange-alt mr-2"></i>Transfer Customer
                         </button>
                     </div>
@@ -209,7 +209,7 @@
                     <i class="fas fa-forward text-white text-xl"></i>
                     <h3 class="text-xl font-bold text-white">Skip Current Queue?</h3>
                 </div>
-                <button type="button" onclick="closeSkipModal()" class="text-white hover:text-gray-200 text-2xl leading-none">&times;</button>
+                <button type="button" id="closeSkipModalBtn" class="text-white hover:text-gray-200 text-2xl leading-none">&times;</button>
             </div>
         </div>
 
@@ -226,8 +226,8 @@
 
         <!-- Footer -->
         <div class="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3 border-t border-gray-200">
-            <button type="button" onclick="closeSkipModal()" class="counter-btn px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold">Cancel</button>
-            <button type="button" onclick="confirmSkip(this)" class="counter-btn px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold">
+            <button type="button" id="cancelSkipBtn" class="counter-btn px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold">Cancel</button>
+            <button type="button" id="confirmSkipBtn" class="counter-btn px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold">
                 <i class="fas fa-forward mr-2"></i>Skip Queue
             </button>
         </div>
@@ -235,13 +235,13 @@
 </div>
 
 @push('styles')
-<style>
+<style nonce="{{ session('csp_nonce', '') }}">
 html, body { overflow: hidden; }
 </style>
 @endpush
 
 @push('scripts')
-<script>
+<script nonce="{{ session('csp_nonce', '') }}">
 // ============================================================
 // COUNTER PANEL - MAIN CONFIGURATION
 // ============================================================
@@ -865,6 +865,33 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('offline', function() {
         console.warn('Network disconnected - using cached data');
     });
+
+    // Add event listeners for main action buttons
+    const btnCallNext = document.getElementById('btnCallNext');
+    const btnNotify = document.getElementById('btnNotify');
+    const btnComplete = document.getElementById('btnComplete');
+    const btnSkip = document.getElementById('btnSkip');
+    const btnTransfer = document.getElementById('btnTransfer');
+    const dockRestoreBtn = document.getElementById('dockRestoreBtn');
+    const closeTransferModalBtn = document.getElementById('closeTransferModalBtn');
+    const cancelTransferBtn = document.getElementById('cancelTransferBtn');
+    const confirmTransferBtn = document.getElementById('confirmTransferBtn');
+    const closeSkipModalBtn = document.getElementById('closeSkipModalBtn');
+    const cancelSkipBtn = document.getElementById('cancelSkipBtn');
+    const confirmSkipBtn = document.getElementById('confirmSkipBtn');
+
+    if (btnCallNext) btnCallNext.addEventListener('click', function() { callNext(this); });
+    if (btnNotify) btnNotify.addEventListener('click', function() { return notifyCustomer(this, event); });
+    if (btnComplete) btnComplete.addEventListener('click', function() { moveToNext(this); });
+    if (btnSkip) btnSkip.addEventListener('click', skipCurrent);
+    if (btnTransfer) btnTransfer.addEventListener('click', openTransferModal);
+    if (dockRestoreBtn) dockRestoreBtn.addEventListener('click', function() { toggleMinimize(false); });
+    if (closeTransferModalBtn) closeTransferModalBtn.addEventListener('click', closeTransferModal);
+    if (cancelTransferBtn) cancelTransferBtn.addEventListener('click', closeTransferModal);
+    if (confirmTransferBtn) confirmTransferBtn.addEventListener('click', function() { confirmTransfer(); });
+    if (closeSkipModalBtn) closeSkipModalBtn.addEventListener('click', closeSkipModal);
+    if (cancelSkipBtn) cancelSkipBtn.addEventListener('click', closeSkipModal);
+    if (confirmSkipBtn) confirmSkipBtn.addEventListener('click', function() { confirmSkip(this); });
 });
 </script>
 @endpush

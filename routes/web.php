@@ -61,6 +61,18 @@ Route::post('/test-csrf-endpoint', function (Illuminate\Http\Request $request) {
     ]);
 });
 
+Route::get('/test-forbidden', function () {
+    return view('test.forbidden-test');
+});
+
+Route::post('/test-forbidden-endpoint', function (Illuminate\Http\Request $request) {
+    return response()->json([
+        'success' => true,
+        'message' => 'Access granted - no forbidden issues',
+        'data' => $request->all()
+    ]);
+});
+
 // SuperAdmin routes (no company code in URL)
 Route::middleware(['auth', 'role:superadmin'])->prefix('superadmin')->name('superadmin.')->group(function () {
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
