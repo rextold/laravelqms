@@ -472,6 +472,7 @@ function renderLists(data) {
 // ============================================================
 
 
+// Cached data for fallback scenarios
 let lastSuccessfulData = null;
 
 function handleFallbackData() {
