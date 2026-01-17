@@ -111,8 +111,9 @@ Route::prefix('{organization_code}')->group(function () {
     });
     
     // Public counter data endpoint - accessible without authentication
-    Route::prefix('counter')->name('counter.')->middleware(['allow.public'])->group(function () {
+    Route::prefix('counter')->name('counter.')->middleware(['organization.context', 'allow.public'])->group(function () {
         Route::get('/data', [CounterController::class, 'getData'])->name('data');
+        
     });
     
     // Protected routes - auth middleware runs FIRST, then organization context
