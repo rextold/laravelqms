@@ -58,8 +58,22 @@ class EnsureOrganizationContext
         $user = auth()->user();
         $routeName = $request->route()->getName() ?? '';
         $path = $request->getPathInfo();
+        $isPublic = $this->isPublicRoute($request);
 
-        if ($user && !$this->isPublicRoute($request)) {
+        // Log for debugging public route detection
+        if ($user && $isPublic) {
+            Log::info('Public route accessed by authenticated user', [
+                'user_id' => $user->id,
+                'user_role' => $user->role,
+                'route_name' => $routeName,
+                'path' => $path,
+                'organization_code' => $organizationCode,
+                'is_public' => $isPublic,
+                'middleware' => $request->route()->middleware()
+            ]);
+        }
+
+        if ($user && !$isPublic) {
             if (!$user->isSuperAdmin() && $user->organization_id && $user->organization_id !== $organization->id) {
                 Log::warning('403 Unauthorized organization access attempt', [
                     'user_id' => $user->id,
@@ -68,6 +82,10 @@ class EnsureOrganizationContext
                     'user_organization_id' => $user->organization_id,
                     'requested_organization_id' => $organization->id,
                     'requested_organization_code' => $organizationCode,
+                    'route_name' => $routeName,
+                    'path' => $path,
+                    'is_public' => $isPublic,
+                    'middleware' => $request->route()->middleware()
                 ]);
                 abort(403, 'Unauthorized access to this organization.');
             }
