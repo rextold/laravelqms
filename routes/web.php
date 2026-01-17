@@ -168,9 +168,7 @@ Route::prefix('{organization_code}')->group(function () {
             Route::put('/marquee/{marquee}', [MarqueeController::class, 'update'])->name('marquee.update');
             Route::post('/marquee/{marquee}/toggle', [MarqueeController::class, 'toggleActive'])->name('marquee.toggle');
             Route::delete('/marquee/{marquee}', [MarqueeController::class, 'destroy'])->name('marquee.destroy');
-        });
-        
-        // All other counter routes require organization context and role:counter
+        });        // All other counter routes require organization context and role:counter
         Route::middleware(['organization.context', 'role:counter'])->prefix('counter')->name('counter.')->group(function () {
             // Counter single-frame calling view now at /counter/panel
             Route::get('/panel', [CounterController::class, 'callView'])->name('panel');
@@ -178,13 +176,24 @@ Route::prefix('{organization_code}')->group(function () {
             Route::get('/view', function () {
                 return redirect()->to(route('counter.panel', ['organization_code' => request()->route('organization_code')]));
             })->name('view');
-            Route::get('/toggle-online', [CounterController::class, 'toggleOnline'])->name('toggle-online');
-            Route::get('/call-next', [CounterController::class, 'callNext'])->name('call-next');
-            Route::get('/move-next', [CounterController::class, 'moveToNext'])->name('move-next');
-            Route::get('/transfer', [CounterController::class, 'transferQueue'])->name('transfer');
-            Route::get('/notify', [CounterController::class, 'notifyCustomer'])->name('notify');
-            Route::get('/skip', [CounterController::class, 'skipQueue'])->name('skip');
-            Route::get('/recall', [CounterController::class, 'recallQueue'])->name('recall');
+            
+            // Counter operations - use POST for state-changing operations
+            Route::post('/toggle-online', [CounterController::class, 'toggleOnline'])->name('toggle-online');
+            Route::post('/call-next', [CounterController::class, 'callNext'])->name('call-next');
+            Route::post('/move-next', [CounterController::class, 'moveToNext'])->name('move-next');
+            Route::post('/transfer', [CounterController::class, 'transferQueue'])->name('transfer');
+            Route::post('/notify', [CounterController::class, 'notifyCustomer'])->name('notify');
+            Route::post('/skip', [CounterController::class, 'skipQueue'])->name('skip');
+            Route::post('/recall', [CounterController::class, 'recallQueue'])->name('recall');
+            
+            // Keep GET versions for backward compatibility (will redirect to POST)
+            Route::get('/toggle-online', function() { return response()->json(['error' => 'Use POST method'], 405); });
+            Route::get('/call-next', function() { return response()->json(['error' => 'Use POST method'], 405); });
+            Route::get('/move-next', function() { return response()->json(['error' => 'Use POST method'], 405); });
+            Route::get('/transfer', function() { return response()->json(['error' => 'Use POST method'], 405); });
+            Route::get('/notify', function() { return response()->json(['error' => 'Use POST method'], 405); });
+            Route::get('/skip', function() { return response()->json(['error' => 'Use POST method'], 405); });
+            Route::get('/recall', function() { return response()->json(['error' => 'Use POST method'], 405); });
         });
     });
 });

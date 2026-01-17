@@ -111,15 +111,13 @@ class CounterController extends Controller
             
             return redirect()->back()->with('error', 'Failed to update status');
         }
-    }
-
-    /**
+    }    /**
      * Call next queue in line
      */
-    public function callNext(Request $request)
+    public function callNext(Request $request = null)
     {
         $user = Auth::user();
-        $organization = $request->attributes->get('organization');
+        $organization = $request ? $request->attributes->get('organization') : null;
         
         if (!$user->isCounter() || !$user->is_online) {
             return response()->json(['error' => 'Counter must be online to call queues'], 403);
@@ -164,12 +162,10 @@ class CounterController extends Controller
             Log::error('Error calling next queue: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to call next queue'], 500);
         }
-    }
-
-    /**
+    }    /**
      * Move current queue to completed and call next
      */
-    public function moveToNext(Request $request)
+    public function moveToNext(Request $request = null)
     {
         $user = Auth::user();
         
