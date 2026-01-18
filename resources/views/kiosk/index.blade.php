@@ -109,6 +109,13 @@
         .counter-btn .counter-desc { font-size:0.75rem; color: rgba(15,23,42,0.55); }
         /* vertical center helper */
         .vertical-center { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1rem; min-height: calc(100dvh - 2rem); }
+
+        /* Position counter info to top-right inside the queue card */
+        #queueContent { position: relative; }
+        #counterInfo { position: absolute; top: 0.8rem; right: 1rem; text-align: right; font-weight: 700; }
+        @media (max-width: 640px) {
+            #counterInfo { position: static; text-align: center; margin-top: .5rem; }
+        }
     </style>
 </head>
 <body>
