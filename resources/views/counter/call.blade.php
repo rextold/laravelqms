@@ -248,7 +248,6 @@ html, body { overflow: hidden; }
 const COUNTER_ID = {{ $counter->id }};
 const COUNTER_NUM = {{ $counter->counter_number }};
 const ORG_CODE = '{{ request()->route('organization_code') }}';
-const APP_URL = '{{ rtrim(config('app.url'), '/') }}';
 
 // Get CSRF token from meta tag
 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
@@ -522,7 +521,7 @@ function fetchData() {
         counterFetchController = null;
     }
     
-    const url = new URL(`${APP_URL}/${ORG_CODE}/counter/data`);
+    const url = new URL(`/${ORG_CODE}/counter/data`, window.location.origin);
     url.searchParams.append('counter_id', COUNTER_ID);
     console.log('Fetching counter data from', url.toString());
     
