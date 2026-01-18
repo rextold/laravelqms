@@ -21,6 +21,37 @@
 
     <!-- Main Grid -->
     <div class="max-w-7xl mx-auto p-4 space-y-4">
+
+        <!-- Compact Control Bar -->
+        <div class="bg-gray-800 rounded-lg border border-gray-700 p-3 flex items-center justify-between space-x-3">
+            <div class="flex items-center space-x-2">
+                <button id="prevBtn" type="button" onclick="prevVideo()" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm">
+                    <i class="fas fa-step-backward"></i>
+                </button>
+                <button id="playBtn" type="button" onclick="togglePlay()" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm flex items-center">
+                    <i id="playIcon" class="fas fa-play text-lg"></i>
+                    <span class="ml-2 text-xs font-semibold">Play</span>
+                </button>
+                <button id="nextBtn" type="button" onclick="nextVideo()" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm">
+                    <i class="fas fa-step-forward"></i>
+                </button>
+            </div>
+
+            <div class="flex-1 text-center">
+                <div class="text-xs text-gray-400">Now Playing</div>
+                <div id="nowPlayingCompact" class="text-sm font-semibold text-white truncate">—</div>
+            </div>
+
+            <div class="flex items-center space-x-2">
+                <select id="setNowSelect" class="bg-gray-900 text-xs text-white px-2 py-1 rounded border border-gray-700">
+                    <option value="">Select video</option>
+                    @foreach($videos as $v)
+                        <option value="{{ $v->id }}">{{ $v->title }}</option>
+                    @endforeach
+                </select>
+                <button type="button" onclick="setNowPlayingFromSelect()" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs font-semibold">Set</button>
+            </div>
+        </div>
         
         <!-- Video Player Section -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -526,6 +557,7 @@ function updateNowPlayingDisplay(nowPlaying) {
         document.getElementById('currentVideo').textContent = nowPlaying.title;
         isPlaying = true;
         updatePlayButton();
+        updateNowPlayingCompact(nowPlaying);
         updatePlaylistHighlight();
     } else {
         nowPlayingVideo = null;
@@ -537,7 +569,37 @@ function updateNowPlayingDisplay(nowPlaying) {
         document.getElementById('currentVideo').textContent = '—';
         isPlaying = false;
         updatePlayButton();
+        updateNowPlayingCompact(null);
         updatePlaylistHighlight();
+    }
+}
+
+function setNowPlayingFromSelect() {
+    const sel = document.getElementById('setNowSelect');
+    if (!sel) return;
+    const vid = sel.value;
+    if (!vid) {
+        showToast('Select a video first', 'error');
+        return;
+    }
+    // Use existing playNow to set now playing
+    playNow(parseInt(vid, 10));
+    // update compact display immediately (optimistic)
+    const opt = sel.options[sel.selectedIndex];
+    if (opt) document.getElementById('nowPlayingCompact').textContent = opt.text;
+}
+
+function updateNowPlayingCompact(nowPlaying) {
+    const el = document.getElementById('nowPlayingCompact');
+    if (!el) return;
+    if (nowPlaying && nowPlaying.title) el.textContent = nowPlaying.title;
+    else el.textContent = '—';
+}
+
+function prevVideo() {
+    const currentIdx = currentPlaylist.findIndex(v => nowPlayingVideo && v.video_id === nowPlayingVideo.id);
+    if (currentIdx > 0) {
+        playNow(currentPlaylist[currentIdx - 1].video_id);
     }
 }
 
