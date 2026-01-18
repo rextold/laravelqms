@@ -45,7 +45,7 @@ class RedirectIfAuthenticated
         if (method_exists($user, 'isCounter') && $user->isCounter()) {
             $organization = $user->organization;
             if ($organization) {
-                return redirect()->route('counter.dashboard', ['organization_code' => $organization->organization_code]);
+                return redirect()->route('counter.panel', ['organization_code' => $organization->organization_code]);
             }
             return redirect('/');
         }
