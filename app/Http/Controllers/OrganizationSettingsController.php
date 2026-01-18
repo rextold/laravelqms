@@ -233,6 +233,10 @@ class OrganizationSettingsController extends Controller
         return response()->json([
             'organization' => $organization,
             'settings' => $settings,
+            // Notification display settings
+            'notify_title' => $settings->notify_title ?? 'Now Calling',
+            'notify_message' => $settings->notify_message ?? 'Please proceed to the counter',
+            'serve_title' => $settings->serve_title ?? 'Now Serving',
+            'serve_message' => $settings->serve_message ?? 'Please proceed to Counter {counter}',
         ]);
-    }
-}
+    }}

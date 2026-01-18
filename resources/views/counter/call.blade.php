@@ -522,7 +522,7 @@ html, body { overflow-x: hidden; }
             setCooldown('btnNotify');
             apiRequest('notify').then(data => {
                 if (data.success) {
-                    playSound();
+                    // Sound plays on monitor, not on counter
                     showToast('Customer notified for queue: ' + (data.queue_number || formatQueueNumber(state.currentQueue?.queue_number)));
                     fetchData();
                 } else {

@@ -14,6 +14,8 @@ class Queue extends Model
         'counter_id',
         'status',
         'transferred_to',
+        'transferred_from',
+        'transferred_at',
         'called_at',
         'notified_at',
         'skipped_at',
@@ -26,6 +28,7 @@ class Queue extends Model
         'notified_at' => 'datetime',
         'skipped_at' => 'datetime',
         'completed_at' => 'datetime',
+        'transferred_at' => 'datetime',
     ];
 
     public function counter()

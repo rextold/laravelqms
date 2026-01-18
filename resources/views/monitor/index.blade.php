@@ -631,14 +631,32 @@
         let overlayHideTimer = null;
         const notificationSound = document.getElementById('notificationSound');
 
-        function showCallOverlay(queueNumber, counterNumber) {
+        // Customizable notification display messages from admin settings
+        let notifySettings = {
+            notifyTitle: '{{ $settings->notify_title ?? "Now Calling" }}',
+            notifyMessage: '{{ $settings->notify_message ?? "Please proceed to the counter" }}',
+            serveTitle: '{{ $settings->serve_title ?? "Now Serving" }}',
+            serveMessage: '{{ $settings->serve_message ?? "Please proceed to Counter {counter}" }}'
+        };
+
+        function showCallOverlay(queueNumber, counterNumber, isNotify = false) {
             const overlay = document.getElementById('callOverlay');
+            const titleEl = document.querySelector('.call-overlay-title');
             const numberEl = document.getElementById('callOverlayNumber');
             const counterEl = document.getElementById('callOverlayCounter');
             if (!overlay || !numberEl || !counterEl) return;
 
+            // Use customizable messages from admin settings
+            const title = isNotify ? notifySettings.notifyTitle : notifySettings.serveTitle;
+            let message = isNotify ? notifySettings.notifyMessage : notifySettings.serveMessage;
+            
+            // Replace {counter} placeholder with actual counter number
+            message = message.replace('{counter}', counterNumber || '');
+            message = message.replace('{queue}', queueNumber || '');
+
+            if (titleEl) titleEl.textContent = title;
             numberEl.textContent = queueNumber || '---';
-            counterEl.textContent = counterNumber ? `Please proceed to Counter ${counterNumber}` : 'Please proceed to the counter';
+            counterEl.textContent = counterNumber ? message : 'Please proceed to the counter';
             overlay.classList.add('show');
             overlay.setAttribute('aria-hidden', 'false');
 
@@ -804,7 +822,10 @@
                 // Overlay for the first alert item
                 if (alerts.length > 0) {
                     const first = alerts[0];
-                    showCallOverlay(first.queue?.queue_number, first.counter?.counter_number);
+                    const isNotifyAlert = !!first.queue?.notified_at && 
+                        (!previousServingState.get(String(first.queue?.id))?.notified_at || 
+                         previousServingState.get(String(first.queue?.id))?.notified_at !== first.queue?.notified_at);
+                    showCallOverlay(first.queue?.queue_number, first.counter?.counter_number, isNotifyAlert);
                 }
                 
                 previousServingState = nextState;
