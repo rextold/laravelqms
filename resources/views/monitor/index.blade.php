@@ -946,6 +946,7 @@
         function updateVideo(videoControl) {
             const player = document.getElementById('videoPlayer');
             
+            // If no control or playback disabled, show paused state
             if (!videoControl || !videoControl.is_playing) {
                 player.innerHTML = `
                     <div class="no-video">
@@ -955,7 +956,6 @@
                 `;
                 return;
             }
-
             const videos = @json($videos);
             if (!videos || videos.length === 0) {
                 player.innerHTML = `
@@ -966,28 +966,70 @@
                 `;
                 return;
             }
+            // If admin set a specific current_video_id, try to play that
+            let video = null;
+            try {
+                const vidId = videoControl && videoControl.current_video_id ? String(videoControl.current_video_id) : null;
+                if (vidId) {
+                    video = videos.find(v => String(v.id) === String(vidId)) || null;
+                }
+            } catch (e) {
+                video = null;
+            }
 
-            // Rotate through videos every 10 seconds
-            videoRotationIndex = Math.floor(Date.now() / 10000) % videos.length;
-            const video = videos[videoRotationIndex];
+            // Fallback: rotate videos if none selected
+            if (!video) {
+                videoRotationIndex = Math.floor(Date.now() / 10000) % videos.length;
+                video = videos[videoRotationIndex];
+            }
 
-            if (video.is_youtube) {
-                const newHTML = `
-                    <iframe src="${video.youtube_embed_url}?autoplay=1&loop=1&modestbranding=1&rel=0" 
-                            allow="autoplay; encrypted-media" 
-                            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></iframe>
+            if (!video) {
+                player.innerHTML = `
+                    <div class="no-video">
+                        <i class="fas fa-video"></i>
+                        <p>Video not available</p>
+                    </div>
                 `;
-                if (!player.querySelector('iframe') || player.querySelector('iframe').src !== video.youtube_embed_url) {
-                    player.innerHTML = newHTML;
+                return;
+            }
+
+            // Play YouTube embed or local video
+            if (video.is_youtube && video.youtube_embed_url) {
+                    // Append autoplay params; set mute based on sound toggle
+                    const muteParam = isSoundEnabled() ? 0 : 1;
+                    const autoplayParams = `?autoplay=1&mute=${muteParam}&loop=1&modestbranding=1&rel=0`;
+                const src = video.youtube_embed_url + autoplayParams;
+                const existing = player.querySelector('iframe');
+                if (!existing || existing.src !== src) {
+                    player.innerHTML = `<iframe src="${src}" allow="autoplay; encrypted-media" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border:0;"></iframe>`;
                 }
             } else if (video.file_path) {
-                if (!player.querySelector('video')) {
+                const existingVideo = player.querySelector('video');
+                if (!existingVideo) {
                     player.innerHTML = `
                         <video autoplay loop style="width: 100%; height: 100%; object-fit: cover;">
                             <source src="/storage/${video.file_path}" type="video/mp4">
                             Your browser does not support the video tag.
                         </video>
                     `;
+                    const v = player.querySelector('video');
+                    if (v) {
+                            v.muted = !isSoundEnabled();
+                            v.volume = (videoControl && typeof videoControl.volume === 'number') ? (videoControl.volume / 100) : 0.8;
+                            v.play().catch(e => console.log('Video play failed:', e));
+                    }
+                } else {
+                    // update source if changed
+                    const srcEl = existingVideo.querySelector('source');
+                    const expectedSrc = `/storage/${video.file_path}`;
+                    if (!srcEl || srcEl.src.indexOf(expectedSrc) === -1) {
+                        player.innerHTML = `
+                            <video autoplay loop style="width: 100%; height: 100%; object-fit: cover;">
+                                <source src="/storage/${video.file_path}" type="video/mp4">
+                                Your browser does not support the video tag.
+                            </video>
+                        `;
+                    }
                 }
             } else {
                 player.innerHTML = `
