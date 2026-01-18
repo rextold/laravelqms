@@ -1,5 +1,28 @@
 <?php
 
+/**
+ * ============================================================================
+ * QUEUE MANAGEMENT SYSTEM - WEB ROUTES
+ * ============================================================================
+ * 
+ * Route Structure:
+ * ----------------
+ * 1. ROOT ROUTES - Home redirects
+ * 2. AUTHENTICATION - Login/Logout
+ * 3. PUBLIC ROUTES - Kiosk, Monitor (no auth required)
+ * 4. SUPERADMIN ROUTES - System-wide management
+ * 5. ORGANIZATION ROUTES - Admin & Counter operations
+ * 
+ * Middleware:
+ * -----------
+ * - guest: Redirect authenticated users
+ * - auth: Require authentication
+ * - role:X: Require specific role (superadmin, admin, counter)
+ * - organization.context: Set organization from URL
+ * - allow.public: Mark route as publicly accessible
+ * 
+ */
+
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\OrganizationController;
@@ -10,102 +33,91 @@ use App\Http\Controllers\CounterController;
 use App\Http\Controllers\KioskController;
 use App\Http\Controllers\MonitorController;
 use App\Http\Controllers\AccountController;
+use App\Models\Organization;
 use Illuminate\Support\Facades\Route;
 
-/*
-|--------------------------------------------------------------------------
-| Web Routes
-|--------------------------------------------------------------------------
-|
-| Queue Management System Routes
-| 
-| Route Groups:
-| 1. Public Routes (no auth) - Home, Kiosk, Monitor
-| 2. Auth Routes - Login, Logout
-| 3. SuperAdmin Routes - Organization & User Management
-| 4. Organization Routes - Admin, Counter operations
-|
-*/
-
 // ============================================================================
-// ROOT & DEFAULT REDIRECTS
+// 1. ROOT & DEFAULT REDIRECTS
 // ============================================================================
 
-Route::get('/', function () {
-    return redirect('/login');
-});
+// Home page redirects to login
+Route::get('/', fn() => redirect('/login'));
 
-// Default kiosk redirect (no organization specified)
+// Default kiosk (redirects to first organization's kiosk)
 Route::get('/kiosk', function () {
-    $defaultOrg = \App\Models\Organization::first();
-    if ($defaultOrg) {
-        return redirect('/' . strtolower($defaultOrg->organization_code) . '/kiosk');
-    }
-    return response('No organization found', 404);
+    $org = Organization::first();
+    return $org 
+        ? redirect('/' . strtolower($org->organization_code) . '/kiosk')
+        : response('No organization configured', 404);
 });
 
-// Default monitor redirect (no organization specified)
+// Default monitor (redirects to first organization's monitor)
 Route::get('/monitor', function () {
-    $defaultOrg = \App\Models\Organization::first();
-    if ($defaultOrg) {
-        return redirect('/' . strtolower($defaultOrg->organization_code) . '/monitor');
-    }
-    return view('monitor.fallback');
+    $org = Organization::first();
+    return $org 
+        ? redirect('/' . strtolower($org->organization_code) . '/monitor')
+        : view('monitor.fallback');
 });
 
 // ============================================================================
-// AUTHENTICATION ROUTES
+// 2. AUTHENTICATION ROUTES
 // ============================================================================
 
-// Guest routes (login page)
+// Login (guests only)
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 });
 
-// Logout route (GET method for simplicity)
-Route::get('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
+// Logout (GET method for simplicity - works with simple links)
+Route::get('/logout', [AuthController::class, 'logout'])
+    ->middleware('auth')
+    ->name('logout');
 
 // ============================================================================
-// SUPERADMIN ROUTES (No organization prefix)
+// 3. SUPERADMIN ROUTES (No organization prefix)
 // ============================================================================
 
-Route::middleware(['auth', 'role:superadmin'])
-    ->prefix('superadmin')
+Route::prefix('superadmin')
     ->name('superadmin.')
+    ->middleware(['auth', 'role:superadmin'])
     ->group(function () {
         
+        // Dashboard
         Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
         
-        // Organization CRUD
-        Route::get('/organizations', [OrganizationController::class, 'index'])->name('organizations.index');
-        Route::get('/organizations/create', [OrganizationController::class, 'create'])->name('organizations.create');
-        Route::post('/organizations', [OrganizationController::class, 'store'])->name('organizations.store');
-        Route::get('/organizations/{organization}/edit', [OrganizationController::class, 'edit'])->name('organizations.edit');
-        Route::put('/organizations/{organization}', [OrganizationController::class, 'update'])->name('organizations.update');
-        Route::delete('/organizations/{organization}', [OrganizationController::class, 'destroy'])->name('organizations.destroy');
+        // Organizations CRUD
+        Route::prefix('organizations')->name('organizations.')->group(function () {
+            Route::get('/', [OrganizationController::class, 'index'])->name('index');
+            Route::get('/create', [OrganizationController::class, 'create'])->name('create');
+            Route::post('/', [OrganizationController::class, 'store'])->name('store');
+            Route::get('/{organization}/edit', [OrganizationController::class, 'edit'])->name('edit');
+            Route::put('/{organization}', [OrganizationController::class, 'update'])->name('update');
+            Route::delete('/{organization}', [OrganizationController::class, 'destroy'])->name('destroy');
+        });
         
-        // User CRUD
-        Route::get('/users', [AdminController::class, 'manageUsers'])->name('users.index');
-        Route::get('/users/create', [AdminController::class, 'createUser'])->name('users.create');
-        Route::post('/users', [AdminController::class, 'storeUser'])->name('users.store');
-        Route::get('/users/{user}/edit', [AdminController::class, 'editUser'])->name('users.edit');
-        Route::put('/users/{user}', [AdminController::class, 'updateUser'])->name('users.update');
-        Route::delete('/users/{user}', [AdminController::class, 'deleteUser'])->name('users.destroy');
+        // Users CRUD
+        Route::prefix('users')->name('users.')->group(function () {
+            Route::get('/', [AdminController::class, 'manageUsers'])->name('index');
+            Route::get('/create', [AdminController::class, 'createUser'])->name('create');
+            Route::post('/', [AdminController::class, 'storeUser'])->name('store');
+            Route::get('/{user}/edit', [AdminController::class, 'editUser'])->name('edit');
+            Route::put('/{user}', [AdminController::class, 'updateUser'])->name('update');
+            Route::delete('/{user}', [AdminController::class, 'deleteUser'])->name('destroy');
+        });
     });
 
 // ============================================================================
-// ORGANIZATION-BASED ROUTES (with {organization_code} prefix)
+// 4. ORGANIZATION-BASED ROUTES (with {organization_code} prefix)
 // ============================================================================
 
 Route::prefix('{organization_code}')->group(function () {
     
-    // ------------------------------------------------------------------------
+    // ========================================================================
     // PUBLIC ROUTES - No Authentication Required
-    // These routes are accessible without login
-    // ------------------------------------------------------------------------
+    // ========================================================================
     
-    // KIOSK - Public queue ticket generation
+    // KIOSK - Customer queue ticket generation
     Route::prefix('kiosk')
         ->name('kiosk.')
         ->middleware(['organization.context', 'allow.public'])
@@ -114,102 +126,114 @@ Route::prefix('{organization_code}')->group(function () {
             Route::get('/counters', [KioskController::class, 'counters'])->name('counters');
             Route::get('/generate-queue', [KioskController::class, 'generateQueue'])->name('generate');
         });
-
-    // MONITOR - Public display screen (NO AUTH - accessible by anyone)
+    
+    // MONITOR - Public display screen (completely public, no auth)
     Route::prefix('monitor')
         ->name('monitor.')
         ->middleware(['organization.context', 'allow.public'])
-        ->withoutMiddleware(['auth', 'web'])
         ->group(function () {
             Route::get('/', [MonitorController::class, 'index'])->name('index');
             Route::get('/data', [MonitorController::class, 'getData'])->name('data');
         });
     
-    // ------------------------------------------------------------------------
+    // ========================================================================
     // PROTECTED ROUTES - Authentication Required
-    // ------------------------------------------------------------------------
+    // ========================================================================
     
     Route::middleware(['auth', 'organization.context'])->group(function () {
         
-        // Account Settings (for all authenticated users)
-        Route::get('/account/settings', [AccountController::class, 'settings'])->name('account.settings');
-        Route::put('/account/password', [AccountController::class, 'updatePassword'])->name('account.update-password');
+        // Account Settings (available to all authenticated users)
+        Route::prefix('account')->name('account.')->group(function () {
+            Route::get('/settings', [AccountController::class, 'settings'])->name('settings');
+            Route::put('/password', [AccountController::class, 'updatePassword'])->name('update-password');
+        });
         
-        // --------------------------------------------------------------------
+        // ====================================================================
         // ADMIN ROUTES - Requires admin role
-        // --------------------------------------------------------------------
+        // ====================================================================
         
         Route::prefix('admin')
             ->name('admin.')
             ->middleware('role:admin')
             ->group(function () {
                 
+                // Dashboard
                 Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
                 
                 // Organization Settings
-                Route::get('/organization-settings', [OrganizationSettingsController::class, 'edit'])->name('organization-settings.edit');
-                Route::put('/organization-settings', [OrganizationSettingsController::class, 'update'])->name('organization-settings.update');
-                Route::delete('/organization-settings/logo', [OrganizationSettingsController::class, 'removeLogo'])->name('organization-settings.remove-logo');
-                Route::get('/organization-settings/api/get', [OrganizationSettingsController::class, 'getSettingsApi'])->name('organization-settings.api.get');
+                Route::prefix('organization-settings')->name('organization-settings.')->group(function () {
+                    Route::get('/', [OrganizationSettingsController::class, 'edit'])->name('edit');
+                    Route::put('/', [OrganizationSettingsController::class, 'update'])->name('update');
+                    Route::delete('/logo', [OrganizationSettingsController::class, 'removeLogo'])->name('remove-logo');
+                    Route::get('/api/get', [OrganizationSettingsController::class, 'getSettingsApi'])->name('api.get');
+                });
                 
                 // User Management
-                Route::get('/users', [AdminController::class, 'manageUsers'])->name('users.index');
-                Route::get('/users/create', [AdminController::class, 'createUser'])->name('users.create');
-                Route::post('/users', [AdminController::class, 'storeUser'])->name('users.store');
-                Route::get('/users/{user}/edit', [AdminController::class, 'editUser'])->name('users.edit');
-                Route::put('/users/{user}', [AdminController::class, 'updateUser'])->name('users.update');
-                Route::delete('/users/{user}', [AdminController::class, 'deleteUser'])->name('users.destroy');
+                Route::prefix('users')->name('users.')->group(function () {
+                    Route::get('/', [AdminController::class, 'manageUsers'])->name('index');
+                    Route::get('/create', [AdminController::class, 'createUser'])->name('create');
+                    Route::post('/', [AdminController::class, 'storeUser'])->name('store');
+                    Route::get('/{user}/edit', [AdminController::class, 'editUser'])->name('edit');
+                    Route::put('/{user}', [AdminController::class, 'updateUser'])->name('update');
+                    Route::delete('/{user}', [AdminController::class, 'deleteUser'])->name('destroy');
+                });
                 
                 // Video Management
-                Route::get('/videos', [VideoController::class, 'index'])->name('videos.index');
-                Route::post('/videos', [VideoController::class, 'store'])->name('videos.store');
-                Route::put('/videos/{video}', [VideoController::class, 'update'])->name('videos.update');
-                Route::post('/videos/order', [VideoController::class, 'updateOrder'])->name('videos.order');
-                Route::post('/videos/{video}/toggle', [VideoController::class, 'toggleActive'])->name('videos.toggle');
-                Route::delete('/videos/{video}', [VideoController::class, 'destroy'])->name('videos.destroy');
-                Route::post('/videos/control', [VideoController::class, 'updateControl'])->name('videos.control');
-                Route::post('/videos/upload-bell', [VideoController::class, 'uploadBellSound'])->name('videos.upload-bell');
-                Route::post('/videos/reset-bell', [VideoController::class, 'resetBellSound'])->name('videos.reset-bell');
-                Route::post('/videos/set-now-playing', [VideoController::class, 'setNowPlaying'])->name('videos.set-now-playing');
+                Route::prefix('videos')->name('videos.')->group(function () {
+                    Route::get('/', [VideoController::class, 'index'])->name('index');
+                    Route::post('/', [VideoController::class, 'store'])->name('store');
+                    Route::put('/{video}', [VideoController::class, 'update'])->name('update');
+                    Route::delete('/{video}', [VideoController::class, 'destroy'])->name('destroy');
+                    Route::post('/order', [VideoController::class, 'updateOrder'])->name('order');
+                    Route::post('/{video}/toggle', [VideoController::class, 'toggleActive'])->name('toggle');
+                    Route::post('/control', [VideoController::class, 'updateControl'])->name('control');
+                    Route::post('/upload-bell', [VideoController::class, 'uploadBellSound'])->name('upload-bell');
+                    Route::post('/reset-bell', [VideoController::class, 'resetBellSound'])->name('reset-bell');
+                    Route::post('/set-now-playing', [VideoController::class, 'setNowPlaying'])->name('set-now-playing');
+                });
                 
                 // Playlist Management
-                Route::get('/playlist', [VideoController::class, 'getPlaylist'])->name('playlist.get');
-                Route::post('/playlist/add', [VideoController::class, 'addToPlaylist'])->name('playlist.add');
-                Route::post('/playlist/remove', [VideoController::class, 'removeFromPlaylist'])->name('playlist.remove');
-                Route::post('/playlist/reorder', [VideoController::class, 'reorderPlaylist'])->name('playlist.reorder');
-                Route::post('/playlist/control', [VideoController::class, 'updatePlaylistControl'])->name('playlist.control');
-                Route::post('/playlist/now-playing', [VideoController::class, 'setNowPlaying'])->name('playlist.now-playing');
+                Route::prefix('playlist')->name('playlist.')->group(function () {
+                    Route::get('/', [VideoController::class, 'getPlaylist'])->name('get');
+                    Route::post('/add', [VideoController::class, 'addToPlaylist'])->name('add');
+                    Route::post('/remove', [VideoController::class, 'removeFromPlaylist'])->name('remove');
+                    Route::post('/reorder', [VideoController::class, 'reorderPlaylist'])->name('reorder');
+                    Route::post('/control', [VideoController::class, 'updatePlaylistControl'])->name('control');
+                    Route::post('/now-playing', [VideoController::class, 'setNowPlaying'])->name('now-playing');
+                });
                 
                 // Marquee Management
-                Route::get('/marquee', [MarqueeController::class, 'index'])->name('marquee.index');
-                Route::get('/marquee/list', [MarqueeController::class, 'list'])->name('marquee.list');
-                Route::post('/marquee', [MarqueeController::class, 'store'])->name('marquee.store');
-                Route::put('/marquee/{marquee}', [MarqueeController::class, 'update'])->name('marquee.update');
-                Route::post('/marquee/{marquee}/toggle', [MarqueeController::class, 'toggleActive'])->name('marquee.toggle');
-                Route::delete('/marquee/{marquee}', [MarqueeController::class, 'destroy'])->name('marquee.destroy');
+                Route::prefix('marquee')->name('marquee.')->group(function () {
+                    Route::get('/', [MarqueeController::class, 'index'])->name('index');
+                    Route::get('/list', [MarqueeController::class, 'list'])->name('list');
+                    Route::post('/', [MarqueeController::class, 'store'])->name('store');
+                    Route::put('/{marquee}', [MarqueeController::class, 'update'])->name('update');
+                    Route::post('/{marquee}/toggle', [MarqueeController::class, 'toggleActive'])->name('toggle');
+                    Route::delete('/{marquee}', [MarqueeController::class, 'destroy'])->name('destroy');
+                });
             });
         
-        // --------------------------------------------------------------------
+        // ====================================================================
         // COUNTER ROUTES - Requires counter role
-        // --------------------------------------------------------------------
+        // ====================================================================
         
         Route::prefix('counter')
             ->name('counter.')
             ->middleware('role:counter')
             ->group(function () {
                 
-                // Counter Panel (main view)
+                // Counter Panel (main service view)
                 Route::get('/panel', [CounterController::class, 'callView'])->name('panel');
                 
-                // Legacy redirect
-                Route::get('/view', function () {
-                    return redirect()->route('counter.panel', ['organization_code' => request()->route('organization_code')]);
-                })->name('view');
+                // Legacy URL redirect
+                Route::get('/view', fn() => redirect()->route('counter.panel', [
+                    'organization_code' => request()->route('organization_code')
+                ]))->name('view');
                 
-                // Counter Data API (for real-time updates)
+                // Real-time Data API
                 Route::get('/data', [CounterController::class, 'getData'])->name('data');
                 
-                // Counter Status Toggle (GET for simplicity)
+                // Status Toggle (GET for easy toggling)
                 Route::get('/toggle-online', [CounterController::class, 'toggleOnline'])->name('toggle-online');
                 
                 // Queue Operations (POST for state changes)
