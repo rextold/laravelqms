@@ -118,7 +118,7 @@ Route::prefix('{organization_code}')->group(function () {
 
     // Direct public access route for counter data (without organization prefix, uses query parameter)
     // Fallback for direct API access without organization context
-    Route::get('/counter/data', [CounterController::class, 'getData'])->name('counter.public.data');    
+    Route::get('/counter/data', [CounterController::class, 'getData'])->name('counter.public.data')->middleware('allow.public.counter.data');    
     // Protected routes - auth middleware runs FIRST, then organization context
     Route::middleware(['auth', 'organization.context'])->group(function () {
         

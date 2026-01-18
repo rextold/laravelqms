@@ -535,103 +535,41 @@ class CounterController extends Controller
                 $currentQueue = $user->getCurrentQueue();
                 $waitingQueues = $user->getWaitingQueues();
                 $skippedQueues = $user->getSkippedQueues();
-                $onlineCounters = User::where('organization_id', $organization->id)
-                    ->where('role', 'counter')
-                    ->where('is_online', true)
-                    ->where('id', '!=', $user->id)
-                    ->orderBy('counter_number')
-                    ->get(['id', 'counter_number', 'display_name']);
-
-                // Get stats and analytics safely
-                $stats = $this->getCounterStats($user);
-                $analytics = $this->getAnalyticsData($user);
+                $onlineCounters = $user->getOnlineCounters();
+                $stats = $this->getCounterStats($user->id, $organization->id);
+                $analytics = $this->getAnalyticsData($organization->id);
 
                 return response()->json([
                     'success' => true,
                     'online_status' => $user->is_online,
-                    'current_queue' => $currentQueue ? [
-                        'id' => $currentQueue->id,
-                        'queue_number' => $currentQueue->queue_number,
-                        'counter_id' => $currentQueue->counter_id,
-                        'status' => $currentQueue->status,
-                    ] : null,
-                    'waiting_queues' => $waitingQueues->map(fn($q) => [
-                        'id' => $q->id,
-                        'queue_number' => $q->queue_number,
-                        'customer_name' => $q->customer_name,
-                        'created_at' => $q->created_at,
-                    ])->values(),
-                    'skipped' => $skippedQueues->map(fn($q) => [
-                        'id' => $q->id,
-                        'queue_number' => $q->queue_number,
-                        'customer_name' => $q->customer_name,
-                        'created_at' => $q->created_at,
-                    ])->values(),
+                    'current_queue' => $currentQueue,
+                    'waiting_queues' => $waitingQueues,
+                    'skipped' => $skippedQueues,
                     'online_counters' => $onlineCounters,
-                    'served_today' => $stats['completed_today'] ?? 0,
-                    // Dashboard stats and analytics
+                    'served_today' => $stats['completed_today'],
                     'stats' => $stats,
                     'analytics' => $analytics
                 ]);
             }
 
-            // For public requests (kiosk, monitor) or when counter_id is provided
+            // If counter_id is provided, get public data for that counter
             if ($counterId) {
-                $counter = User::where('organization_id', $organization->id)
-                    ->where('role', 'counter')
-                    ->where('id', $counterId)
-                    ->first();
-
-                if ($counter) {
-                    $currentQueue = $counter->getCurrentQueue();
-                    $waitingQueues = $counter->getWaitingQueues();
-                    $skippedQueues = $counter->getSkippedQueues();
-                    $onlineCounters = User::where('organization_id', $organization->id)
-                        ->where('role', 'counter')
-                        ->where('is_online', true)
-                        ->where('id', '!=', $counter->id)
-                        ->orderBy('counter_number')
-                        ->get(['id', 'counter_number', 'display_name']);
-
-                    // Get basic stats for public display
-                    $today = Carbon::today();
-                    $servedToday = Queue::where('counter_id', $counter->id)
-                        ->where('status', 'completed')
-                        ->whereDate('completed_at', $today)
-                        ->count();
-
-                    return response()->json([
-                        'success' => true,
-                        'online_status' => $counter->is_online,
-                        'current_queue' => $currentQueue ? [
-                            'id' => $currentQueue->id,
-                            'queue_number' => $currentQueue->queue_number,
-                            'counter_id' => $currentQueue->counter_id,
-                            'status' => $currentQueue->status,
-                        ] : null,
-                        'waiting_queues' => $waitingQueues->map(fn($q) => [
-                            'id' => $q->id,
-                            'queue_number' => $q->queue_number,
-                        ])->values(),
-                        'skipped' => $skippedQueues->map(fn($q) => [
-                            'id' => $q->id,
-                            'queue_number' => $q->queue_number,
-                        ])->values(),
-                        'online_counters' => $onlineCounters,
-                        'served_today' => $servedToday,
-                        'stats' => [
-                            'waiting' => $waitingQueues->count(),
-                            'completed_today' => $servedToday
-                        ],
-                        'analytics' => [
-                            'hourly' => array_fill(0, 24, 0),
-                            'weekly' => array_fill(0, 7, 0),
-                            'weekly_days' => [],
-                            'wait_time' => array_fill(0, 7, 0),
-                            'peak_hours' => [0, 0, 0, 0]
-                        ]
-                    ]);
+                $counter = User::find($counterId);
+                if (!$counter || $counter->organization_id !== $organization->id) {
+                    return response()->json(['success' => false, 'message' => 'Counter not found'], 404);
                 }
+                
+                $currentQueue = $counter->getCurrentQueue();
+                $waitingQueues = $counter->getWaitingQueues();
+                $stats = $this->getCounterStats($counter->id, $organization->id);
+
+                return response()->json([
+                    'success' => true,
+                    'online_status' => $counter->is_online,
+                    'current_queue' => $currentQueue,
+                    'waiting_queues' => $waitingQueues,
+                    'stats' => $stats
+                ]);
             }
 
             // For other unauthenticated requests, return basic organization data
