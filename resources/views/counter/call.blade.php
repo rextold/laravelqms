@@ -10,92 +10,12 @@
             <!-- Current Queue Display -->
             <div class="glass-card p-8 mb-6">
                 <div class="text-center">
-                    <div class="mb-4 flex flex-col items-center space-y-2">
+                    <div class="mb-4">
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
                             <i class="fas fa-user-check mr-2"></i>
                             NOW SERVING
                         </span>
-                        <div class="flex space-x-2 mt-2">
-                            <button type="button" id="btnGoOnline" class="counter-btn px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold shadow-sm" style="display:none;">
-                                <i class="fas fa-toggle-on mr-1"></i> Go Online
-                            </button>
-                            <button type="button" id="btnGoOffline" class="counter-btn px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-semibold shadow-sm" style="display:none;">
-                                <i class="fas fa-toggle-off mr-1"></i> Go Offline
-                            </button>
-                            <span id="onlineStatusLabel" class="ml-2 text-sm font-medium"></span>
-                        </div>
                     </div>
-                    // ===================== ONLINE/OFFLINE BUTTONS =====================
-                    function updateOnlineStatusUI(isOnline) {
-                        const btnGoOnline = document.getElementById('btnGoOnline');
-                        const btnGoOffline = document.getElementById('btnGoOffline');
-                        const label = document.getElementById('onlineStatusLabel');
-                        if (isOnline) {
-                            btnGoOnline.style.display = 'none';
-                            btnGoOffline.style.display = '';
-                            if (label) {
-                                label.textContent = 'Status: Online';
-                                label.className = 'ml-2 text-sm font-medium text-green-700';
-                            }
-                        } else {
-                            btnGoOnline.style.display = '';
-                            btnGoOffline.style.display = 'none';
-                            if (label) {
-                                label.textContent = 'Status: Offline';
-                                label.className = 'ml-2 text-sm font-medium text-gray-700';
-                            }
-                        }
-                    }
-
-                    function fetchOnlineStatusAndUpdate() {
-                        // Use the counter data endpoint to get online status
-                        fetchData(); // fetchData will update UI via renderLists
-                    }
-
-                    function goOnlineHandler() {
-                        const btn = document.getElementById('btnGoOnline');
-                        btn.disabled = true;
-                        makeCounterRequest('go-online').then(data => {
-                            btn.disabled = false;
-                            if (data && data.success) {
-                                updateOnlineStatusUI(true);
-                                fetchData();
-                            } else {
-                                alert(data?.message || 'Failed to go online');
-                            }
-                        });
-                    }
-
-                    function goOfflineHandler() {
-                        const btn = document.getElementById('btnGoOffline');
-                        btn.disabled = true;
-                        makeCounterRequest('go-offline').then(data => {
-                            btn.disabled = false;
-                            if (data && data.success) {
-                                updateOnlineStatusUI(false);
-                                fetchData();
-                            } else {
-                                alert(data?.message || 'Failed to go offline');
-                            }
-                        });
-                    }
-
-                    // Patch renderLists to update online/offline UI
-                    const origRenderLists = renderLists;
-                    renderLists = function(data) {
-                        if (data && typeof data.is_online !== 'undefined') {
-                            updateOnlineStatusUI(!!data.is_online);
-                        } else if (data && data.current_queue && typeof data.current_queue.is_online !== 'undefined') {
-                            updateOnlineStatusUI(!!data.current_queue.is_online);
-                        }
-                        origRenderLists.apply(this, arguments);
-                    };
-
-                    document.addEventListener('DOMContentLoaded', function() {
-                        document.getElementById('btnGoOnline').addEventListener('click', goOnlineHandler);
-                        document.getElementById('btnGoOffline').addEventListener('click', goOfflineHandler);
-                        fetchOnlineStatusAndUpdate();
-                    });
                     <div id="currentNumber" class="queue-number font-extrabold text-gray-900 mb-6 tracking-wider">---</div>
                     
                     <!-- Action Buttons -->

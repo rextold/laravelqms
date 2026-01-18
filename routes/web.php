@@ -182,9 +182,6 @@ Route::prefix('{organization_code}')->group(function () {
             
             // Counter operations - use GET for toggle-online and POST for state-changing operations
             Route::get('/toggle-online', [CounterController::class, 'toggleOnline'])->name('toggle-online');
-            // Go Online/Offline endpoints
-            Route::post('/go-online', [CounterController::class, 'goOnline'])->name('go-online');
-            Route::post('/go-offline', [CounterController::class, 'goOffline'])->name('go-offline');
             Route::post('/call-next', [CounterController::class, 'callNext'])->name('call-next');
             Route::post('/move-next', [CounterController::class, 'moveToNext'])->name('move-next');
             Route::post('/transfer', [CounterController::class, 'transferQueue'])->name('transfer');
