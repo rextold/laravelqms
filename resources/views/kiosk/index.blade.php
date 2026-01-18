@@ -104,18 +104,30 @@
         /* Small centered counter cards */
         .counter-grid-cols { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); justify-items: center; padding: 0.75rem; }
         .counter-btn { width: 160px; min-height: 96px; padding: 0.75rem; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; justify-self: center; align-self: center; }
+
+        /* Horizontal responsive counter row with touch scroll and snap */
+        .counter-grid {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            gap: 1rem;
+            padding: 0.75rem;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scroll-snap-type: x mandatory;
+        }
+        .counter-grid::-webkit-scrollbar { height: 8px; }
+        .counter-grid::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 4px; }
+        .counter-grid .counter-btn { flex: 0 0 auto; scroll-snap-align: center; }
+        @media (min-width: 900px) {
+            .counter-grid { gap: 1.25rem; padding: 1rem 1.5rem; }
+            .counter-grid .counter-btn { min-width: 160px; }
+        }
         .counter-btn .counter-number { width:48px; height:48px; font-size:1.05rem; }
         .counter-btn .counter-title { font-size:0.98rem; font-weight:700; color: #0f172a; }
         .counter-btn .counter-desc { font-size:0.75rem; color: rgba(15,23,42,0.55); }
         /* vertical center helper */
         .vertical-center { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1rem; min-height: calc(100dvh - 2rem); }
-
-        /* Position counter info to top-right inside the queue card */
-        #queueContent { position: relative; }
-        #counterInfo { position: absolute; top: 0.8rem; right: 1rem; text-align: right; font-weight: 700; }
-        @media (max-width: 640px) {
-            #counterInfo { position: static; text-align: center; margin-top: .5rem; }
-        }
     </style>
 </head>
 <body>
@@ -197,7 +209,7 @@
                         </h2>
                         
                         <div class="counter-grid-height overflow-y-auto custom-scrollbar pr-1 flex-1 min-h-0">
-                            <div id="countersGrid" class="counter-grid-cols grid gap-2 sm:gap-4">
+                            <div id="countersGrid" class="counter-grid">
                                 <!-- Counters will be injected here -->
                             </div>
                             <div id="noCounters" class="hidden text-center py-8 sm:py-16">
