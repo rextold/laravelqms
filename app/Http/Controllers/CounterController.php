@@ -2,26 +2,27 @@
 
 namespace App\Http\Controllers;
 
-use App\Events\CounterStatusUpdated;
-use App\Events\QueueCalled;
+use App\Http\Requests\Counter\TransferQueueRequest;
+use App\Http\Requests\Counter\RecallQueueRequest;
 use App\Models\Queue;
 use App\Models\User;
 use App\Models\Organization;
 use App\Models\OrganizationSetting;
+use App\Services\CounterService;
 use App\Services\QueueService;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class CounterController extends Controller
 {
     protected $queueService;
+    protected $counterService;
 
-    public function __construct(QueueService $queueService)
+    public function __construct(QueueService $queueService, CounterService $counterService)
     {
         $this->queueService = $queueService;
+        $this->counterService = $counterService;
     }
 
     /**
