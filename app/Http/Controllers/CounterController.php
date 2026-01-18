@@ -667,6 +667,54 @@ class CounterController extends Controller
                 Queue::where('counter_id', $counter->id)
                     ->where('status', 'completed')
                     ->where('completed_at', '>=', $thirtyDaysAgo)
+    
+    /**
+     * Send customer notification
+     */
+    public function notifyCustomer(Request $request)
+    {
+        $user = Auth::user();
+        $organization = $request->attributes->get('organization');
+
+        try {
+            // Get current queue for this counter
+            $currentQueue = $user->getCurrentQueue();
+            if (!$currentQueue) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No current queue to notify'
+                ], 400);
+            }
+
+            // Send notification through configured channel
+            $result = $this->counterService->sendCustomerNotification(
+                $user,
+                $currentQueue->queue_number,
+                $request->notification_method,
+                $request->message
+            );
+
+            if (!$result['success']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $result['message']
+                ], 400);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Notification sent successfully',
+                'queue_number' => $currentQueue->queue_number
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Notification error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to send notification'
+            ], 500);
+        }
+    }
                     ->whereRaw('TIME(completed_at) >= ?', ['06:00:00'])
                     ->whereRaw('TIME(completed_at) < ?', ['09:00:00'])
                     ->count(),

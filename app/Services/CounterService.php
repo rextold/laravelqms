@@ -719,4 +719,47 @@ class CounterService
             'peak_hours' => [0, 0, 0, 0]
         ];
     }
+    
+    /**
+     * Send customer notification
+     */
+    public function sendCustomerNotification(User $counter, string $queue, string $method, string $message): array
+    {
+        try {
+            $currentQueue = $counter->getCurrentQueue();
+            
+            if (!$currentQueue) {
+                return [
+                    'success' => false,
+                    'message' => 'No current queue to notify'
+                ];
+            }
+            
+            // Update notified_at timestamp
+            $currentQueue->notified_at = now();
+            $currentQueue->save();
+
+            Log::info('Customer notification sent', [
+                'counter_id' => $counter->id,
+                'queue_id' => $currentQueue->id,
+                'queue_number' => $currentQueue->queue_number,
+                'method' => $method,
+                'message' => $message,
+                'notified_at' => $currentQueue->notified_at
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'Customer notification sent via ' . $method,
+                'queue_number' => $currentQueue->queue_number
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Error sending customer notification: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Failed to send customer notification'
+            ];
+        }
+    }
 }
