@@ -192,6 +192,13 @@
                             <div class="text-xs text-gray-500" id="headerDate"></div>
                         </div>
                         
+                        <!-- Online/Offline Toggle Button -->
+                        <button id="btnToggleOnline" type="button" 
+                                class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors" 
+                                title="Toggle Online Status">
+                            <i class="fas fa-power-off"></i>
+                        </button>
+                        
                         <!-- Minimize/Restore button -->
                         <button id="btnToggleMinimize" type="button" 
                                 class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors" title="Minimize">
@@ -281,15 +288,60 @@
         }
 
         // Bind logout button click handler
-        document.addEventListener('DOMContentLoaded', function() {
-            const logoutBtn = document.getElementById('logoutBtn');
-            if (logoutBtn) {
-                logoutBtn.addEventListener('click', handleLogout);
-                console.log('[INIT] Logout button listener attached');
-            } else {
-                console.warn('[INIT] Logout button not found in DOM');
+document.addEventListener('DOMContentLoaded', function() {
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', handleLogout);
+        console.log('[INIT] Logout button listener attached');
+    } else {
+        console.warn('[INIT] Logout button not found in DOM');
+    }
+    
+    // Bind online/offline toggle button
+    const toggleOnlineBtn = document.getElementById('btnToggleOnline');
+    if (toggleOnlineBtn) {
+        // Set initial state
+        fetch(`/${window.location.pathname.split('/')[1]}/counter/status`, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
             }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                toggleOnlineBtn.innerHTML = data.is_online 
+                    ? '<i class="fas fa-power-off text-green-600"></i>' 
+                    : '<i class="fas fa-power-off text-gray-600"></i>';
+                toggleOnlineBtn.title = data.is_online ? 'Online - Click to go offline' : 'Offline - Click to go online';
+            }
+        })
+        .catch(error => console.error('Error getting initial online status:', error));
+        
+        // Add click handler
+        toggleOnlineBtn.addEventListener('click', function() {
+            fetch(`/${window.location.pathname.split('/')[1]}/counter/toggle-online`, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    toggleOnlineBtn.innerHTML = data.is_online 
+                        ? '<i class="fas fa-power-off text-green-600"></i>' 
+                        : '<i class="fas fa-power-off text-gray-600"></i>';
+                    toggleOnlineBtn.title = data.is_online ? 'Online - Click to go offline' : 'Offline - Click to go online';
+                }
+            })
+            .catch(error => console.error('Error toggling online status:', error));
         });
+        console.log('[INIT] Online toggle button listener attached');
+    } else {
+        console.warn('[INIT] Online toggle button not found in DOM');
+    }
+});
 
         // Minimize/Restore functionality
         function toggleMinimize(minimize = null) {
