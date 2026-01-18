@@ -176,8 +176,8 @@
                 <div class="flex items-center justify-between h-16">
                     <!-- Left side - Organization Info -->
                     <div class="flex items-center space-x-4">
-                        @if(isset($settings) && $settings->logo_url)
-                            <img src="{{ $settings->logo_url }}" alt="Organization Logo" class="h-10 w-auto rounded-lg shadow-sm">
+                        @if(isset($organization) && $organization->setting && $organization->setting->organization_logo)
+                            <img src="{{ asset('storage/' . $organization->setting->organization_logo) }}" alt="Organization Logo" class="h-10 w-auto rounded-lg shadow-sm">
                         @endif
                         <div>
                             <h1 class="text-xl font-bold text-gray-900">{{ $organization->organization_name ?? 'Queue Management System' }}</h1>
