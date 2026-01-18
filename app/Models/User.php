@@ -42,6 +42,7 @@ class User extends Authenticatable
         'is_online',
         'is_active',
         'organization_id',
+        'session_id',
     ];
 
     protected $hidden = [
@@ -49,6 +50,7 @@ class User extends Authenticatable
         'remember_token',
     ];    protected $casts = [
         'is_online' => 'boolean',
+        'is_active' => 'boolean',
         'password' => 'hashed',
         'organization_id' => 'integer',
     ];

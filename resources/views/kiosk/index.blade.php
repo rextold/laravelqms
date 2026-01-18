@@ -12,52 +12,86 @@
             --primary: {{ $settings->primary_color ?? '#3b82f6' }};
             --secondary: {{ $settings->secondary_color ?? '#8b5cf6' }};
             --accent: {{ $settings->accent_color ?? '#10b981' }};
+            --text-color: {{ $settings->text_color ?? '#ffffff' }};
         }
-        
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { 
-            height: 100%; 
-            min-height: 100dvh; 
-            overflow: hidden; 
-            font-family: system-ui, -apple-system, sans-serif;
+        html, body {
+            height: 100%;
+            min-height: 100dvh;
+            overflow: hidden;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
         }
-        body { background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); }
-        
-        .glass { 
-            background: rgba(255,255,255,0.95); 
+        body {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 50%, var(--accent) 100%);
+            background-attachment: fixed;
+        }
+
+        .glass-card {
+            background: rgba(255,255,255,0.95);
             backdrop-filter: blur(20px);
-            border-radius: 1rem;
+            border-radius: 1.5rem;
             box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+            border: 1px solid rgba(255,255,255,0.2);
         }
-        
+
         .counter-card {
-            transition: all 0.2s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
+            transform: translateZ(0);
         }
-        .counter-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.15); }
-        .counter-card:active { transform: translateY(-2px); }
-        
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        .pulse { animation: pulse 2s infinite; }
-        
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .spin { animation: spin 1s linear infinite; }
-        
-        /* Mobile-first responsive */
-        .main-grid { display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
-        @media (min-width: 640px) { .main-grid { grid-template-columns: repeat(2, 1fr); gap: 1rem; } }
-        @media (min-width: 1024px) { .main-grid { grid-template-columns: repeat(3, 1fr); } }
-        @media (min-width: 1280px) { .main-grid { grid-template-columns: repeat(4, 1fr); } }
+        .counter-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 32px 64px rgba(0,0,0,0.2);
+        }
+        .counter-card:active { transform: translateY(-4px) scale(0.98); }
+
+        .counter-card.selected {
+            ring: 4px solid var(--accent);
+            ring-offset: 4px;
+            ring-offset-white;
+        }
+
+        @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); } 50% { box-shadow: 0 0 40px rgba(59, 130, 246, 0.8); } }
+        .pulse-glow { animation: pulse-glow 2s infinite; }
+
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fadeInUp { animation: fadeInUp 0.6s ease-out; }
+
+        @keyframes fadeInScale { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        .animate-fadeInScale { animation: fadeInScale 0.5s ease-out; }
+
+        @keyframes slideInRight { from { opacity: 0; transform: translateX(50px); } to { opacity: 1; transform: translateX(0); } }
+        .animate-slideInRight { animation: slideInRight 0.5s ease-out; }
+
+        @keyframes progress { 0% { width: 0%; } 100% { width: 100%; } }
+        .progress-bar { animation: progress 2s ease-in-out; }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.3); border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.5); }
+
+        .touch-target { min-height: 44px; min-width: 44px; }
+
+        @media (max-width: 768px) {
+            .counter-grid { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+            .queue-number { font-size: 4rem; }
+        }
+
+        @media (min-width: 769px) {
+            .counter-grid { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; }
+            .queue-number { font-size: 6rem; }
+        }
     </style>
 </head>
 <body>
     <!-- Background particles removed for cleaner kiosk look -->
     
     <!-- Settings Button -->
-    <button onclick="showSettings()" 
-            class="settings-btn fixed top-4 right-4 z-50 glass-card px-3 sm:px-6 py-2 sm:py-3 rounded-xl shadow-2xl hover:shadow-3xl transition-all transform hover:scale-105 text-gray-700 font-semibold text-sm sm:text-base">
-        <i class="settings-btn-icon fas fa-cog mr-0 sm:mr-2 text-lg sm:text-xl"></i>
-        <span class="hidden sm:inline">Settings</span>
+    <button onclick="showSettings()"
+            class="fixed top-6 right-6 z-50 glass-card px-4 py-3 rounded-2xl shadow-2xl hover:shadow-3xl transition-all transform hover:scale-105 text-gray-700 font-semibold text-sm touch-target">
+        <i class="fas fa-cog text-xl"></i>
     </button>
     
     <!-- Main Container -->

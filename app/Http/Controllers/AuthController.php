@@ -66,6 +66,25 @@ class AuthController extends Controller
                 }
             }
 
+            // For counter users, prevent multiple simultaneous logins
+            if ($user->isCounter()) {
+                // Check if this counter is already logged in from another session
+                if ($user->session_id && $user->session_id !== session()->getId()) {
+                    // Invalidate the old session
+                    $this->invalidateOldSession($user->session_id);
+                    
+                    // Log the forced logout
+                    Log::info('Counter user logged out from previous session', [
+                        'username' => $user->username,
+                        'old_session_id' => $user->session_id,
+                        'new_session_id' => session()->getId(),
+                    ]);
+                }
+                
+                // Update the session_id for this counter
+                $user->update(['session_id' => session()->getId()]);
+            }
+
             // Regenerate session AFTER auth check succeeds
             $request->session()->regenerate();
             
@@ -89,10 +108,13 @@ class AuthController extends Controller
     {
         $user = Auth::user();
         
-        // Set counter offline on logout (both for GET and POST)
+        // Set counter offline and clear session_id on logout (both for GET and POST)
         if ($user && $user->isCounter()) {
             try {
-                $user->update(['is_online' => false]);
+                $user->update([
+                    'is_online' => false,
+                    'session_id' => null
+                ]);
             } catch (\Exception $e) {
                 Log::warning('Failed to set counter offline on logout: ' . $e->getMessage());
                 // Continue with logout even if offline update fails
@@ -179,6 +201,24 @@ class AuthController extends Controller
 
         // Fallback
         return redirect('/');
+    }
+
+    protected function invalidateOldSession(string $sessionId): void
+    {
+        try {
+            // Get the session driver
+            $sessionManager = app('session');
+            $store = $sessionManager->getStore();
+            
+            // Remove the old session from storage
+            $store->delete($sessionId);
+        } catch (\Exception $e) {
+            // Log but don't fail the login if session invalidation fails
+            Log::warning('Failed to invalidate old session', [
+                'session_id' => $sessionId,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     protected function throttleKey(Request $request): string

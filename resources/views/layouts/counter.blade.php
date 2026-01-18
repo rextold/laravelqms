@@ -283,14 +283,93 @@
         // Refresh token every 30 minutes (1800000 ms)
         setInterval(refreshCSRFToken, 1800000);
 
-        // Also refresh on user activity after 25 minutes of inactivity
+        // Auto-logout after 30 minutes of inactivity for counters
         let inactivityTimer;
+        let autoLogoutTimer;
+        const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+        const WARNING_TIME = 5 * 60 * 1000; // Show warning 5 minutes before logout
+        
         function resetInactivityTimer() {
             clearTimeout(inactivityTimer);
-            inactivityTimer = setTimeout(refreshCSRFToken, 1500000); // 25 minutes
+            clearTimeout(autoLogoutTimer);
+            
+            // Reset CSRF refresh timer (25 minutes)
+            inactivityTimer = setTimeout(refreshCSRFToken, 1500000);
+            
+            // Reset auto-logout timer (30 minutes)
+            autoLogoutTimer = setTimeout(() => {
+                showAutoLogoutWarning();
+            }, INACTIVITY_TIMEOUT - WARNING_TIME);
         }
         
-        ['click', 'keypress', 'scroll', 'mousemove'].forEach(event => {
+        function showAutoLogoutWarning() {
+            // Create warning modal
+            const modal = document.createElement('div');
+            modal.id = 'autoLogoutModal';
+            modal.className = 'fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 backdrop-blur-sm';
+            modal.innerHTML = `
+                <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 transform transition-all animate-fadeInScale">
+                    <div class="bg-gradient-to-r from-red-500 to-orange-500 px-6 py-4 rounded-t-xl">
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-clock text-white text-2xl"></i>
+                            <h2 class="text-xl font-bold text-white">Session Timeout Warning</h2>
+                        </div>
+                    </div>
+                    <div class="p-6 space-y-4">
+                        <p class="text-gray-700">
+                            You have been inactive for 25 minutes. Your session will automatically logout in <span id="countdown" class="font-bold text-red-600">5:00</span> minutes for security reasons.
+                        </p>
+                        <div class="flex space-x-3">
+                            <button onclick="extendSession()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition">
+                                <i class="fas fa-check mr-2"></i>Stay Logged In
+                            </button>
+                            <button onclick="logoutNow()" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-semibold transition">
+                                <i class="fas fa-sign-out-alt mr-2"></i>Logout Now
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            // Start countdown
+            let timeLeft = WARNING_TIME / 1000; // 5 minutes in seconds
+            const countdownElement = document.getElementById('countdown');
+            const countdownInterval = setInterval(() => {
+                timeLeft--;
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                countdownElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(countdownInterval);
+                    logoutNow();
+                }
+            }, 1000);
+            
+            // Store interval for cleanup
+            modal.dataset.countdownInterval = countdownInterval;
+        }
+        
+        function extendSession() {
+            const modal = document.getElementById('autoLogoutModal');
+            if (modal) {
+                clearInterval(modal.dataset.countdownInterval);
+                modal.remove();
+            }
+            resetInactivityTimer();
+        }
+        
+        function logoutNow() {
+            const modal = document.getElementById('autoLogoutModal');
+            if (modal) {
+                clearInterval(modal.dataset.countdownInterval);
+                modal.remove();
+            }
+            window.location.href = '{{ route('logout') }}';
+        }
+        
+        ['click', 'keypress', 'scroll', 'mousemove', 'touchstart', 'touchmove'].forEach(event => {
             document.addEventListener(event, resetInactivityTimer, { passive: true });
         });
         
