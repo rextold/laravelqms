@@ -12,7 +12,9 @@ use App\Services\CounterService;
 use App\Services\QueueService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
 class CounterController extends Controller
 {
@@ -23,6 +25,31 @@ class CounterController extends Controller
     {
         $this->queueService = $queueService;
         $this->counterService = $counterService;
+    }
+
+    /**
+     * Get analytics data for counter performance
+     */
+    protected function getAnalyticsData(User $user)
+    {
+        try {
+            $organization = $user->organization;
+            
+            $analytics = [
+                'daily_served' => $this->counterService->getCounterAnalytics($user->id, 'daily_served'),
+                'avg_wait_time' => $this->counterService->getCounterAnalytics($user->id, 'avg_wait_time'),
+                'avg_service_time' => $this->counterService->getCounterAnalytics($user->id, 'avg_service_time'),
+                'efficiency' => $this->counterService->getCounterAnalytics($user->id, 'efficiency'),
+                'peak_hours' => $this->counterService->getCounterAnalytics($user->id, 'peak_hours'),
+                'organization_settings' => OrganizationSetting::getSettings($organization->id)
+            ];
+
+            return $analytics;
+
+        } catch (\Exception $e) {
+            Log::error('Analytics data error: ' . $e->getMessage());
+            return ['error' => 'Failed to load analytics data'];
+        }
     }
 
     /**
@@ -536,9 +563,8 @@ class CounterController extends Controller
                 $currentQueue = $user->getCurrentQueue();
                 $waitingQueues = $user->getWaitingQueues();
                 $skippedQueues = $user->getSkippedQueues();
-                $onlineCounters = $user->getOnlineCounters();
-                $stats = $this->counterService->getCounterStats($user->id, $organization->id);
-                $analytics = $this->getAnalyticsData($organization->id);
+                $onlineCounters = $user->getOnlineCounters();                $stats = $this->counterService->getCounterStats($user->id, $organization->id);
+                $analytics = $this->getAnalyticsData($user);
 
                 return response()->json([
                     'success' => true,

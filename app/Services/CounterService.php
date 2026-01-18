@@ -598,6 +598,62 @@ class CounterService
     /**
      * Get peak hours distribution (last 30 days)
      */
+    /**
+     * Get specific counter analytics metric
+     */
+    public function getCounterAnalytics(int $counterId, string $metric): mixed
+    {
+        try {
+            switch ($metric) {
+                case 'daily_served':
+                    return Queue::where('counter_id', $counterId)
+                        ->where('status', 'completed')
+                        ->whereDate('completed_at', Carbon::today())
+                        ->count();
+
+                case 'avg_wait_time':
+                    return Queue::where('counter_id', $counterId)
+                        ->where('status', 'completed')
+                        ->whereDate('completed_at', Carbon::today())
+                        ->average(DB::raw('TIMESTAMPDIFF(MINUTE, created_at, called_at)'));
+
+                case 'avg_service_time':
+                    return Queue::where('counter_id', $counterId)
+                        ->where('status', 'completed')
+                        ->whereDate('completed_at', Carbon::today())
+                        ->average(DB::raw('TIMESTAMPDIFF(MINUTE, called_at, completed_at)'));
+
+                case 'efficiency':
+                    $totalTime = Queue::where('counter_id', $counterId)
+                        ->where('status', 'completed')
+                        ->whereDate('completed_at', Carbon::today())
+                        ->sum(DB::raw('TIMESTAMPDIFF(MINUTE, called_at, completed_at)'));
+
+                    $onlineTime = Carbon::now()->diffInMinutes(
+                        User::find($counterId)->updated_at
+                    );
+
+                    return $onlineTime > 0 ? round(($totalTime / $onlineTime) * 100, 2) : 0;
+
+                case 'peak_hours':
+                    return Queue::where('counter_id', $counterId)
+                        ->where('status', 'completed')
+                        ->whereDate('completed_at', '>=', Carbon::today()->subDays(30))
+                        ->selectRaw('HOUR(completed_at) as hour, COUNT(*) as count')
+                        ->groupBy('hour')
+                        ->orderByDesc('count')
+                        ->limit(3)
+                        ->pluck('count', 'hour');
+
+                default:
+                    return null;
+            }
+        } catch (\Exception $e) {
+            Log::error("Counter analytics error [{$metric}]: " . $e->getMessage());
+            return null;
+        }
+    }
+
     private function getPeakHoursData(int $counterId, Carbon $today): array
     {
         $thirtyDaysAgo = $today->copy()->subDays(30);
