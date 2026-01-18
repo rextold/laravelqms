@@ -341,7 +341,7 @@ function runActionWithCooldown(btnEl, actionFn, seconds = ACTION_COOLDOWN_SECOND
             }
             
             // Only alert for non-403 errors
-            alert(err || 'Action failed. Please try again.');
+            // alert(err || 'Action failed. Please try again.');
         });
 }
 
