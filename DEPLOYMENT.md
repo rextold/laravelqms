@@ -1,4 +1,10 @@
-# Laravel QMS - Deployment Guide
+# Production Deployment Guide
+
+## Critical Setup Steps
+
+After deploying to production, run the following commands to ensure all classes are properly autoloaded:
+
+### 1. Clear All Caches# Laravel QMS - Deployment Guide
 
 ## Table of Contents
 - [Server Requirements](#server-requirements)
