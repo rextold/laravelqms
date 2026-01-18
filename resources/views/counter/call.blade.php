@@ -5,10 +5,10 @@
 @section('content')
 <div class="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
     <!-- Main Service Panel -->
-    <div id="panelMain" class="flex-1 p-6">
+    <div id="panelMain" class="flex-1 p-3 sm:p-4 md:p-6">
         <div class="max-w-6xl mx-auto">
             <!-- Current Queue Display -->
-            <div class="glass-card p-8 mb-6">
+            <div class="glass-card p-4 sm:p-6 md:p-8 mb-3 sm:mb-4 md:mb-6">
                 <div class="text-center">
                     <div class="mb-4">
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
@@ -18,35 +18,35 @@
                     </div>
                     <div id="currentNumber" class="queue-number font-extrabold text-gray-900 mb-6 tracking-wider">---</div>
                     
-                    <!-- Action Buttons - 5 buttons only, no toggle -->
-                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 max-w-4xl mx-auto">
+                    <!-- Action Buttons - Responsive grid: 2 cols on mobile, 5 on desktop -->
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3 max-w-4xl mx-auto">
                         <button type="button" id="btnCallNext" 
-                                class="counter-btn flex items-center justify-center px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" disabled>
-                            <i class="fas fa-phone mr-2"></i>
-                            Call Next
+                                class="counter-btn flex items-center justify-center px-3 sm:px-4 py-2.5 sm:py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg sm:rounded-xl font-semibold shadow-sm text-sm sm:text-base" disabled>
+                            <i class="fas fa-phone mr-1.5 sm:mr-2"></i>
+                            <span class="hidden xs:inline">Call </span>Next
                         </button>
                         
                         <button type="button" id="btnNotify" 
-                                class="counter-btn flex items-center justify-center px-4 py-3 bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" disabled>
-                            <i class="fas fa-bell mr-2"></i>
+                                class="counter-btn flex items-center justify-center px-3 sm:px-4 py-2.5 sm:py-3 bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg sm:rounded-xl font-semibold shadow-sm text-sm sm:text-base" disabled>
+                            <i class="fas fa-bell mr-1.5 sm:mr-2"></i>
                             Notify
                         </button>
                         
                         <button type="button" id="btnComplete" 
-                                class="counter-btn flex items-center justify-center px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" disabled>
-                            <i class="fas fa-check-circle mr-2"></i>
-                            Complete
+                                class="counter-btn flex items-center justify-center px-3 sm:px-4 py-2.5 sm:py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg sm:rounded-xl font-semibold shadow-sm text-sm sm:text-base" disabled>
+                            <i class="fas fa-check-circle mr-1.5 sm:mr-2"></i>
+                            Done
                         </button>
                         
                         <button type="button" id="btnSkip" 
-                                class="counter-btn flex items-center justify-center px-4 py-3 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" disabled>
-                            <i class="fas fa-forward mr-2"></i>
+                                class="counter-btn flex items-center justify-center px-3 sm:px-4 py-2.5 sm:py-3 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg sm:rounded-xl font-semibold shadow-sm text-sm sm:text-base" disabled>
+                            <i class="fas fa-forward mr-1.5 sm:mr-2"></i>
                             Skip
                         </button>
                         
                         <button type="button" id="btnTransfer" 
-                                class="counter-btn flex items-center justify-center px-4 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" disabled>
-                            <i class="fas fa-exchange-alt mr-2"></i>
+                                class="counter-btn col-span-2 sm:col-span-1 flex items-center justify-center px-3 sm:px-4 py-2.5 sm:py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg sm:rounded-xl font-semibold shadow-sm text-sm sm:text-base" disabled>
+                            <i class="fas fa-exchange-alt mr-1.5 sm:mr-2"></i>
                             Transfer
                         </button>
                     </div>
@@ -178,7 +178,72 @@
 @push('styles')
 <style nonce="{{ session('csp_nonce', '') }}">
 html, body { overflow-x: hidden; }
-.queue-item { @apply flex items-center justify-between p-3 bg-white rounded-lg shadow-sm border border-gray-200 mb-2; }
+.queue-item { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem; background: white; border-radius: 0.5rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; margin-bottom: 0.5rem; }
+
+/* Mobile-first responsive design */
+@media (max-width: 640px) {
+    #panelMain { padding: 0.75rem !important; }
+    .glass-card { padding: 1rem !important; border-radius: 1rem !important; }
+    .queue-number { font-size: 3rem !important; }
+    
+    /* Stack action buttons in 2 columns on mobile */
+    .grid.grid-cols-2.md\\:grid-cols-5 { 
+        grid-template-columns: repeat(2, 1fr) !important; 
+        gap: 0.5rem !important;
+    }
+    
+    /* Make buttons more touch-friendly */
+    .counter-btn { 
+        padding: 0.75rem 0.5rem !important; 
+        font-size: 0.75rem !important;
+        min-height: 48px;
+    }
+    .counter-btn i { margin-right: 0.25rem !important; font-size: 0.875rem !important; }
+    
+    /* Queue lists side by side on mobile landscape, stacked on portrait */
+    .grid.grid-cols-1.md\\:grid-cols-2 { gap: 0.75rem !important; }
+    
+    /* Stats grid - 2x2 on mobile */
+    .grid.grid-cols-2.md\\:grid-cols-4 { gap: 0.5rem !important; }
+    .grid.grid-cols-2.md\\:grid-cols-4 > div { padding: 0.75rem !important; }
+    .grid.grid-cols-2.md\\:grid-cols-4 .text-xl { font-size: 1rem !important; }
+    .grid.grid-cols-2.md\\:grid-cols-4 .text-sm { font-size: 0.65rem !important; }
+    .grid.grid-cols-2.md\\:grid-cols-4 .w-10 { width: 2rem !important; height: 2rem !important; }
+    
+    /* Queue list items more compact */
+    .queue-item { padding: 0.5rem 0.75rem !important; }
+    .queue-item .text-lg { font-size: 1rem !important; }
+    
+    /* Modal improvements for mobile */
+    #transfer-modal .max-w-md,
+    #skip-modal .max-w-md { 
+        max-width: calc(100vw - 2rem) !important;
+        margin: 1rem !important;
+    }
+}
+
+/* Small mobile (iPhone SE, etc) */
+@media (max-width: 375px) {
+    .queue-number { font-size: 2.5rem !important; }
+    .counter-btn { font-size: 0.7rem !important; padding: 0.5rem !important; }
+    .grid.grid-cols-2.md\\:grid-cols-5 { gap: 0.375rem !important; }
+}
+
+/* Landscape mode on mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+    .glass-card { padding: 0.75rem !important; margin-bottom: 0.5rem !important; }
+    .queue-number { font-size: 2rem !important; margin-bottom: 0.5rem !important; }
+    .grid.grid-cols-1.md\\:grid-cols-2 { grid-template-columns: repeat(2, 1fr) !important; }
+    .max-h-80 { max-height: 120px !important; }
+    .grid.grid-cols-2.md\\:grid-cols-4 { display: none; } /* Hide stats in landscape */
+}
+
+/* Touch-friendly targets */
+@media (hover: none) and (pointer: coarse) {
+    .counter-btn { min-height: 48px; }
+    button { min-height: 44px; }
+    .queue-item button { min-height: 36px; padding: 0.5rem 0.75rem; }
+}
 </style>
 @endpush
 

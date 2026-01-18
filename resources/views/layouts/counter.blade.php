@@ -172,43 +172,63 @@
     <div class="min-h-screen">
         <!-- Header -->
         <header class="counter-header">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex items-center justify-between h-16">
+            <div class="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-14 sm:h-16">
                     <!-- Left side - Organization Info -->
-                    <div class="flex items-center space-x-4">
-                        @if(isset($organization) && $organization->setting && $organization->setting->organization_logo)
-                            <img src="{{ asset('storage/' . $organization->setting->organization_logo) }}" alt="Organization Logo" class="h-10 w-auto rounded-lg shadow-sm">
+                    <div class="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
+                        @php
+                            $logoUrl = null;
+                            if (isset($organization)) {
+                                // Try multiple logo sources
+                                if ($organization->setting && $organization->setting->organization_logo) {
+                                    $logoUrl = asset('storage/' . $organization->setting->organization_logo);
+                                } elseif ($organization->organization_logo) {
+                                    $logoUrl = asset('storage/' . $organization->organization_logo);
+                                } elseif (isset($settings) && $settings->organization_logo) {
+                                    $logoUrl = asset('storage/' . $settings->organization_logo);
+                                }
+                            }
+                            $orgName = $organization->organization_name ?? 'Queue Management System';
+                        @endphp
+                        
+                        @if($logoUrl)
+                            <img src="{{ $logoUrl }}" alt="{{ $orgName }}" class="h-8 sm:h-10 w-auto rounded-lg shadow-sm flex-shrink-0">
+                        @else
+                            <div class="h-8 sm:h-10 w-8 sm:w-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-building text-white text-sm sm:text-base"></i>
+                            </div>
                         @endif
-                        <div>
-                            <h1 class="text-xl font-bold text-gray-900">{{ $organization->organization_name ?? 'Queue Management System' }}</h1>
-                            <p class="text-sm text-gray-600">Counter {{ $counter->counter_number ?? '' }} - {{ $counter->display_name ?? 'Service Station' }}</p>
+                        <div class="min-w-0">
+                            <h1 class="text-sm sm:text-xl font-bold text-gray-900 truncate">{{ $orgName }}</h1>
+                            <p class="text-xs sm:text-sm text-gray-600 truncate">Counter {{ $counter->counter_number ?? '' }} - {{ $counter->display_name ?? 'Service Station' }}</p>
                         </div>
                     </div>
                     
                     <!-- Right side - Time and Controls -->
-                    <div class="flex items-center space-x-4">
-                        <div class="text-right">
-                            <div class="text-lg font-semibold text-gray-700" id="headerTime"></div>
+                    <div class="flex items-center space-x-1 sm:space-x-2 md:space-x-4 flex-shrink-0">
+                        <!-- Time display - hidden on very small screens -->
+                        <div class="text-right hidden sm:block">
+                            <div class="text-sm sm:text-lg font-semibold text-gray-700" id="headerTime"></div>
                             <div class="text-xs text-gray-500" id="headerDate"></div>
                         </div>
                         
                         <!-- Online/Offline Status Toggle Button -->
                         <button id="btnToggleOnline" type="button" 
-                                class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-all duration-300 flex items-center" 
+                                class="px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-all duration-300 flex items-center" 
                                 title="{{ $counter->is_online ?? false ? 'Online - Click to go offline' : 'Offline - Click to go online' }}">
-                            <i id="statusIcon" class="fas fa-circle {{ $counter->is_online ?? false ? 'text-green-500' : 'text-red-500' }}" style="font-size: 0.6rem;"></i>
-                            <span id="statusLabel" class="text-xs font-semibold {{ $counter->is_online ?? false ? 'text-green-600' : 'text-red-600' }} ml-2">{{ $counter->is_online ?? false ? 'Online' : 'Offline' }}</span>
+                            <i id="statusIcon" class="fas fa-circle {{ $counter->is_online ?? false ? 'text-green-500' : 'text-red-500' }}" style="font-size: 0.5rem;"></i>
+                            <span id="statusLabel" class="text-xs font-semibold {{ $counter->is_online ?? false ? 'text-green-600' : 'text-red-600' }} ml-1 sm:ml-2 hidden sm:inline">{{ $counter->is_online ?? false ? 'Online' : 'Offline' }}</span>
                         </button>
                         
-                        <!-- Minimize/Restore button -->
+                        <!-- Minimize/Restore button - hidden on mobile -->
                         <button id="btnToggleMinimize" type="button" 
-                                class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors" title="Minimize">
+                                class="hidden sm:flex px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors" title="Minimize">
                             <i class="fas fa-window-minimize"></i>
                         </button>
                         
                         <!-- Logout button -->
                         <a href="#" id="logoutBtn" 
-                           class="px-3 py-2 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 transition-colors" title="Logout">
+                           class="px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 transition-colors" title="Logout">
                             <i class="fas fa-sign-out-alt"></i>
                         </a>
                     </div>                </div>

@@ -2,385 +2,52 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $organization->organization_name }} - Queue Kiosk</title>
-    <script src="/js/counter-realtime.js"></script>
+    <title>{{ $organization->organization_name ?? 'Queue Kiosk' }} - Queue Kiosk</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --primary-color: {{ $settings->primary_color }};
-            --secondary-color: {{ $settings->secondary_color }};
-            --accent-color: {{ $settings->accent_color }};
-            --text-color: {{ $settings->text_color }};
+            --primary: {{ $settings->primary_color ?? '#3b82f6' }};
+            --secondary: {{ $settings->secondary_color ?? '#8b5cf6' }};
+            --accent: {{ $settings->accent_color ?? '#10b981' }};
         }
         
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { 
+            height: 100%; 
+            min-height: 100dvh; 
+            overflow: hidden; 
+            font-family: system-ui, -apple-system, sans-serif;
         }
+        body { background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); }
         
-        html, body {
-            height: 100%;
-            min-height: 100dvh;
-            width: 100vw;
-            overflow: hidden;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        body {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-            position: relative;
-        }
-        
-        /* Animated background particles */
-        .bg-particles {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            z-index: 0;
-        }
-        
-        .bg-particles::before,
-        .bg-particles::after {
-            content: '';
-            position: absolute;
-            width: 500px;
-            height: 500px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
-            animation: float 20s ease-in-out infinite;
-        }
-        
-        .bg-particles::before {
-            top: -100px;
-            left: -100px;
-            animation-delay: 0s;
-        }
-        
-        .bg-particles::after {
-            bottom: -100px;
-            right: -100px;
-            animation-delay: 10s;
-        }
-        
-        @keyframes float {
-            0%, 100% { transform: translate(0, 0) scale(1); }
-            25% { transform: translate(50px, 50px) scale(1.1); }
-            50% { transform: translate(-50px, 100px) scale(0.9); }
-            75% { transform: translate(100px, -50px) scale(1.05); }
-        }
-        
-        /* Glass morphism effect */
-        .glass-card {
-            background: rgba(255, 255, 255, 0.95);
+        .glass { 
+            background: rgba(255,255,255,0.95); 
             backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3);
+            border-radius: 1rem;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
         }
         
-        /* Step indicator animations */
-        .step-indicator {
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        .counter-card {
+            transition: all 0.2s ease;
+            cursor: pointer;
         }
+        .counter-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.15); }
+        .counter-card:active { transform: translateY(-2px); }
         
-        .step-active {
-            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
-            color: white;
-            transform: scale(1.1);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-        }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .pulse { animation: pulse 2s infinite; }
         
-        .step-completed {
-            background: linear-gradient(135deg, #10b981, #059669);
-            color: white;
-            box-shadow: 0 5px 15px rgba(16, 185, 129, 0.3);
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spin { animation: spin 1s linear infinite; }
         
-        /* Counter button effects */
-        .counter-btn {
-            position: relative;
-            overflow: hidden;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .counter-btn::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(59, 130, 246, 0.1);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
-        }
-        
-        .counter-btn:hover::before {
-            width: 300px;
-            height: 300px;
-        }
-        
-        .counter-btn:hover {
-            transform: translateY(-8px) scale(1.03);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-        }
-        
-        .counter-btn:active {
-            transform: translateY(-4px) scale(1.01);
-        }
-        
-        /* Pulse animation */
-        @keyframes pulse-scale {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-        }
-        
-        .pulse-animation {
-            animation: pulse-scale 2s ease-in-out infinite;
-        }
-        
-        /* Fade in animations */
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        @keyframes fadeInScale {
-            from {
-                opacity: 0;
-                transform: scale(0.9);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-        
-        .animate-fadeInUp {
-            animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .animate-fadeInScale {
-            animation: fadeInScale 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        /* Custom scrollbar */
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 12px;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.05);
-            border-radius: 10px;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
-            border-radius: 10px;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: var(--accent-color);
-        }
-        
-        /* Progress bar animation */
-        @keyframes progressSlide {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(400%); }
-        }
-        
-        .progress-bar {
-            animation: progressSlide 1.5s ease-in-out infinite;
-        }
-        
-        /* Badge ping animation */
-        @keyframes ping-small {
-            0% {
-                transform: scale(1);
-                opacity: 1;
-            }
-            75%, 100% {
-                transform: scale(1.5);
-                opacity: 0;
-            }
-        }
-        
-        .animate-ping-small {
-            animation: ping-small 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
-        }
-        
-        /* Viewport-based responsive sizing */
-        .main-container {
-            height: 100dvh;
-            min-height: 100dvh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        /* Let the grid area truly fill available height */
-        .counter-grid-height {
-            flex: 1;
-            min-height: 0;
-            max-height: none;
-        }
-        
-        .step-header {
-            flex-shrink: 0;
-        }
-        
-        .step-content {
-            flex: 1;
-            min-height: 0;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-        
-        /* Height-based responsive text and spacing */
-        @media (max-height: 600px) {
-            .logo-size { height: 2.5rem !important; }
-            .title-size { font-size: 1.5rem !important; }
-            .subtitle-size { font-size: 1rem !important; }
-            .section-title { font-size: 1.25rem !important; }
-            .counter-grid-height { max-height: none !important; }
-            .queue-number-size { font-size: 2.25rem !important; }
-            .step-indicator-text { font-size: 0.75rem !important; }
-            .step-indicator-number { font-size: 1rem !important; }
-            .btn-text { font-size: 0.875rem !important; }
-            .spacing-sm { margin-bottom: 0.5rem !important; }
-            .spacing-md { margin-bottom: 0.75rem !important; }
-            .spacing-lg { margin-bottom: 1rem !important; }
-            .padding-sm { padding: 0.5rem !important; }
-            .padding-md { padding: 1rem !important; }
-            .counter-card-padding { padding: 0.75rem !important; }
-        }
-        
-        @media (min-height: 601px) and (max-height: 800px) {
-            .logo-size { height: 3.5rem !important; }
-            .title-size { font-size: 2.5rem !important; }
-            .subtitle-size { font-size: 1.25rem !important; }
-            .section-title { font-size: 1.5rem !important; }
-            .counter-grid-height { max-height: none !important; }
-            .queue-number-size { font-size: 3rem !important; }
-            .step-indicator-text { font-size: 0.875rem !important; }
-            .step-indicator-number { font-size: 1.5rem !important; }
-            .btn-text { font-size: 1rem !important; }
-            .spacing-sm { margin-bottom: 0.75rem !important; }
-            .spacing-md { margin-bottom: 1rem !important; }
-            .spacing-lg { margin-bottom: 1.5rem !important; }
-            .padding-sm { padding: 0.75rem !important; }
-            .padding-md { padding: 1.5rem !important; }
-            .counter-card-padding { padding: 1rem !important; }
-        }
-        
-        @media (min-height: 801px) and (max-height: 1000px) {
-            .logo-size { height: 4rem !important; }
-            .title-size { font-size: 3rem !important; }
-            .subtitle-size { font-size: 1.5rem !important; }
-            .section-title { font-size: 1.75rem !important; }
-            .counter-grid-height { max-height: none !important; }
-            .queue-number-size { font-size: 3.75rem !important; }
-            .step-indicator-text { font-size: 0.875rem !important; }
-            .step-indicator-number { font-size: 1.75rem !important; }
-            .btn-text { font-size: 1rem !important; }
-            .spacing-sm { margin-bottom: 1rem !important; }
-            .spacing-md { margin-bottom: 1.5rem !important; }
-            .spacing-lg { margin-bottom: 2rem !important; }
-            .padding-sm { padding: 1rem !important; }
-            .padding-md { padding: 2rem !important; }
-            .counter-card-padding { padding: 1.25rem !important; }
-        }
-        
-        @media (min-height: 1001px) {
-            .logo-size { height: 5rem !important; }
-            .title-size { font-size: 4rem !important; }
-            .subtitle-size { font-size: 2rem !important; }
-            .section-title { font-size: 2rem !important; }
-            .counter-grid-height { max-height: none !important; }
-            .queue-number-size { font-size: 4.5rem !important; }
-            .step-indicator-text { font-size: 1rem !important; }
-            .step-indicator-number { font-size: 2rem !important; }
-            .btn-text { font-size: 1.125rem !important; }
-            .spacing-sm { margin-bottom: 1rem !important; }
-            .spacing-md { margin-bottom: 2rem !important; }
-            .spacing-lg { margin-bottom: 2.5rem !important; }
-            .padding-sm { padding: 1rem !important; }
-            .padding-md { padding: 2.5rem !important; }
-            .counter-card-padding { padding: 1.5rem !important; }
-        }
-        
-        /* Width responsive adjustments */
-        @media (max-width: 480px) {
-            .step-indicators-container { transform: scale(0.75); }
-            .counter-grid-cols { grid-template-columns: repeat(1, minmax(0, 1fr)) !important; }
-            .settings-btn { top: 0.5rem !important; right: 0.5rem !important; font-size: 0.75rem !important; padding: 0.5rem !important; }
-            .settings-btn-icon { font-size: 1rem !important; }
-        }
-        
-        @media (min-width: 481px) and (max-width: 640px) {
-            .step-indicators-container { transform: scale(0.85); }
-            .counter-grid-cols { grid-template-columns: repeat(1, minmax(0, 1fr)) !important; }
-        }
-        
-        @media (min-width: 641px) and (max-width: 1024px) {
-            .counter-grid-cols { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
-        }
-        
-        @media (min-width: 1025px) and (max-width: 1440px) {
-            .counter-grid-cols { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
-        }
-        
-        @media (min-width: 1441px) {
-            .counter-grid-cols { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
-        }
-        
-        /* Landscape mode adjustments for mobile */
-        @media (max-height: 500px) and (orientation: landscape) {
-            .logo-size { height: 2rem !important; }
-            .title-size { font-size: 1.25rem !important; }
-            .subtitle-size { font-size: 0.875rem !important; }
-            .section-title { font-size: 1rem !important; }
-            .counter-grid-height { max-height: none !important; }
-            .queue-number-size { font-size: 1.75rem !important; }
-            .step-indicator-text { font-size: 0.625rem !important; }
-            .step-indicator-number { font-size: 0.875rem !important; }
-            .btn-text { font-size: 0.75rem !important; }
-            .spacing-sm { margin-bottom: 0.25rem !important; }
-            .spacing-md { margin-bottom: 0.5rem !important; }
-            .spacing-lg { margin-bottom: 0.75rem !important; }
-            .padding-sm { padding: 0.5rem !important; }
-            .padding-md { padding: 0.75rem !important; }
-            .counter-card-padding { padding: 0.5rem !important; }
-            .step-indicators-container { transform: scale(0.7); }
-        }
-        
-        /* Touch-friendly targets */
-        @media (hover: none) and (pointer: coarse) {
-            .counter-btn { min-height: 60px; }
-            button, .btn-primary { min-height: 48px; }
-        }
-        
-        /* Print styles */
-        @media print {
-            .settings-btn, .step-indicators-container, 
-            button[onclick="testPrint()"], 
-            button[onclick="saveSettings()"] { 
-                display: none !important; 
-            }
-        }
+        /* Mobile-first responsive */
+        .main-grid { display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
+        @media (min-width: 640px) { .main-grid { grid-template-columns: repeat(2, 1fr); gap: 1rem; } }
+        @media (min-width: 1024px) { .main-grid { grid-template-columns: repeat(3, 1fr); } }
+        @media (min-width: 1280px) { .main-grid { grid-template-columns: repeat(4, 1fr); } }
     </style>
 </head>
 <body>
