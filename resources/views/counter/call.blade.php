@@ -51,9 +51,8 @@
                         </button>
                         
                         <button type="button" id="btnToggleOnline" 
-                                class="counter-btn flex items-center justify-center px-4 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-semibold shadow-sm">
-                            <i class="fas fa-power-off mr-2"></i>
-                            Toggle Online
+                                class="counter-btn flex items-center justify-center p-3 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-semibold shadow-sm" title="Toggle Online">
+                            <i class="fas fa-power-off"></i>
                         </button>
                     </div>
                 </div>
@@ -898,8 +897,10 @@ function confirmTransfer(toCounterId) {
 
 function toggleOnline(btnEl) {
     return runActionWithCooldown(btnEl, () =>
-        makeCounterRequest('toggle-online')
-            .then((data) => {
+        $.ajax({
+            url: `/${ORG_CODE}/counter/toggle-online`,
+            type: 'GET',
+            success: (data) => {
                 if (data.success) {
                     fetchData();
                     // Update button appearance based on new status
@@ -913,7 +914,8 @@ function toggleOnline(btnEl) {
                 } else {
                     throw new Error(data?.message || 'Failed to toggle online status');
                 }
-            })
+            }
+        })
     );
 }
 
@@ -1001,18 +1003,18 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }, FETCH_INTERVAL);
     
-    // Initial fetch
+    // Initial fetch and set counter to online on login
     try {
         fetchData().then(() => {
             // Initialize toggle online button state
             const toggleBtn = document.getElementById('btnToggleOnline');
             if (toggleBtn && currentCounterData) {
-                if (currentCounterData.is_online) {
+                if (!currentCounterData.is_online) {
+                    // Auto set to online on login
+                    toggleOnline(toggleBtn);
+                } else {
                     toggleBtn.classList.remove('bg-gray-600');
                     toggleBtn.classList.add('bg-green-600');
-                } else {
-                    toggleBtn.classList.remove('bg-green-600');
-                    toggleBtn.classList.add('bg-gray-600');
                 }
             }
         });
