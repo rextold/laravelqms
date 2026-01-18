@@ -35,55 +35,97 @@ class QueueService
     {
         $organizationId = $counter->organization_id;
 
-        $queue = DB::transaction(function () use ($counter, $organizationId) {
-            // Ensure we have settings for THIS organization (do not rely on session)
-            $settingsQuery = OrganizationSetting::query();
-            if ($organizationId) {
-                $settingsQuery->where('organization_id', $organizationId);
-            }
+        try {
+            $queue = DB::transaction(function () use ($counter, $organizationId) {
+                // Ensure we have settings for THIS organization (do not rely on session)
+                $settingsQuery = OrganizationSetting::query();
+                if ($organizationId) {
+                    $settingsQuery->where('organization_id', $organizationId);
+                }
 
-            /** @var OrganizationSetting|null $settings */
-            $settings = $settingsQuery->lockForUpdate()->first();
+                /** @var OrganizationSetting|null $settings */
+                $settings = $settingsQuery->lockForUpdate()->first();
 
+                if (!$settings) {
+                    // Fallback to singleton getter (uses session), but prefer explicit org
+                    $settings = OrganizationSetting::getSettings();
+                }
+
+                $digits = (int) ($settings->queue_number_digits ?? 4);
+                if ($digits <= 0) {
+                    $digits = 4;
+                }
+
+                // Initialize sequence from existing queues if needed
+                $lastSeq = (int) ($settings->last_queue_sequence ?? 0);
+                if ($organizationId && $lastSeq <= 0) {
+                    // Fast path: queue numbers are now digits-only; use most recent row and parse suffix.
+                    // This avoids full-table scans on large queue history.
+                    $latestQueueNumber = (string) (Queue::where('organization_id', $organizationId)
+                        ->orderByDesc('id')
+                        ->value('queue_number') ?? '');
+
+                    if ($latestQueueNumber !== '') {
+                        $parts = explode('-', $latestQueueNumber);
+                        $suffix = end($parts);
+                        $lastSeq = max($lastSeq, (int) $suffix);
+                    }
+                }
+
+                $nextSeq = $lastSeq + 1;
+                $settings->last_queue_sequence = $nextSeq;
+                $settings->save();
+
+                $queueNumber = str_pad((string) $nextSeq, $digits, '0', STR_PAD_LEFT);
+
+                return Queue::create([
+                    'queue_number' => $queueNumber,
+                    'counter_id' => $counter->id,
+                    'organization_id' => $organizationId,
+                    'status' => 'waiting',
+                ]);
+            });
+        } catch (\Throwable $e) {
+            // Transaction failed (possible lock wait or DB issue). Fall back to a non-blocking approach.
+            \Log::warning('createQueue transaction failed, falling back to non-transactional creation: ' . $e->getMessage(), ['counter_id' => $counter->id, 'organization_id' => $organizationId]);
+
+            // Attempt to get settings without locking
+            $settings = OrganizationSetting::where('organization_id', $organizationId)->first();
             if (!$settings) {
-                // Fallback to singleton getter (uses session), but prefer explicit org
                 $settings = OrganizationSetting::getSettings();
             }
 
             $digits = (int) ($settings->queue_number_digits ?? 4);
-            if ($digits <= 0) {
-                $digits = 4;
-            }
+            if ($digits <= 0) $digits = 4;
 
-            // Initialize sequence from existing queues if needed
-            $lastSeq = (int) ($settings->last_queue_sequence ?? 0);
-            if ($organizationId && $lastSeq <= 0) {
-                // Fast path: queue numbers are now digits-only; use most recent row and parse suffix.
-                // This avoids full-table scans on large queue history.
-                $latestQueueNumber = (string) (Queue::where('organization_id', $organizationId)
-                    ->orderByDesc('id')
-                    ->value('queue_number') ?? '');
-
-                if ($latestQueueNumber !== '') {
-                    $parts = explode('-', $latestQueueNumber);
-                    $suffix = end($parts);
-                    $lastSeq = max($lastSeq, (int) $suffix);
-                }
+            // Determine last sequence by inspecting the most recent queue number
+            $latestQueueNumber = (string) (Queue::where('organization_id', $organizationId)
+                ->orderByDesc('id')
+                ->value('queue_number') ?? '');
+            $lastSeq = 0;
+            if ($latestQueueNumber !== '') {
+                $parts = explode('-', $latestQueueNumber);
+                $suffix = end($parts);
+                $lastSeq = (int) $suffix;
             }
 
             $nextSeq = $lastSeq + 1;
-            $settings->last_queue_sequence = $nextSeq;
-            $settings->save();
-
             $queueNumber = str_pad((string) $nextSeq, $digits, '0', STR_PAD_LEFT);
 
-            return Queue::create([
+            // Try to persist the last_queue_sequence best-effort (no locking)
+            try {
+                OrganizationSetting::where('organization_id', $organizationId)->update(['last_queue_sequence' => $nextSeq]);
+            } catch (\Throwable $_) {
+                // ignore persistence errors on fallback
+            }
+
+            $queue = Queue::create([
                 'queue_number' => $queueNumber,
                 'counter_id' => $counter->id,
                 'organization_id' => $organizationId,
                 'status' => 'waiting',
             ]);
-        });
+        }
 
         if ($this->shouldBroadcast()) {
             broadcast(new QueueCreated($queue))->toOthers();
