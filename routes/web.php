@@ -112,16 +112,15 @@ Route::prefix('{organization_code}')->group(function () {
     
     // Public counter data endpoint - accessible without authentication (supports ?counter_id query param)
     // Used by kiosk, monitor, and counter panel for real-time updates
-    Route::prefix('counter')->name('counter.')->middleware(['organization.context', 'allow.public.counter.data'])->group(function () {
-        Route::get('/data', [CounterController::class, 'getData'])->name('data');    
-    });
 
     // Direct public access route for counter data (without organization prefix, uses query parameter)
     // Fallback for direct API access without organization context
         
     // Protected routes - auth middleware runs FIRST, then organization context
     Route::middleware(['auth', 'organization.context'])->group(function () {
-        
+
+        Route::get('/counter/data', [CounterController::class, 'getData'])->name('data');
+       
         // Account Settings (for admin and counter users)
         Route::get('/account/settings', [AccountController::class, 'settings'])->name('account.settings');
         Route::put('/account/password', [AccountController::class, 'updatePassword'])->name('account.update-password');
