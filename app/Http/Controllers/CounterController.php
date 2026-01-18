@@ -537,7 +537,7 @@ class CounterController extends Controller
                 $waitingQueues = $user->getWaitingQueues();
                 $skippedQueues = $user->getSkippedQueues();
                 $onlineCounters = $user->getOnlineCounters();
-                $stats = $this->getCounterStats($user->id, $organization->id);
+                $stats = $this->counterService->getCounterStats($user->id, $organization->id);
                 $analytics = $this->getAnalyticsData($organization->id);
 
                 return response()->json([
@@ -562,7 +562,7 @@ class CounterController extends Controller
                 
                 $currentQueue = $counter->getCurrentQueue();
                 $waitingQueues = $counter->getWaitingQueues();
-                $stats = $this->getCounterStats($counter->id, $organization->id);
+                $stats = $this->counterService->getCounterStats($counter->id, $organization->id);
 
                 return response()->json([
                     'success' => true,
