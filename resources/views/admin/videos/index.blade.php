@@ -116,6 +116,14 @@
                             <span id="bellVolumeValue" class="text-xs text-gray-400 w-7 text-right">{{ $control->bell_volume ?? 100 }}%</span>
                         </div>
                         <div class="text-xs text-gray-500 truncate">{{ $control->bell_sound_path ? basename($control->bell_sound_path) : 'Default' }}</div>
+                        <div class="flex items-center space-x-2">
+                            <select id="bellChoice" class="bg-gray-900 text-xs text-white px-2 py-1 rounded border border-gray-700">
+                                <option value="" {{ $control->bell_sound_path ? '' : 'selected' }}>Default</option>
+                                @if($control->bell_sound_path)
+                                    <option value="{{ $control->bell_sound_path }}" selected>Custom - {{ basename($control->bell_sound_path) }}</option>
+                                @endif
+                            </select>
+                        </div>
                         <div class="flex space-x-1">
                             <button type="button" onclick="document.getElementById('bellSoundInput').click()" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-1 rounded text-xs font-semibold transition">
                                 <i class="fas fa-upload mr-1"></i>Upload
@@ -691,7 +699,9 @@ function updateControl() {
             body: JSON.stringify({
                 is_playing: isPlaying,
                 volume: document.getElementById('volumeSlider').value,
-                bell_volume: document.getElementById('bellVolumeSlider').value
+                bell_volume: document.getElementById('bellVolumeSlider').value,
+                current_video_id: nowPlayingVideo ? nowPlayingVideo.id : null,
+                bell_choice: (document.getElementById('bellChoice') ? document.getElementById('bellChoice').value : null)
             })
         }).catch(() => {});
     }, 300);
@@ -771,6 +781,13 @@ function removeFromPlaylist(videoId) {
 function playNow(videoId) {
     isPlaying = true;
     updatePlayButton();
+    // Optimistically set nowPlayingVideo so updateControl can include current_video_id immediately
+    try {
+        const row = document.querySelector(`[data-video-row][data-video-id="${videoId}"]`);
+        const title = row ? row.dataset.videoTitle || row.querySelector('p')?.textContent : null;
+        nowPlayingVideo = { id: videoId, title: title };
+        updateNowPlayingCompact(nowPlayingVideo);
+    } catch (e) { /* ignore */ }
     updateControl();
     syncPlaylistAndControl();
     
