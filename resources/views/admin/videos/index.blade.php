@@ -124,21 +124,7 @@
                     <p id="nowPlayingType" class="text-xs text-gray-400">—</p>
                 </div>
 
-                <!-- Quick Actions -->
-                <div class="grid grid-cols-3 gap-2">
-                    <button onclick="toggleRepeat()" id="repeatBtn" class="bg-gray-800 hover:bg-gray-700 rounded p-2 text-center transition border border-gray-700" title="Repeat Mode">
-                        <i class="fas fa-repeat text-sm block mb-1"></i>
-                        <span class="text-xs font-semibold">Off</span>
-                    </button>
-                    <button onclick="toggleShuffle()" id="shuffleBtn" class="bg-gray-800 hover:bg-gray-700 rounded p-2 text-center transition border border-gray-700" title="Shuffle">
-                        <i class="fas fa-shuffle text-sm block mb-1"></i>
-                        <span class="text-xs font-semibold">Off</span>
-                    </button>
-                    <button onclick="toggleSequence()" id="sequenceBtn" class="bg-gray-800 hover:bg-gray-700 rounded p-2 text-center transition border border-gray-700 border-blue-600" title="Sequence">
-                        <i class="fas fa-list-ol text-sm block mb-1"></i>
-                        <span class="text-xs font-semibold">On</span>
-                    </button>
-                </div>
+                <!-- Quick Actions removed: repeat/shuffle/sequence controls cleaned -->
 
             </div>
 
@@ -279,6 +265,64 @@
                         </div>
                     </div>
                 </form>
+                <script>
+                    // Chunked upload helper (no npm). Intercepts the form submit and uploads file in 5MB parts.
+                    (function(){
+                        const form = document.getElementById('videoForm');
+                        const fileInput = document.getElementById('videoFile');
+                        const progress = document.getElementById('uploadProgress');
+                        const bar = document.getElementById('uploadBar');
+                        const percentEl = document.getElementById('uploadPercent');
+                        if (!form || !fileInput) return;
+
+                        form.addEventListener('submit', async function(e){
+                            const file = fileInput.files && fileInput.files[0];
+                            if (!file) return; // fallback to normal submit
+                            e.preventDefault();
+
+                            const chunkSize = 5 * 1024 * 1024; // 5MB
+                            const total = Math.ceil(file.size / chunkSize);
+                            const uploadId = Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8);
+                            progress.classList.remove('hidden');
+
+                            for (let i = 0; i < total; i++) {
+                                const start = i * chunkSize;
+                                const end = Math.min(file.size, start + chunkSize);
+                                const blob = file.slice(start, end);
+                                const fd = new FormData();
+                                fd.append('chunk', blob, 'chunk');
+                                fd.append('upload_id', uploadId);
+                                fd.append('chunk_index', i);
+                                fd.append('total_chunks', total);
+                                fd.append('filename', file.name);
+                                fd.append('_token', document.querySelector('input[name=_token]').value);
+                                fd.append('title', form.querySelector('input[name=title]').value || file.name);
+
+                                try {
+                                    const res = await fetch('{{ route('admin.videos.upload-chunk', ['organization_code' => request()->route('organization_code')]) }}', {
+                                        method: 'POST',
+                                        body: fd,
+                                        credentials: 'same-origin'
+                                    });
+                                    const json = await res.json();
+                                    if (!res.ok || json.error) throw new Error(json.error || 'Upload failed');
+                                } catch (err) {
+                                    console.error('Chunk upload failed', err);
+                                    alert('Upload failed: ' + err.message);
+                                    return;
+                                }
+
+                                const pct = Math.round(((i+1)/total) * 100);
+                                bar.style.width = pct + '%';
+                                percentEl.textContent = pct + '%';
+                            }
+
+                            // All chunks uploaded; server assembles and returns video info
+                            // Reload page or show success
+                            location.reload();
+                        });
+                    })();
+                </script>
             </div>
 
             <!-- Video Library -->
@@ -429,9 +473,7 @@ let currentPlaylist = [];
 let nowPlayingVideo = null;
 let isLoadingPlaylist = false;
 let isLoadingMonitor = false;
-let repeatMode = 'off';
-let isShuffle = false;
-let isSequence = true;
+// Playlist repeat/shuffle/sequence controls removed
 
 const throttle = (func, limit) => {
     let inThrottle;
@@ -463,12 +505,11 @@ function loadPlaylist() {
     fetch(`/${orgCode}/admin/playlist`, { cache: 'no-store', credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
         .then(r => r.json())
         .then(d => {
-            if (d.success) {
+                if (d.success) {
                 nowPlayingVideo = d.now_playing || null;
                 currentPlaylist = d.playlist || [];
                 renderPlaylist(d.playlist);
                 updatePlaylistHighlight();
-                updatePlaylistControlUI(d.control);
                 updateNowPlayingDisplay(d.now_playing);
                 if (d?.control && typeof d.control.is_playing !== 'undefined') {
                     isPlaying = !!d.control.is_playing;
@@ -735,64 +776,7 @@ function prevVideo() {
     }
 }
 
-function updatePlaylistControlUI(control) {
-    if (control) {
-        repeatMode = control.repeat_mode || 'off';
-        isShuffle = control.is_shuffle || false;
-        isSequence = control.is_sequence !== false;
-        updateRepeatBtn();
-        updateShuffleBtn();
-        updateSequenceBtn();
-    }
-}
-
-function updateRepeatBtn() {
-    const btn = document.getElementById('repeatBtn');
-    const modes = { 'off': 'Off', 'one': 'One', 'all': 'All' };
-    btn.innerHTML = `<i class="fas fa-repeat text-sm block mb-1"></i><span class="text-xs font-semibold">${modes[repeatMode] || 'Off'}</span>`;
-}
-
-function updateShuffleBtn() {
-    const btn = document.getElementById('shuffleBtn');
-    btn.innerHTML = `<i class="fas fa-shuffle text-sm block mb-1"></i><span class="text-xs font-semibold">${isShuffle ? 'On' : 'Off'}</span>`;
-    if (isShuffle) btn.classList.add('border-blue-600');
-    else btn.classList.remove('border-blue-600');
-}
-
-function updateSequenceBtn() {
-    const btn = document.getElementById('sequenceBtn');
-    btn.innerHTML = `<i class="fas fa-list-ol text-sm block mb-1"></i><span class="text-xs font-semibold">${isSequence ? 'On' : 'Off'}</span>`;
-    if (isSequence) btn.classList.add('border-blue-600');
-    else btn.classList.remove('border-blue-600');
-}
-
-function toggleRepeat() {
-    const modes = ['off', 'one', 'all'];
-    const idx = modes.indexOf(repeatMode);
-    repeatMode = modes[(idx + 1) % modes.length];
-    updateRepeatBtn();
-    updatePlaylistControl();
-}
-
-function toggleShuffle() {
-    isShuffle = !isShuffle;
-    updateShuffleBtn();
-    updatePlaylistControl();
-}
-
-function toggleSequence() {
-    isSequence = !isSequence;
-    updateSequenceBtn();
-    updatePlaylistControl();
-}
-
-function updatePlaylistControl() {
-    fetch(`/${orgCode}/admin/playlist/control`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-        body: JSON.stringify({ repeat_mode: repeatMode, is_shuffle: isShuffle, is_sequence: isSequence })
-    }).catch(() => {});
-}
+// Playlist repeat/shuffle/sequence controls removed (unused).
 
 function togglePlay() {
     isPlaying = !isPlaying;
@@ -957,8 +941,6 @@ function nextVideo() {
     const currentIdx = currentPlaylist.findIndex(v => nowPlayingVideo && v.video_id === nowPlayingVideo.id);
     if (currentIdx !== -1 && currentIdx < currentPlaylist.length - 1) {
         playNow(currentPlaylist[currentIdx + 1].video_id);
-    } else if (repeatMode === 'all' && currentPlaylist.length > 0) {
-        playNow(currentPlaylist[0].video_id);
     }
 }
 
