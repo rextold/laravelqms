@@ -11,8 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Migration disabled: application uses `sync` queue driver.
-        // Prevent creating the `jobs` table to avoid writing job payloads to the database.
+        Schema::create('jobs', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->string('queue')->index();
+            $table->longText('payload');
+            $table->unsignedTinyInteger('attempts');
+            $table->unsignedInteger('reserved_at')->nullable();
+            $table->unsignedInteger('available_at');
+            $table->unsignedInteger('created_at');
+        });
     }
 
     /**
@@ -20,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // No-op rollback since table creation is disabled.
+        Schema::dropIfExists('jobs');
     }
 };
