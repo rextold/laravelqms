@@ -269,12 +269,36 @@
         
         resetInactivityTimer();
 
-        // Handle logout with GET method
+        // Handle logout with POST method (security best practice)
         function handleLogout(event) {
             event.preventDefault();
-            // Simply redirect to the logout route using GET method
-            window.location.href = '{{ route('logout') }}';
+            
+            // Create a temporary form for POST logout
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{{ route('logout') }}';
+            
+            // Add CSRF token
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = '_token';
+            csrfInput.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            form.appendChild(csrfInput);
+            
+            document.body.appendChild(form);
+            form.submit();
         }
+
+        // Bind logout button click handler
+        document.addEventListener('DOMContentLoaded', function() {
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', handleLogout);
+                console.log('Logout button listener attached');
+            } else {
+                console.warn('Logout button not found');
+            }
+        });
 
         // Minimize/Restore functionality
         function toggleMinimize(minimize = null) {

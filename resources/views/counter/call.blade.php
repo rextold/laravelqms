@@ -250,17 +250,34 @@ const COUNTER_NUM = {{ $counter->counter_number }};
 const ORG_CODE = '{{ request()->route('organization_code') }}';
 
 // Get CSRF token from meta tag with fallback
-const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+let csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
                   document.querySelector('input[name="_token"]')?.value || 
                   '{{ csrf_token() }}';
+
+// Ensure CSRF token is available
+if (!csrfToken) {
+    console.error('CRITICAL: CSRF token not found! Counter operations will fail.');
+    csrfToken = '{{ csrf_token() }}';
+}
+
+// Function to refresh CSRF token dynamically
+function refreshCSRFTokenFromPage() {
+    const newToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (newToken && newToken !== csrfToken) {
+        csrfToken = newToken;
+        console.log('CSRF token refreshed');
+    }
+}
 
 // Diagnostic logging for troubleshooting
 console.log('Counter Panel Configuration:', {
     counter_id: COUNTER_ID,
     counter_num: COUNTER_NUM,
     org_code: ORG_CODE,
-    csrf_token: csrfToken ? 'Present' : 'Missing',
-    user_agent: navigator.userAgent.substring(0, 50)
+    csrf_token: csrfToken ? 'Present (length: ' + csrfToken.length + ')' : 'MISSING - CRITICAL',
+    user_agent: navigator.userAgent.substring(0, 50),
+    env: 'production',
+    timestamp: new Date().toISOString()
 });
 
 // State Management
@@ -648,16 +665,34 @@ function toggleMinimize(force) {
 // ============================================================
 
 function makeCounterRequest(action, params = {}) {
+    // Refresh CSRF token before each request (production safety)
+    refreshCSRFTokenFromPage();
+    
+    // Validate CSRF token
+    if (!csrfToken) {
+        console.error('CSRF token not available for action:', action);
+        return Promise.resolve({ success: false, message: 'Security token missing', critical: true });
+    }
+    
     // Ensure organization code is included in URL
     const orgCode = ORG_CODE || window.location.pathname.split('/')[1];
     const url = new URL(`/${orgCode}/counter/${action}`, window.location.origin);
     
     // Prepare form data for POST request
     const formData = new FormData();
+    formData.append('_token', csrfToken);
+    formData.append('counter_id', COUNTER_ID);
+    
     Object.keys(params).forEach(key => {
-        if (params[key] !== undefined && params[key] !== null) {
+        if (params[key] !== undefined && params[key] !== null && key !== 'counter_id') {
             formData.append(key, params[key]);
         }
+    });
+
+    console.log(`[${new Date().toISOString()}] Counter Request: ${action}`, {
+        url: url.toString(),
+        params: Object.fromEntries(formData),
+        csrfTokenLength: csrfToken.length
     });
 
     return fetch(url.toString(), {
@@ -665,16 +700,52 @@ function makeCounterRequest(action, params = {}) {
         headers: {
             'Accept': 'application/json',
             'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRF-TOKEN': csrfToken || ''
+            'X-CSRF-TOKEN': csrfToken
         },
         body: formData,
-        credentials: 'same-origin'
+        credentials: 'same-origin',
+        cache: 'no-store'
     })
         .then(response => {
-            if (response.status === 403) {
-                // Suppress 403 for counter operations
-                console.warn(`Counter action '${action}' returned 403`);
+            console.log(`Counter action '${action}' response: HTTP ${response.status}`);
+            
+            if (response.status === 401 || response.status === 403) {
+                console.error(`Authentication error (HTTP ${response.status}) for action '${action}'`);
+                console.error('Possible causes:');
+                console.error('  - User session expired');
+                console.error('  - Missing authentication middleware on route');
+                console.error('  - CSRF token mismatch');
+                console.error('  - User lacks permission to perform action');
+                
+                // Check if we're truly authenticated
+                if (response.status === 401) {
+                    console.warn('Attempting to refresh authentication...');
+                    return fetch(`/${orgCode}/refresh-auth`, { 
+                        method: 'GET',
+                        credentials: 'same-origin',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    }).then(() => {
+                        // Retry after refresh
+                        return makeCounterRequest(action, params);
+                    }).catch(() => {
+                        return { success: false, message: 'Session expired. Please login again.', requiresReauth: true };
+                    });
+                }
+                
                 return { success: false, suppressed: true };
+            }
+            
+            if (response.status === 500) {
+                console.error('Server error (HTTP 500) for action:', action);
+                console.error('Check server logs at: storage/logs/laravel.log');
+                return response.json().then(data => ({
+                    success: false,
+                    message: 'Server error',
+                    debug: data
+                })).catch(() => ({
+                    success: false,
+                    message: 'Server error (HTTP 500)'
+                }));
             }
             
             if (!response.ok) {
@@ -684,8 +755,22 @@ function makeCounterRequest(action, params = {}) {
             return response.json();
         })
         .catch(err => {
+            if (err && err.name === 'AbortError') {
+                console.log(`Counter request '${action}' was cancelled`);
+                return { success: false, message: 'Request cancelled', cancelled: true };
+            }
+            
             console.error(`Counter request error for '${action}':`, err);
-            return { success: false, message: err.message };
+            console.error('Diagnostic Info:', {
+                url: url.toString(),
+                counter_id: COUNTER_ID,
+                org_code: orgCode,
+                action: action,
+                error: err.message,
+                timestamp: new Date().toISOString()
+            });
+            
+            return { success: false, message: err.message || 'Network error' };
         });
 }
 
@@ -878,108 +963,133 @@ function closeTransferModal() {
 // ============================================================
 
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('[INIT] Counter panel initialization starting...');
+    
     // Rapid polling for real-time updates
-    setInterval(fetchData, FETCH_INTERVAL);
-    fetchData(); // Initial fetch
+    const pollInterval = setInterval(function() {
+        try {
+            fetchData();
+        } catch (err) {
+            console.error('[POLL] Error in polling:', err);
+        }
+    }, FETCH_INTERVAL);
+    
+    // Initial fetch
+    try {
+        fetchData();
+    } catch (err) {
+        console.error('[INIT] Error in initial fetch:', err);
+    }
 
     // Handle visibility changes
     document.addEventListener('visibilitychange', function() {
         if (!document.hidden) {
-            console.log('Counter panel restored, refreshing data...');
-            fetchData();
+            console.log('[VISIBILITY] Counter panel restored, refreshing data...');
+            try {
+                fetchData();
+            } catch (err) {
+                console.error('[VISIBILITY] Error refreshing data:', err);
+            }
         }
     });
 
     // Handle network changes
     window.addEventListener('online', function() {
-        console.log('Network restored');
-        fetchData();
+        console.log('[NETWORK] Network restored - resuming operations');
+        try {
+            fetchData();
+        } catch (err) {
+            console.error('[NETWORK] Error on network restore:', err);
+        }
     });
 
     window.addEventListener('offline', function() {
-        console.warn('Network disconnected - using cached data');
-    });    // Add event listeners for main action buttons with better error handling
-    console.log('Setting up event listeners...');
-    
-    const btnCallNext = document.getElementById('btnCallNext');
-    const btnNotify = document.getElementById('btnNotify');
-    const btnComplete = document.getElementById('btnComplete');
-    const btnSkip = document.getElementById('btnSkip');
-    const btnTransfer = document.getElementById('btnTransfer');
-    const dockRestoreBtn = document.getElementById('dockRestoreBtn');
-    const closeTransferModalBtn = document.getElementById('closeTransferModalBtn');
-    const cancelTransferBtn = document.getElementById('cancelTransferBtn');
-    const confirmTransferBtn = document.getElementById('confirmTransferBtn');
-    const closeSkipModalBtn = document.getElementById('closeSkipModalBtn');
-    const cancelSkipBtn = document.getElementById('cancelSkipBtn');
-    const confirmSkipBtn = document.getElementById('confirmSkipBtn');
-
-    // Log which buttons are found
-    console.log('Button elements found:', {
-        btnCallNext: !!btnCallNext,
-        btnNotify: !!btnNotify,
-        btnComplete: !!btnComplete,
-        btnSkip: !!btnSkip,
-        btnTransfer: !!btnTransfer
+        console.warn('[NETWORK] Network disconnected - using cached data');
     });
-
-    if (btnCallNext) {
-        btnCallNext.addEventListener('click', function(e) { 
-            e.preventDefault();
-            console.log('Call Next button clicked');
-            callNext(this); 
-        });
-    } else {
-        console.warn('btnCallNext element not found');
+    
+    // Setup event listeners for action buttons with comprehensive error handling
+    console.log('[INIT] Setting up event listeners...');
+    
+    const buttonConfig = [
+        { id: 'btnCallNext', handler: 'callNext', label: 'Call Next' },
+        { id: 'btnNotify', handler: 'notifyCustomer', label: 'Notify' },
+        { id: 'btnComplete', handler: 'moveToNext', label: 'Complete' },
+        { id: 'btnSkip', handler: 'skipCurrent', label: 'Skip' },
+        { id: 'btnTransfer', handler: 'openTransferModal', label: 'Transfer' }
+    ];
+    
+    const elementsFound = {};
+    
+    // Bind main action buttons
+    buttonConfig.forEach(config => {
+        const btn = document.getElementById(config.id);
+        elementsFound[config.id] = !!btn;
+        
+        if (btn) {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                try {
+                    console.log(`[ACTION] ${config.label} button clicked`);
+                    
+                    // Execute handler with proper context
+                    if (config.handler === 'notifyCustomer') {
+                        notifyCustomer(this, e);
+                    } else if (config.handler === 'moveToNext') {
+                        moveToNext(this);
+                    } else if (config.handler === 'callNext') {
+                        callNext(this);
+                    } else if (config.handler === 'skipCurrent') {
+                        skipCurrent();
+                    } else if (config.handler === 'openTransferModal') {
+                        openTransferModal();
+                    }
+                } catch (err) {
+                    console.error(`[ACTION] Error in ${config.label}:`, err);
+                }
+            });
+        } else {
+            console.warn(`[INIT] Button element not found: ${config.id}`);
+        }
+    });
+    
+    console.log('[INIT] Action buttons setup complete:', elementsFound);
+    
+    // Bind modal control buttons
+    const modalButtons = [
+        { id: 'dockRestoreBtn', handler: () => toggleMinimize(false) },
+        { id: 'closeTransferModalBtn', handler: closeTransferModal },
+        { id: 'cancelTransferBtn', handler: closeTransferModal },
+        { id: 'confirmTransferBtn', handler: () => confirmTransfer() },
+        { id: 'closeSkipModalBtn', handler: closeSkipModal },
+        { id: 'cancelSkipBtn', handler: closeSkipModal },
+        { id: 'confirmSkipBtn', handler: function() { confirmSkip(this); } }
+    ];
+    
+    modalButtons.forEach(btn => {
+        const el = document.getElementById(btn.id);
+        if (el) {
+            el.addEventListener('click', function(e) {
+                try {
+                    e.preventDefault();
+                    btn.handler.call(this, e);
+                } catch (err) {
+                    console.error(`[MODAL] Error with ${btn.id}:`, err);
+                }
+            });
+        }
+    });
+    
+    // Restore minimized state from localStorage if available
+    try {
+        const wasMinimized = localStorage.getItem('counterPanelMinimized') === '1';
+        if (wasMinimized) {
+            setMinimized(true);
+        }
+    } catch (e) {
+        console.log('[INIT] localStorage not available');
     }
     
-    if (btnNotify) {
-        btnNotify.addEventListener('click', function(e) { 
-            e.preventDefault();
-            console.log('Notify button clicked');
-            return notifyCustomer(this, e); 
-        });
-    } else {
-        console.warn('btnNotify element not found');
-    }
-    
-    if (btnComplete) {
-        btnComplete.addEventListener('click', function(e) { 
-            e.preventDefault();
-            console.log('Complete button clicked');
-            moveToNext(this); 
-        });
-    } else {
-        console.warn('btnComplete element not found');
-    }
-    
-    if (btnSkip) {
-        btnSkip.addEventListener('click', function(e) { 
-            e.preventDefault();
-            console.log('Skip button clicked');
-            skipCurrent(); 
-        });
-    } else {
-        console.warn('btnSkip element not found');
-    }
-    
-    if (btnTransfer) {
-        btnTransfer.addEventListener('click', function(e) { 
-            e.preventDefault();
-            console.log('Transfer button clicked');
-            openTransferModal(); 
-        });
-    } else {
-        console.warn('btnTransfer element not found');
-    }
-    
-    if (dockRestoreBtn) dockRestoreBtn.addEventListener('click', function() { toggleMinimize(false); });
-    if (closeTransferModalBtn) closeTransferModalBtn.addEventListener('click', closeTransferModal);
-    if (cancelTransferBtn) cancelTransferBtn.addEventListener('click', closeTransferModal);
-    if (confirmTransferBtn) confirmTransferBtn.addEventListener('click', function() { confirmTransfer(); });
-    if (closeSkipModalBtn) closeSkipModalBtn.addEventListener('click', closeSkipModal);
-    if (cancelSkipBtn) cancelSkipBtn.addEventListener('click', closeSkipModal);
-    if (confirmSkipBtn) confirmSkipBtn.addEventListener('click', function() { confirmSkip(this); });
+    console.log('[INIT] Counter panel initialization complete');
 });
 </script>
 @endpush
