@@ -59,12 +59,34 @@
             <!-- Player & Controls (Left 2/3) -->
             <div class="lg:col-span-2 space-y-4">
                 
-                <!-- Player -->
+                <!-- Player + Controls -->
                 <div class="bg-gray-800 rounded-lg overflow-hidden border border-gray-700">
-                    <!-- Player Controls -->
-                    <div class="bg-gray-900 p-3 space-y-2">
-                        
-                        <!-- Volume Control -->
+                    <!-- Player Controls (expanded) -->
+                    <div class="bg-gray-900 p-3 space-y-3">
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="flex items-center space-x-2">
+                                <button id="adminPrev" onclick="prevVideo()" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm"><i class="fas fa-step-backward"></i></button>
+                                <button id="adminPlay" onclick="togglePlay()" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm"><i id="adminPlayIcon" class="fas fa-play"></i></button>
+                                <button id="adminNext" onclick="nextVideo()" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm"><i class="fas fa-step-forward"></i></button>
+                                <button id="adminStop" onclick="stopPlayback()" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm"><i class="fas fa-stop"></i></button>
+                            </div>
+
+                            <div class="flex items-center space-x-3">
+                                <label class="flex items-center space-x-2 text-xs text-gray-300">
+                                    <input id="videoMuted" type="checkbox" {{ isset($control) && $control->video_muted ? 'checked' : '' }} onchange="updateControl()" />
+                                    <span>Mute Video</span>
+                                </label>
+                                <label class="flex items-center space-x-2 text-xs text-gray-300">
+                                    <input id="autoplayToggle" type="checkbox" {{ isset($control) && $control->autoplay ? 'checked' : '' }} onchange="updateControl()" />
+                                    <span>Autoplay</span>
+                                </label>
+                                <label class="flex items-center space-x-2 text-xs text-gray-300">
+                                    <input id="loopToggle" type="checkbox" {{ isset($control) && $control->loop ? 'checked' : '' }} onchange="updateControl()" />
+                                    <span>Loop</span>
+                                </label>
+                            </div>
+                        </div>
+
                         <div class="flex items-center space-x-2">
                             <i class="fas fa-volume-down text-gray-400 text-xs"></i>
                             <input type="range" id="volumeSlider" min="0" max="100" value="{{ $control->volume }}" 
@@ -72,6 +94,26 @@
                                    oninput="updateVolumeDisplay(this.value)" onchange="updateVolume(this.value)">
                             <span id="volumeValue" class="text-xs text-gray-400 w-7 text-right">{{ $control->volume }}%</span>
                         </div>
+
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2">
+                                <select id="setNowSelectSmall" class="bg-gray-900 text-xs text-white px-2 py-1 rounded border border-gray-700">
+                                    <option value="">Select video</option>
+                                    @foreach($videos as $v)
+                                        <option value="{{ $v->id }}">{{ $v->title }}</option>
+                                    @endforeach
+                                </select>
+                                <button type="button" onclick="setNowPlayingFromSelectSmall()" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs font-semibold">Set Now</button>
+                                <button type="button" onclick="previewSelected()" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs">Preview</button>
+                                <button type="button" onclick="unmuteNow(10)" class="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-xs">Unmute 10s</button>
+                            </div>
+                            <div class="text-xs text-gray-400">Now: <span id="adminNowPlaying">—</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Preview Area -->
+                    <div id="adminPreview" class="bg-black h-40 flex items-center justify-center border-t border-gray-700">
+                        <div class="text-gray-400 text-xs">Preview area — select a video and click Preview</div>
                     </div>
                 </div>
 
@@ -254,10 +296,31 @@
                              data-video-file="{{ $video->isFile() ? asset('storage/'.$video->file_path) : '' }}"
                              data-video-youtube="{{ $video->isYoutube() ? $video->youtube_embed_url : '' }}"
                              data-video-filename="{{ addslashes($video->filename) }}">
-                            <div class="flex-1 min-w-0">
-                                <p class="text-xs font-semibold text-white truncate">{{ $video->title }}</p>
-                                <p class="text-[11px] text-gray-400">{{ $video->isYoutube() ? 'YouTube' : 'File' }}</p>
-                            </div>
+                            <div class="flex-1 min-w-0 flex items-center gap-3">
+                                    <div class="w-20 h-12 bg-gray-700 rounded overflow-hidden flex items-center justify-center flex-shrink-0">
+                                        @if($video->isFile() && $video->file_path)
+                                            <video muted playsinline loop class="w-full h-full object-cover">
+                                                <source src="{{ asset('storage/'.$video->file_path) }}" type="video/mp4" />
+                                            </video>
+                                        @elseif($video->isYoutube() && $video->youtube_url)
+                                            @php
+                                                preg_match('/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/', $video->youtube_url, $m);
+                                                $ytid = $m[1] ?? null;
+                                            @endphp
+                                            @if($ytid)
+                                                <img src="https://img.youtube.com/vi/{{ $ytid }}/hqdefault.jpg" alt="thumb" class="w-full h-full object-cover" />
+                                            @else
+                                                <i class="fas fa-video text-gray-400"></i>
+                                            @endif
+                                        @else
+                                            <i class="fas fa-video text-gray-400"></i>
+                                        @endif
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="text-xs font-semibold text-white truncate">{{ $video->title }}</p>
+                                        <p class="text-[11px] text-gray-400">{{ $video->isYoutube() ? 'YouTube' : 'File' }}</p>
+                                    </div>
+                                </div>
                             <div class="flex items-center space-x-2 flex-shrink-0 ml-1">
                                 <span class="playing-indicator w-2 h-2 rounded-full bg-blue-500 opacity-0 transition"></span>
                                 <div class="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition flex-shrink-0">
@@ -597,6 +660,67 @@ function setNowPlayingFromSelect() {
     if (opt) document.getElementById('nowPlayingCompact').textContent = opt.text;
 }
 
+function setNowPlayingFromSelectSmall() {
+    const sel = document.getElementById('setNowSelectSmall');
+    if (!sel) return;
+    const vid = sel.value;
+    if (!vid) {
+        showToast('Select a video first', 'error');
+        return;
+    }
+    playNow(parseInt(vid, 10));
+    const opt = sel.options[sel.selectedIndex];
+    if (opt) {
+        document.getElementById('adminNowPlaying').textContent = opt.text;
+        document.getElementById('nowPlayingCompact').textContent = opt.text;
+    }
+}
+
+function previewSelected() {
+    const sel = document.getElementById('setNowSelectSmall');
+    if (!sel) return showToast('Select a video to preview', 'error');
+    const vid = sel.value;
+    if (!vid) return showToast('Select a video to preview', 'error');
+    previewVideo(parseInt(vid, 10));
+}
+
+function previewVideo(videoId) {
+    const videos = @json($videos);
+    const video = videos.find(v => String(v.id) === String(videoId));
+    const preview = document.getElementById('adminPreview');
+    if (!preview) return;
+    if (!video) {
+        preview.innerHTML = '<div class="text-gray-400 text-xs">Video not found</div>';
+        return;
+    }
+    if (video.is_youtube && video.youtube_embed_url) {
+        const src = video.youtube_embed_url + '?autoplay=1&mute=1&modestbranding=1&rel=0';
+        preview.innerHTML = `<iframe src="${src}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen style="width:100%;height:100%;border:0"></iframe>`;
+    } else if (video.file_path) {
+        preview.innerHTML = `<video controls autoplay muted style="width:100%;height:100%;object-fit:cover;"><source src="/storage/${video.file_path}" type="video/mp4">Your browser does not support video.</video>`;
+    } else {
+        preview.innerHTML = '<div class="text-gray-400 text-xs">No preview available</div>';
+    }
+}
+
+function unmuteNow(seconds = 10) {
+    fetch(`/${orgCode}/admin/videos/unmute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+        body: JSON.stringify({ seconds })
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) {
+            const vm = document.getElementById('videoMuted');
+            if (vm) vm.checked = false;
+            showToast('Monitors unmuted for ' + (d.unmute_seconds || seconds) + 's', 'success');
+            updateControl();
+        }
+    })
+    .catch(() => showToast('Failed to unmute', 'error'));
+}
+
 function updateNowPlayingCompact(nowPlaying) {
     const el = document.getElementById('nowPlayingCompact');
     if (!el) return;
@@ -701,7 +825,10 @@ function updateControl() {
                 volume: document.getElementById('volumeSlider').value,
                 bell_volume: document.getElementById('bellVolumeSlider').value,
                 current_video_id: nowPlayingVideo ? nowPlayingVideo.id : null,
-                bell_choice: (document.getElementById('bellChoice') ? document.getElementById('bellChoice').value : null)
+                bell_choice: (document.getElementById('bellChoice') ? document.getElementById('bellChoice').value : null),
+                video_muted: (document.getElementById('videoMuted') ? !!document.getElementById('videoMuted').checked : false),
+                autoplay: (document.getElementById('autoplayToggle') ? !!document.getElementById('autoplayToggle').checked : false),
+                loop: (document.getElementById('loopToggle') ? !!document.getElementById('loopToggle').checked : false)
             })
         }).catch(() => {});
     }, 300);

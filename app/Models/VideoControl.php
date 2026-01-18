@@ -15,6 +15,10 @@ class VideoControl extends Model
         'bell_volume',
         'bell_sound_path',
         'current_video_id',
+        'bell_choice',
+        'video_muted',
+        'autoplay',
+        'loop',
         'repeat_mode',
         'is_shuffle',
         'is_sequence',
@@ -25,7 +29,11 @@ class VideoControl extends Model
         'is_playing' => 'boolean',
         'is_shuffle' => 'boolean',
         'is_sequence' => 'boolean',
+        'video_muted' => 'boolean',
+        'autoplay' => 'boolean',
+        'loop' => 'boolean',
     ];
+
 
     public function currentVideo()
     {

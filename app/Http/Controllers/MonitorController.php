@@ -121,9 +121,11 @@ class MonitorController extends Controller
 
         $waitingQueues = $waitingQueues->values();
 
+        $unmuteUntil = \Illuminate\Support\Facades\Cache::get('video_control_unmute_until_' . $organization->id);
+
         return response()->json([
             'counters' => $counterQueues,
-            'video_control' => $videoControl,
+            'video_control' => array_merge($videoControl->toArray(), ['unmute_until' => $unmuteUntil]),
             'marquee' => $marquee,
             'waiting_queues' => $waitingQueues,
         ])
