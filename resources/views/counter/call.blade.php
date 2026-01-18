@@ -249,8 +249,10 @@ const COUNTER_ID = {{ $counter->id }};
 const COUNTER_NUM = {{ $counter->counter_number }};
 const ORG_CODE = '{{ request()->route('organization_code') }}';
 
-// Get CSRF token from meta tag
-const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+// Get CSRF token from meta tag with fallback
+const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+                  document.querySelector('input[name="_token"]')?.value || 
+                  '{{ csrf_token() }}';
 
 // State Management
 let currentQueueData = null;
@@ -874,9 +876,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     window.addEventListener('offline', function() {
         console.warn('Network disconnected - using cached data');
-    });
-
-    // Add event listeners for main action buttons
+    });    // Add event listeners for main action buttons with better error handling
+    console.log('Setting up event listeners...');
+    
     const btnCallNext = document.getElementById('btnCallNext');
     const btnNotify = document.getElementById('btnNotify');
     const btnComplete = document.getElementById('btnComplete');
@@ -890,11 +892,65 @@ document.addEventListener('DOMContentLoaded', function() {
     const cancelSkipBtn = document.getElementById('cancelSkipBtn');
     const confirmSkipBtn = document.getElementById('confirmSkipBtn');
 
-    if (btnCallNext) btnCallNext.addEventListener('click', function() { callNext(this); });
-    if (btnNotify) btnNotify.addEventListener('click', function() { return notifyCustomer(this, event); });
-    if (btnComplete) btnComplete.addEventListener('click', function() { moveToNext(this); });
-    if (btnSkip) btnSkip.addEventListener('click', skipCurrent);
-    if (btnTransfer) btnTransfer.addEventListener('click', openTransferModal);
+    // Log which buttons are found
+    console.log('Button elements found:', {
+        btnCallNext: !!btnCallNext,
+        btnNotify: !!btnNotify,
+        btnComplete: !!btnComplete,
+        btnSkip: !!btnSkip,
+        btnTransfer: !!btnTransfer
+    });
+
+    if (btnCallNext) {
+        btnCallNext.addEventListener('click', function(e) { 
+            e.preventDefault();
+            console.log('Call Next button clicked');
+            callNext(this); 
+        });
+    } else {
+        console.warn('btnCallNext element not found');
+    }
+    
+    if (btnNotify) {
+        btnNotify.addEventListener('click', function(e) { 
+            e.preventDefault();
+            console.log('Notify button clicked');
+            return notifyCustomer(this, e); 
+        });
+    } else {
+        console.warn('btnNotify element not found');
+    }
+    
+    if (btnComplete) {
+        btnComplete.addEventListener('click', function(e) { 
+            e.preventDefault();
+            console.log('Complete button clicked');
+            moveToNext(this); 
+        });
+    } else {
+        console.warn('btnComplete element not found');
+    }
+    
+    if (btnSkip) {
+        btnSkip.addEventListener('click', function(e) { 
+            e.preventDefault();
+            console.log('Skip button clicked');
+            skipCurrent(); 
+        });
+    } else {
+        console.warn('btnSkip element not found');
+    }
+    
+    if (btnTransfer) {
+        btnTransfer.addEventListener('click', function(e) { 
+            e.preventDefault();
+            console.log('Transfer button clicked');
+            openTransferModal(); 
+        });
+    } else {
+        console.warn('btnTransfer element not found');
+    }
+    
     if (dockRestoreBtn) dockRestoreBtn.addEventListener('click', function() { toggleMinimize(false); });
     if (closeTransferModalBtn) closeTransferModalBtn.addEventListener('click', closeTransferModal);
     if (cancelTransferBtn) cancelTransferBtn.addEventListener('click', closeTransferModal);
