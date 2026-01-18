@@ -667,7 +667,44 @@ class CounterController extends Controller
                 Queue::where('counter_id', $counter->id)
                     ->where('status', 'completed')
                     ->where('completed_at', '>=', $thirtyDaysAgo)
-    
+                    ->whereRaw('TIME(completed_at) >= ?', ['06:00:00'])
+                    ->whereRaw('TIME(completed_at) < ?', ['09:00:00'])
+                    ->count(),
+                // Evening (5pm-9pm)
+                Queue::where('counter_id', $counter->id)
+                    ->where('status', 'completed')
+                    ->where('completed_at', '>=', $thirtyDaysAgo)
+                    ->whereRaw('TIME(completed_at) >= ?', ['17:00:00'])
+                    ->whereRaw('TIME(completed_at) < ?', ['21:00:00'])
+                    ->count(),
+                // Night (9pm-6am)
+                Queue::where('counter_id', $counter->id)
+                    ->where('status', 'completed')
+                    ->where('completed_at', '>=', $thirtyDaysAgo)
+                    ->whereRaw('(TIME(completed_at) >= ? OR TIME(completed_at) < ?)', ['21:00:00', '06:00:00'])
+                    ->count()
+            ];
+            
+            return [
+                'hourly' => $hourlyData,
+                'weekly' => $weeklyData,
+                'weekly_days' => $weeklyDays,
+                'wait_time' => $waitTimeData,
+                'peak_hours' => $peakHours
+            ];
+        } catch (\Exception $e) {
+            Log::error('Error generating analytics data: ' . $e->getMessage());
+            
+            // Return empty data structure to prevent crashes
+            return [
+                'hourly' => array_fill(0, 24, 0),
+                'weekly' => array_fill(0, 7, 0),
+                'weekly_days' => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                'wait_time' => array_fill(0, 7, 0),
+                'peak_hours' => [0, 0, 0, 0]
+            ];
+        }
+    }
     /**
      * Send customer notification
      */
@@ -713,44 +750,6 @@ class CounterController extends Controller
                 'success' => false,
                 'message' => 'Failed to send notification'
             ], 500);
-        }
-    }
-                    ->whereRaw('TIME(completed_at) >= ?', ['06:00:00'])
-                    ->whereRaw('TIME(completed_at) < ?', ['09:00:00'])
-                    ->count(),
-                // Evening (5pm-9pm)
-                Queue::where('counter_id', $counter->id)
-                    ->where('status', 'completed')
-                    ->where('completed_at', '>=', $thirtyDaysAgo)
-                    ->whereRaw('TIME(completed_at) >= ?', ['17:00:00'])
-                    ->whereRaw('TIME(completed_at) < ?', ['21:00:00'])
-                    ->count(),
-                // Night (9pm-6am)
-                Queue::where('counter_id', $counter->id)
-                    ->where('status', 'completed')
-                    ->where('completed_at', '>=', $thirtyDaysAgo)
-                    ->whereRaw('(TIME(completed_at) >= ? OR TIME(completed_at) < ?)', ['21:00:00', '06:00:00'])
-                    ->count()
-            ];
-            
-            return [
-                'hourly' => $hourlyData,
-                'weekly' => $weeklyData,
-                'weekly_days' => $weeklyDays,
-                'wait_time' => $waitTimeData,
-                'peak_hours' => $peakHours
-            ];
-        } catch (\Exception $e) {
-            Log::error('Error generating analytics data: ' . $e->getMessage());
-            
-            // Return empty data structure to prevent crashes
-            return [
-                'hourly' => array_fill(0, 24, 0),
-                'weekly' => array_fill(0, 7, 0),
-                'weekly_days' => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                'wait_time' => array_fill(0, 7, 0),
-                'peak_hours' => [0, 0, 0, 0]
-            ];
         }
     }
 }
