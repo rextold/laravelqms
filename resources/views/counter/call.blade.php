@@ -666,9 +666,7 @@ function makeCounterRequest(action, params = {}) {
 }
 
 function notifyCustomer(btnEl, event) {
-    if (event) {
-        event.preventDefault();
-    }
+    if (event) event.preventDefault();
     return runActionWithCooldown(btnEl, () =>
         makeCounterRequest('notify', { counter_id: COUNTER_ID })
             .then((data) => {
@@ -684,6 +682,7 @@ function notifyCustomer(btnEl, event) {
                 }
             })
     );
+    return false;
 }
 
 function skipCurrent() {
