@@ -13,9 +13,19 @@
             --secondary: {{ $settings->secondary_color ?? '#8b5cf6' }};
             --accent: {{ $settings->accent_color ?? '#10b981' }};
             --text-color: {{ $settings->text_color ?? '#ffffff' }};
+            /* legacy variable names used elsewhere in templates */
+            --primary-color: {{ $settings->primary_color ?? '#3b82f6' }};
+            --secondary-color: {{ $settings->secondary_color ?? '#8b5cf6' }};
+            --accent-color: {{ $settings->accent_color ?? '#10b981' }};
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        *, ::before, ::after {
+            box-sizing: border-box;
+            border-width: 2px;
+            border-style: solid;
+            border-color: #e5e7eb;
+        }
         html, body {
             height: 100%;
             min-height: 100dvh;
@@ -35,6 +45,13 @@
             border: 1px solid rgba(255,255,255,0.2);
         }
 
+        /* helper: center contents inside a glass card when applied */
+        .glass-card.center {
+            /* display: flex; */
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+        }
         .counter-card {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
@@ -75,14 +92,23 @@
         .touch-target { min-height: 44px; min-width: 44px; }
 
         @media (max-width: 768px) {
-            .counter-grid { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+            .counter-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
             .queue-number { font-size: 4rem; }
         }
 
         @media (min-width: 769px) {
-            .counter-grid { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; }
+            .counter-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; }
             .queue-number { font-size: 6rem; }
         }
+
+        /* Small centered counter cards */
+        .counter-grid-cols { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); justify-items: center; padding: 0.75rem; }
+        .counter-btn { width: 160px; min-height: 96px; padding: 0.75rem; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; justify-self: center; align-self: center; }
+        .counter-btn .counter-number { width:48px; height:48px; font-size:1.05rem; }
+        .counter-btn .counter-title { font-size:0.98rem; font-weight:700; color: #0f172a; }
+        .counter-btn .counter-desc { font-size:0.75rem; color: rgba(15,23,42,0.55); }
+        /* vertical center helper */
+        .vertical-center { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1rem; min-height: calc(100dvh - 2rem); }
     </style>
 </head>
 <body>
@@ -90,17 +116,17 @@
     
     <!-- Settings Button -->
     <button onclick="showSettings()"
-            class="fixed top-6 right-6 z-50 glass-card px-4 py-3 rounded-2xl shadow-2xl hover:shadow-3xl transition-all transform hover:scale-105 text-gray-700 font-semibold text-sm touch-target">
+            class="fixed top-6 right-6 z-50 glass-card px-4 py-3 rounded-2xl shadow-2xl hover:shadow-3xl transition-all transform hover:scale-105 text-white font-semibold text-sm touch-target">
         <i class="fas fa-cog text-xl"></i>
     </button>
     
     <!-- Main Container -->
-    <div class="main-container relative z-10 p-2 sm:p-4">
+    <div class="main-container vertical-center relative z-10 p-2 sm:p-4">
         
         <!-- Step Indicator -->
         <div class="step-header spacing-sm">
             <div class="flex justify-center">
-                <div class="glass-card padding-sm rounded-2xl shadow-xl step-indicators-container">
+                <div class="glass-card center padding-sm rounded-2xl shadow-xl step-indicators-container">
                     <div class="flex items-center space-x-2 sm:space-x-4">
                         <div id="step1Indicator" class="step-indicator step-active px-3 sm:px-6 py-2 sm:py-3 rounded-xl flex flex-col items-center min-w-[60px] sm:min-w-[80px]">
                             <div class="step-indicator-number font-bold mb-0.5 sm:mb-1">1</div>
@@ -187,7 +213,7 @@
         <!-- Step 2: Generating -->
         <div id="step2" class="hidden step-content animate-fadeInUp">
             <div class="flex items-center justify-center h-full">
-                <div class="glass-card rounded-2xl sm:rounded-3xl shadow-2xl padding-md text-center max-w-2xl w-full">
+                <div class="glass-card center rounded-2xl sm:rounded-3xl shadow-2xl padding-md text-center max-w-2xl w-full">
                     <div class="spacing-md">
                         <div class="inline-block p-6 sm:p-8 rounded-full spacing-sm shadow-2xl" style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));">
                             <i class="fas fa-spinner fa-spin text-white text-5xl sm:text-7xl"></i>
@@ -208,7 +234,7 @@
         <!-- Step 3: Queue Display -->
         <div id="step3" class="hidden step-content animate-fadeInUp">
             <div class="flex items-center justify-center h-full overflow-y-auto custom-scrollbar">
-                <div class="glass-card rounded-xl sm:rounded-2xl shadow-lg padding-sm sm:padding-md text-center max-w-lg sm:max-w-xl w-full" id="queueContent">
+                <div class="glass-card center rounded-xl sm:rounded-2xl shadow-lg padding-sm sm:padding-md text-center max-w-lg sm:max-w-xl w-full" id="queueContent">
                     <div class="spacing-sm sm:spacing-md">
                         <div class="inline-block p-2.5 sm:p-3 rounded-full spacing-sm shadow-lg" style="background: linear-gradient(135deg, var(--accent-color), var(--primary-color));">
                             <i class="fas fa-check-circle text-white text-2xl sm:text-4xl"></i>
@@ -224,7 +250,7 @@
                          style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));">
                         <div class="absolute inset-0 opacity-10" 
                              style="background-image: radial-gradient(circle, rgba(255,255,255,0.4) 2px, transparent 2px); background-size: 30px 30px;"></div>
-                        <div class="relative z-10 padding-sm">
+                        <div class="relative z-10 p-4 sm:p-6">
                             <p class="text-[10px] sm:text-xs font-bold mb-2 tracking-widest opacity-90" 
                                style="color: var(--text-color);">
                                 YOUR QUEUE NUMBER
@@ -234,6 +260,11 @@
                                  style="color: var(--text-color); text-shadow: 0 6px 12px rgba(0,0,0,0.15);"></div>
                             <div class="btn-text font-bold mb-1" id="counterInfo" style="color: var(--text-color);"></div>
                             <div class="text-xs sm:text-sm opacity-90" id="queueTime" style="color: var(--text-color);"></div>
+                            <div id="ticketSignature" class="text-xs sm:text-sm opacity-80 mt-1" style="color: var(--text-color);">Sig: N/A</div>
+                            <div class="mt-2 inline-flex items-center justify-center space-x-2 glass-card px-3 py-1 rounded-full" style="background: rgba(255,255,255,0.06);">
+                                <i class="fas fa-qrcode text-white text-sm"></i>
+                                <span class="text-xs text-white font-semibold">Verifiable — Scan QR or visit verify link</span>
+                            </div>
                         </div>
                     </div>
                     
@@ -249,28 +280,33 @@
                     </div>
                     
                     <!-- Action Buttons -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 spacing-sm">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 spacing-sm">
                         <button onclick="printQueue()" 
-                                class="px-4 sm:px-5 py-2 sm:py-3 rounded-lg sm:rounded-xl font-bold shadow-md transform hover:scale-[1.01] hover:shadow-lg transition-all text-white btn-text"
+                                class="m-1 sm:m-1 px-4 sm:px-5 py-2 sm:py-2.5 rounded-md sm:rounded-lg font-bold shadow-md transform hover:scale-[1.01] hover:shadow-lg transition-all text-white btn-text text-sm"
                                 style="background: linear-gradient(135deg, var(--accent-color), var(--primary-color));">
-                            <i class="fas fa-print mr-2 text-sm sm:text-lg"></i>
+                            <i class="fas fa-print mr-2 text-sm"></i>
                             <span class="hidden sm:inline">Print Number</span>
                             <span class="sm:hidden">Print</span>
                         </button>
                         <button onclick="capturePhoto()" 
-                                class="px-4 sm:px-5 py-2 sm:py-3 rounded-lg sm:rounded-xl font-bold shadow-md transform hover:scale-[1.01] hover:shadow-lg transition-all btn-text"
+                                class="m-1 sm:m-1 px-4 sm:px-5 py-2 sm:py-2.5 rounded-md sm:rounded-lg font-bold shadow-md transform hover:scale-[1.01] hover:shadow-lg transition-all btn-text text-sm"
                                 style="background: linear-gradient(135deg, var(--secondary-color), var(--accent-color)); color: var(--text-color);">
-                            <i class="fas fa-camera mr-2 text-sm sm:text-lg"></i>
-                            <span class="hidden sm:inline">Take Screenshot</span>
-                            <span class="sm:hidden">Screenshot</span>
+                            <i class="fas fa-camera mr-2 text-sm"></i>
+                            <span class="hidden sm:inline">Save to Gallery</span>
+                            <span class="sm:hidden">Save</span>
                         </button>
                     </div>
-                    
+
                     <button onclick="finishAndReset()" 
-                            class="w-full px-4 sm:px-5 py-2 sm:py-3 rounded-xl sm:rounded-2xl font-bold shadow-md transform hover:scale-[1.01] hover:shadow-lg transition-all text-white btn-text"
+                            class="m-1 sm:m-1 w-full px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-bold shadow-md transform hover:scale-[1.01] hover:shadow-lg transition-all text-white btn-text text-sm"
                             style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: var(--text-color);">
-                        <i class="fas fa-redo mr-2 text-sm sm:text-base"></i>Get Another Number
+                        <i class="fas fa-redo mr-2 text-sm"></i>Get Another Number
                     </button>
+
+                    <style>
+                        /* small margin for counter cards and glass cards to create breathing room */
+                        .counter-btn, .glass-card, .btn-text { margin: .35rem; }
+                    </style>
                 </div>
             </div>
         </div>
@@ -399,27 +435,23 @@
         counters.forEach(counter => {
             const button = document.createElement('button');
             button.type = 'button';
-            button.className = 'counter-btn relative bg-white border-2 border-gray-200 rounded-xl sm:rounded-2xl counter-card-padding text-left shadow-lg hover:shadow-xl transition-all';
+            button.className = 'counter-btn relative bg-white border-2 border-gray-200 rounded-xl sm:rounded-2xl text-center shadow-lg hover:shadow-xl transition-all';
             button.onclick = () => selectCounter(counter.id, counter.counter_number, counter.display_name);
             button.innerHTML = `
-                <div class="flex items-start justify-between mb-2 sm:mb-4">
-                    <div class="flex items-center space-x-2 sm:space-x-3">
-                        <div class="w-10 h-10 sm:w-14 sm:h-14 rounded-lg sm:rounded-xl flex items-center justify-center text-base sm:text-xl font-black text-white shadow-lg" style="background: linear-gradient(135deg, var(--accent-color), var(--primary-color));">
-                            ${counter.counter_number}
-                        </div>
-                        <div>
-                            <div class="text-sm sm:text-xl font-bold text-gray-800 mb-0.5 sm:mb-1">${counter.display_name}</div>
-                            <div class="text-xs sm:text-sm text-gray-500 line-clamp-1">${counter.short_description || 'Ready to serve'}</div>
-                        </div>
+                <div class="flex flex-col items-center justify-center space-y-2 p-1">
+                    <div class="counter-number w-10 h-10 sm:w-11 sm:h-11 rounded-lg flex items-center justify-center text-base sm:text-lg font-black text-white shadow-lg" style="background: linear-gradient(135deg, var(--accent-color), var(--primary-color));">
+                        ${counter.counter_number}
                     </div>
-                    <span class="relative inline-flex items-center px-2 py-1 sm:px-3 sm:py-1.5 rounded-full text-xs font-bold bg-green-100 text-green-700 flex-shrink-0">
-                        <span class="absolute -top-1 -right-1 w-2 h-2 sm:w-3 sm:h-3 bg-green-500 rounded-full animate-ping-small"></span>
+                    <div class="counter-title text-sm sm:text-base font-bold">${counter.display_name}</div>
+                    <div class="counter-desc hidden sm:block text-xs text-gray-500 line-clamp-1">${counter.short_description || 'Ready to serve'}</div>
+                    <div class="mt-1 relative inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700">
+                        <span class="absolute -top-1 -right-1 w-2 h-2 sm:w-2 sm:h-2 bg-green-500 rounded-full animate-ping-small"></span>
                         <span class="relative hidden sm:inline">Available</span>
                         <span class="relative sm:hidden">●</span>
-                    </span>
+                    </div>
                 </div>
-                <div class="flex items-center text-blue-600 font-semibold text-xs sm:text-base">
-                    <i class="fas fa-hand-pointer mr-1 sm:mr-2"></i>
+                <div class="mt-1 text-blue-600 font-semibold text-xs sm:text-sm">
+                    <i class="fas fa-hand-pointer mr-1"></i>
                     <span class="hidden sm:inline">Tap to select</span>
                     <span class="sm:hidden">Tap here</span>
                 </div>
@@ -536,6 +568,7 @@
                 }
 
                 if (data.success && data.queue) {
+                    console.log('Generated queue response:', data.queue);
                     currentQueue = data.queue;
                     showQueueDisplay(data.queue);
                 } else {
@@ -587,10 +620,15 @@
         const queueParts = String(queue.queue_number).split('-');
         const displayNumber = queueParts[queueParts.length - 1];
         
+        console.log('showQueueDisplay queue:', queue);
         document.getElementById('queueNumber').textContent = displayNumber;
         document.getElementById('counterInfo').textContent = 
             `Counter ${queue.counter.counter_number} - ${queue.counter.display_name}`;
         document.getElementById('queueTime').textContent = `Generated at ${timeString}`;
+        const sigEl = document.getElementById('ticketSignature');
+        if (sigEl) {
+            sigEl.textContent = 'Sig: ' + (queue.signature ? String(queue.signature).slice(0, 10) : 'N/A');
+        }
         
         moveToStep(3);
         isGenerating = false;
@@ -816,45 +854,238 @@
     }
 
     function capturePhoto() {
+        console.log('capturePhoto called', currentQueue);
         if (!currentQueue) {
             alert('No queue number to capture');
             return;
         }
 
-        const element = document.getElementById('queueContent');
-        
-        if (typeof html2canvas === 'undefined') {
-            const script = document.createElement('script');
-            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-            script.onload = () => captureWithHtml2Canvas(element);
-            document.head.appendChild(script);
-        } else {
-            captureWithHtml2Canvas(element);
+        try {
+            generateTicketImage(currentQueue).then(() => {
+                console.log('generateTicketImage resolved');
+                alert('Queue ticket saved to your device.');
+            }).catch(err => {
+                console.error('Save failed (generateTicketImage):', err);
+                alert('Could not save ticket image. Please try printing instead.');
+            });
+        } catch (err) {
+            console.error('capturePhoto unexpected error:', err);
+            alert('Unexpected error occurred. Check console for details.');
         }
     }
 
-    function captureWithHtml2Canvas(element) {
-        html2canvas(element, {
-            backgroundColor: '#ffffff',
-            scale: 2,
-            logging: false,
-            windowWidth: element.scrollWidth,
-            windowHeight: element.scrollHeight
-        }).then(canvas => {
-            canvas.toBlob(blob => {
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `queue-number-${currentQueue.queue_number}.png`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                alert('Queue number saved as image!');
-            });
-        }).catch(error => {
-            console.error('Capture error:', error);
-            alert('Could not capture photo. Please try print instead.');
+    async function generateTicketImage(queue) {
+        console.log('generateTicketImage called', queue);
+        return new Promise((resolve, reject) => {
+            try {
+                const orgName = `{{ $organization->organization_name }}` || 'Default Organization';
+                const now = new Date();
+                const nowStr = now.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+                const displayNumber = String(queue.queue_number).split('-').pop();
+
+                const scale = 2; // export scale for sharper image
+                const width = 600;
+                const height = 1100;
+
+                const canvas = document.createElement('canvas');
+                canvas.width = width * scale;
+                canvas.height = height * scale;
+                canvas.style.width = width + 'px';
+                canvas.style.height = height + 'px';
+
+                const ctx = canvas.getContext('2d');
+                ctx.scale(scale, scale);
+
+                // Background
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, width, height);
+
+                // Helpers
+                function centerText(text, y, font, color) {
+                    ctx.font = font;
+                    ctx.fillStyle = color || '#111827';
+                    const metrics = ctx.measureText(text);
+                    const x = (width - metrics.width) / 2;
+                    ctx.fillText(text, x, y);
+                }
+
+                // Organization name
+                ctx.textBaseline = 'top';
+                centerText(orgName, 20, '800 20px Arial', '#111827');
+
+                // QUEUE MANAGEMENT / SYSTEM (two-line header)
+                centerText('QUEUE MANAGEMENT', 52, '700 18px Arial', '#111');
+                centerText('SYSTEM', 76, '700 18px Arial', '#111');
+
+                // Title
+                centerText('PRIORITY NUMBER', 110, '700 16px Arial', '#111');
+
+                // Large number area
+                const boxY = 140;
+                const boxHeight = 240;
+                ctx.fillStyle = '#ffffff';
+                ctx.strokeStyle = '#111';
+                ctx.lineWidth = 3;
+                ctx.fillRect(40, boxY, width - 80, boxHeight);
+                ctx.strokeRect(40, boxY, width - 80, boxHeight);
+
+                // Number text (big)
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#000';
+                ctx.font = '900 140px Arial';
+                let numberMetrics = ctx.measureText(displayNumber);
+                ctx.fillText(displayNumber, (width - numberMetrics.width) / 2, boxY + boxHeight / 2);
+
+                // Spaced barcode-like line: * 8 9 5 8 *
+                const spaced = displayNumber.split('').join(' ');
+                const barcodeText = `* ${spaced} *`;
+                centerText(barcodeText, boxY + boxHeight + 36, '700 28px Courier New, monospace', '#111');
+
+                // Counter info (two lines as in sample)
+                centerText('Counter ' + queue.counter.counter_number, boxY + boxHeight + 86, '700 20px Arial', '#111');
+                centerText(queue.counter.display_name, boxY + boxHeight + 112, '600 18px Arial', '#111');
+
+                // Instructions block
+                const instrY = boxY + boxHeight + 150;
+                const instrX = 60;
+                ctx.font = '700 14px Arial';
+                ctx.fillStyle = '#111';
+                ctx.fillText('📋 INSTRUCTIONS', instrX, instrY);
+
+                ctx.font = '14px Arial';
+                const lines = [
+                    '1. Watch the monitor display',
+                    '2. Listen for your number',
+                    `3. Proceed to Counter ${queue.counter.counter_number}`,
+                    '4. Keep this ticket visible'
+                ];
+                let ly = instrY + 28;
+                lines.forEach(line => {
+                    ctx.fillText(line, instrX, ly);
+                    ly += 24;
+                });
+
+                // Generated timestamp and footer
+                ctx.font = '13px Arial';
+                ctx.fillStyle = '#444';
+                centerText('Generated: ' + nowStr, ly + 18, '13px Arial', '#444');
+                centerText('Thank you for your patience!', ly + 44, '700 14px Arial', '#111');
+
+                // Include full verification URL + short signature snippet for tamper detection
+                try {
+                    const verifyUrl = `${location.origin}/{{ $companyCode }}/kiosk/verify-ticket?queue_number=${encodeURIComponent(queue.queue_number)}&signature=${encodeURIComponent(queue.signature)}`;
+                    ctx.font = '11px Arial';
+                    ctx.fillStyle = '#444';
+                    // Print a short visible signature
+                    if (queue.signature) {
+                        const sig = String(queue.signature).slice(0, 10);
+                        centerText('Sig: ' + sig, ly + 60, '12px Courier New, monospace', '#666');
+                    }
+                    // Print verification URL (small)
+                    ctx.font = '11px Arial';
+                    ctx.fillStyle = '#0066cc';
+                    // Truncate URL display for layout but keep full URL in the QR
+                    const shortUrl = verifyUrl.length > 64 ? verifyUrl.slice(0, 60) + '...' : verifyUrl;
+                    centerText('Verify: ' + shortUrl, ly + 84, '11px Arial', '#0066cc');
+
+                    // Generate QR code image via Google Charts and draw it on the ticket.
+                    // Size in px
+                    const qrSize = 180;
+                    const qrSrc = `https://chart.googleapis.com/chart?cht=qr&chs=${qrSize}x${qrSize}&chl=${encodeURIComponent(verifyUrl)}`;
+                    const img = new Image();
+                    img.crossOrigin = 'Anonymous';
+                    img.onload = () => {
+                        try {
+                            // draw QR at bottom-right area
+                            const qrX = width - 40 - qrSize;
+                            const qrY = ly + 100;
+                            ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
+
+                            // proceed to export
+                            canvas.toBlob(blob => {
+                                if (!blob) {
+                                    console.error('toBlob returned null after QR');
+                                    return reject(new Error('Blob generation failed'));
+                                }
+                                try {
+                                    const url = URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = `ticket-${queue.queue_number}.png`;
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    document.body.removeChild(a);
+                                    URL.revokeObjectURL(url);
+                                    resolve();
+                                } catch (err) {
+                                    console.error('Error triggering download (after QR):', err);
+                                    return reject(err);
+                                }
+                            }, 'image/png');
+                        } catch (err) {
+                            console.error('Failed drawing QR:', err);
+                            // fallback: export without QR
+                            canvas.toBlob(blob => {
+                                if (!blob) return reject(new Error('Blob generation failed'));
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `ticket-${queue.queue_number}.png`;
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                                URL.revokeObjectURL(url);
+                                resolve();
+                            }, 'image/png');
+                        }
+                    };
+                    img.onerror = (e) => {
+                        console.error('QR image load error', e);
+                        // export without QR
+                        canvas.toBlob(blob => {
+                            if (!blob) return reject(new Error('Blob generation failed'));
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `ticket-${queue.queue_number}.png`;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                            resolve();
+                        }, 'image/png');
+                    };
+                    img.src = qrSrc;
+                    // return here; onload will handle toBlob
+                    return;
+                } catch (err) {
+                    console.error('Failed to render verify URL on ticket:', err);
+                }
+
+                // Convert and download
+                canvas.toBlob(blob => {
+                    if (!blob) {
+                        console.error('toBlob returned null');
+                        return reject(new Error('Blob generation failed'));
+                    }
+                    try {
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `ticket-${queue.queue_number}.png`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                        resolve();
+                    } catch (err) {
+                        console.error('Error triggering download:', err);
+                        return reject(err);
+                    }
+                }, 'image/png');
+            } catch (err) {
+                reject(err);
+            }
         });
     }
     </script>

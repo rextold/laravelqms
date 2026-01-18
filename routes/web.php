@@ -125,6 +125,7 @@ Route::prefix('{organization_code}')->group(function () {
             Route::get('/', [KioskController::class, 'index'])->name('index');
             Route::get('/counters', [KioskController::class, 'counters'])->name('counters');
             Route::get('/generate-queue', [KioskController::class, 'generateQueue'])->name('generate');
+            Route::get('/verify-ticket', [KioskController::class, 'verifyTicket'])->name('verify');
         });
     
     // MONITOR - Public display screen (completely public, no auth)

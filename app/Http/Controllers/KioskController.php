@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Queue as QueueModel;
 use App\Models\Organization;
 use App\Models\OrganizationSetting;
 use App\Services\QueueService;
@@ -98,9 +99,18 @@ class KioskController extends Controller
         try {
             $queue = $this->queueService->createQueue($counter);
 
+            // Create a short HMAC signature for tamper-detection on tickets.
+            // Use queue_number, id and created_at to bind the signature to this record.
+            $payload = sprintf('%s|%s|%s', $queue->queue_number, $queue->id, $queue->created_at->timestamp ?? time());
+            $key = config('app.key') ?? env('APP_KEY');
+            $signature = hash_hmac('sha256', $payload, $key);
+
+            $queueData = $queue->load('counter')->toArray();
+            $queueData['signature'] = $signature;
+
             return response()->json([
                 'success' => true,
-                'queue' => $queue->load('counter')
+                'queue' => $queueData
             ]);
         } catch (\Throwable $e) {
             \Log::error('Failed to generate queue number', [
@@ -112,5 +122,39 @@ class KioskController extends Controller
                 'message' => 'Error generating priority number. Please try again.'
             ], 500);
         }
+    }
+
+    /**
+     * Verify a ticket signature and return validation result.
+     * Public endpoint used by scanners or verification tools.
+     */
+    public function verifyTicket(Request $request)
+    {
+        $organization = Organization::where('organization_code', $request->route('organization_code'))->firstOrFail();
+
+        $queueNumber = $request->query('queue_number');
+        $signature = $request->query('signature');
+
+        if (!$queueNumber || !$signature) {
+            return response()->json(['valid' => false, 'message' => 'Missing queue_number or signature'], 422);
+        }
+
+        $queue = QueueModel::where('queue_number', $queueNumber)
+            ->where('organization_id', $organization->id)
+            ->first();
+
+        if (!$queue) {
+            return response()->json(['valid' => false, 'message' => 'Ticket not found'], 404);
+        }
+
+        $payload = sprintf('%s|%s|%s', $queue->queue_number, $queue->id, $queue->created_at->timestamp ?? time());
+        $key = config('app.key') ?? env('APP_KEY');
+        $expected = hash_hmac('sha256', $payload, $key);
+
+        if (hash_equals($expected, $signature)) {
+            return response()->json(['valid' => true, 'message' => 'Signature valid', 'queue' => $queue]);
+        }
+
+        return response()->json(['valid' => false, 'message' => 'Invalid signature'], 200);
     }
 }
