@@ -192,11 +192,12 @@
                             <div class="text-xs text-gray-500" id="headerDate"></div>
                         </div>
                         
-                        <!-- Online/Offline Toggle Button -->
+                        <!-- Online/Offline Status Icon with Pulse Animation -->
                         <button id="btnToggleOnline" type="button" 
-                                class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors" 
-                                title="Toggle Online Status">
-                            <i class="fas fa-power-off"></i>
+                                class="px-3 py-2 rounded-lg transition-all duration-300 flex items-center space-x-2" 
+                                title="Click to toggle online/offline status">
+                            <i id="statusIcon" class="fas fa-circle text-green-500 status-active" style="font-size: 0.75rem;"></i>
+                            <span id="statusLabel" class="text-xs font-semibold text-green-600">Online</span>
                         </button>
                         
                         <!-- Minimize/Restore button -->
@@ -210,8 +211,7 @@
                            class="px-3 py-2 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 transition-colors" title="Logout">
                             <i class="fas fa-sign-out-alt"></i>
                         </a>
-                    </div>
-                </div>
+                    </div>                </div>
             </div>
         </header>
 
