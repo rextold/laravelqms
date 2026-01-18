@@ -553,6 +553,13 @@
                 </div>
             </div>
 
+            <div class="header-right flex items-center gap-3">
+                <button id="soundToggle" title="Toggle notification sound" class="bg-white bg-opacity-10 hover:bg-opacity-20 rounded-md px-3 py-2 text-white flex items-center gap-2" style="border: none;">
+                    <i id="soundIcon" class="fas fa-volume-up"></i>
+                    <span class="hidden sm:inline text-sm">Sound</span>
+                </button>
+            </div>
+
             <div class="header-center">
                 <!-- Call Banner (high-visibility, non-blocking, inside header) -->
                 <div id="callOverlay" class="call-overlay" aria-hidden="true">
@@ -630,6 +637,61 @@
         let previousServingState = new Map();
         let overlayHideTimer = null;
         const notificationSound = document.getElementById('notificationSound');
+
+        // Sound toggle and unlocking for autoplay-restricted browsers
+        const SOUND_KEY = 'monitorSoundEnabled';
+        const soundToggleBtn = document.getElementById('soundToggle');
+        const soundIcon = document.getElementById('soundIcon');
+
+        function isSoundEnabled() {
+            const v = localStorage.getItem(SOUND_KEY);
+            return v === null ? true : v === '1';
+        }
+
+        function updateSoundUI() {
+            const enabled = isSoundEnabled();
+            notificationSound.muted = !enabled;
+            if (soundIcon) {
+                soundIcon.className = enabled ? 'fas fa-volume-up' : 'fas fa-volume-mute';
+            }
+        }
+
+        function toggleSound() {
+            const newVal = !isSoundEnabled();
+            localStorage.setItem(SOUND_KEY, newVal ? '1' : '0');
+            updateSoundUI();
+            // Try to unlock audio on user toggle
+            tryUnlockAudio();
+        }
+
+        function tryUnlockAudio() {
+            // Attempt a short play/pause to unlock audio on browsers requiring user gesture
+            try {
+                notificationSound.currentTime = 0;
+                const p = notificationSound.play();
+                if (p && p.then) {
+                    p.then(() => {
+                        notificationSound.pause();
+                        notificationSound.currentTime = 0;
+                    }).catch(() => { /* ignore */ });
+                }
+            } catch (e) { console.log('unlock audio error', e); }
+        }
+
+        // Initialize sound settings
+        if (soundToggleBtn) {
+            soundToggleBtn.addEventListener('click', toggleSound);
+        }
+        updateSoundUI();
+
+        // On first user interaction anywhere, attempt to unlock audio if enabled
+        function onFirstInteraction() {
+            if (isSoundEnabled()) tryUnlockAudio();
+            window.removeEventListener('pointerdown', onFirstInteraction);
+            window.removeEventListener('keydown', onFirstInteraction);
+        }
+        window.addEventListener('pointerdown', onFirstInteraction);
+        window.addEventListener('keydown', onFirstInteraction);
 
         // Customizable notification display messages from admin settings
         let notifySettings = {
