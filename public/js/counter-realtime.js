@@ -40,9 +40,7 @@ class CounterRealtime {
             }
 
             const data = await response.json();
-            // Handle the API response structure - data.counters contains the array
-            const counters = data.counters || data;
-            this.updateCounterDisplay(counters);
+            this.updateCounterDisplay(data);
         } catch (error) {
             console.warn('Counter data fetch error:', error.message);
         }
