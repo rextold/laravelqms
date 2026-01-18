@@ -15,6 +15,7 @@ class Kernel extends HttpKernel
      */
     protected $middleware = [
         // ...existing Laravel global middleware...
+        \Fruitcake\Cors\HandleCors::class,
         \App\Http\Middleware\VerifySessionPersistence::class,
     ];
 
