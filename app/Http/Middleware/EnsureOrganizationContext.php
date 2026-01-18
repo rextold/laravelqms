@@ -54,16 +54,25 @@ class EnsureOrganizationContext
         // Set organization context for all routes
         $this->setOrganizationContext($request, $organization);
 
-        // For authenticated users, verify organization access unless it's a public route
-        $user = auth()->user();
-        $routeName = $request->route()->getName() ?? '';
-        $path = $request->getPathInfo();
+        // Public routes (kiosk, monitor) - allow access without any user checks
+        if ($this->isPublicRoute($request)) {
+            return $next($request);
+        }
 
-        if ($user && !$this->isPublicRoute($request)) {
-            if (!$user->isSuperAdmin() && $user->organization_id && $user->organization_id !== $organization->id) {
+        // For authenticated users on non-public routes, verify organization access
+        $user = auth()->user();
+
+        if ($user) {
+            // SuperAdmin can access any organization
+            if ($user->isSuperAdmin()) {
+                return $next($request);
+            }
+            
+            // Regular users must belong to the organization they're accessing
+            if ($user->organization_id && $user->organization_id !== $organization->id) {
                 Log::warning('403 Unauthorized organization access attempt', [
                     'user_id' => $user->id,
-                    'user_email' => $user->email,
+                    'user_email' => $user->email ?? 'N/A',
                     'user_role' => $user->role,
                     'user_organization_id' => $user->organization_id,
                     'requested_organization_id' => $organization->id,
@@ -78,7 +87,38 @@ class EnsureOrganizationContext
 
     private function isPublicRoute(Request $request): bool
     {
-        return in_array('allow.public', $request->route()->middleware());
+        // Check for allow.public middleware
+        if (in_array('allow.public', $request->route()->middleware())) {
+            return true;
+        }
+        
+        // Explicitly allow monitor and kiosk routes
+        $routeName = $request->route()->getName() ?? '';
+        $publicRoutePatterns = [
+            'monitor.',   // All monitor routes
+            'kiosk.',     // All kiosk routes
+        ];
+        
+        foreach ($publicRoutePatterns as $pattern) {
+            if (str_starts_with($routeName, $pattern)) {
+                return true;
+            }
+        }
+        
+        // Also check path for public routes (fallback)
+        $path = $request->getPathInfo();
+        $publicPathPatterns = [
+            '/monitor',
+            '/kiosk',
+        ];
+        
+        foreach ($publicPathPatterns as $pattern) {
+            if (str_contains($path, $pattern)) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 
     private function setOrganizationContext(Request $request, Organization $organization): void

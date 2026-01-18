@@ -141,251 +141,509 @@ class CounterController extends Controller
         }
     }    /**
      * Call next queue in line
+     * POST /counter/call-next
      */
-    public function callNext(Request $request = null)
+    public function callNext(Request $request)
     {
-        $user = Auth::user();
-        $organization = $request ? $request->attributes->get('organization') : null;
-        
-        if (!$user->isCounter() || !$user->is_online) {
-            return response()->json(['error' => 'Counter must be online to call queues'], 403);
-        }
-
         try {
+            $user = Auth::user();
+            $organization = $request->attributes->get('organization');
+            
+            // Validate user and counter status
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Authentication required'
+                ], 401);
+            }
+            
+            if (!$user->isCounter()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Counter role required'
+                ], 403);
+            }
+            
+            if (!$user->is_online) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Counter must be online to call queues'
+                ], 403);
+            }
+
+            // Check if counter already has an active queue
+            $currentQueue = $user->getCurrentQueue();
+            if ($currentQueue) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Please complete or skip current queue before calling next',
+                    'current_queue' => $currentQueue
+                ], 400);
+            }
+
             $queue = DB::transaction(function () use ($user) {
-                // Get next waiting queue for this counter
+                // Get next waiting queue for this counter (FIFO - First In First Out)
                 $queue = Queue::where('counter_id', $user->id)
                     ->where('status', 'waiting')
-                    ->orderBy('created_at')
+                    ->orderBy('created_at', 'asc')
+                    ->lockForUpdate()
                     ->first();
 
                 if (!$queue) {
                     return null;
                 }
 
-                // Update queue status
+                // Update queue status to called
                 $queue->status = 'called';
                 $queue->called_at = now();
                 $queue->save();
 
-                // Broadcast queue called event
-                if (config('broadcasting.default') !== 'null') {
-                    broadcast(new QueueCalled($queue));
-                }
+                Log::info('Queue called', [
+                    'queue_id' => $queue->id,
+                    'queue_number' => $queue->queue_number,
+                    'counter_id' => $user->id,
+                    'counter_number' => $user->counter_number,
+                    'called_at' => $queue->called_at
+                ]);
 
                 return $queue;
             });
 
             if (!$queue) {
-                return response()->json(['error' => 'No queues waiting'], 404);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No queues waiting'
+                ], 404);
             }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Queue ' . $queue->queue_number . ' has been called',
-                'queue' => $queue
+                'queue' => [
+                    'id' => $queue->id,
+                    'queue_number' => $queue->queue_number,
+                    'status' => $queue->status,
+                    'called_at' => $queue->called_at->toISOString(),
+                    'counter_id' => $queue->counter_id
+                ]
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Error calling next queue: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to call next queue'], 500);
+            Log::error('Error calling next queue: ' . $e->getMessage(), [
+                'user_id' => $user->id ?? null,
+                'exception' => get_class($e),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to call next queue: ' . $e->getMessage()
+            ], 500);
         }
     }
 
 
     /**
-     * Move current queue to completed and call next
+     * Move current queue to completed and optionally call next
+     * POST /counter/move-next
      */
-    public function moveToNext(Request $request = null)
+    public function moveToNext(Request $request)
     {
-        $user = Auth::user();
-        
-        if (!$user->isCounter() || !$user->is_online) {
-            return response()->json(['error' => 'Counter must be online'], 403);
-        }
-
         try {
+            $user = Auth::user();
+            
+            // Validate user and counter status
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Authentication required'
+                ], 401);
+            }
+            
+            if (!$user->isCounter()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Counter role required'
+                ], 403);
+            }
+            
+            if (!$user->is_online) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Counter must be online'
+                ], 403);
+            }
+
             $result = DB::transaction(function () use ($user) {
-                // Complete current queue
+                // Get and complete current queue
                 $currentQueue = $user->getCurrentQueue();
+                $completedQueue = null;
+                
                 if ($currentQueue) {
                     $currentQueue->status = 'completed';
                     $currentQueue->completed_at = now();
                     $currentQueue->save();
+                    $completedQueue = $currentQueue;
+                    
+                    Log::info('Queue completed', [
+                        'queue_id' => $currentQueue->id,
+                        'queue_number' => $currentQueue->queue_number,
+                        'counter_id' => $user->id,
+                        'completed_at' => $currentQueue->completed_at
+                    ]);
                 }
 
-                // Call next queue
+                // Get and call next waiting queue
                 $nextQueue = Queue::where('counter_id', $user->id)
                     ->where('status', 'waiting')
-                    ->orderBy('created_at')
+                    ->orderBy('created_at', 'asc')
+                    ->lockForUpdate()
                     ->first();
 
                 if ($nextQueue) {
                     $nextQueue->status = 'called';
                     $nextQueue->called_at = now();
                     $nextQueue->save();
-
-                    // Broadcast queue called event
-                    if (config('broadcasting.default') !== 'null') {
-                        broadcast(new QueueCalled($nextQueue));
-                    }
+                    
+                    Log::info('Next queue called after completion', [
+                        'queue_id' => $nextQueue->id,
+                        'queue_number' => $nextQueue->queue_number,
+                        'counter_id' => $user->id,
+                        'called_at' => $nextQueue->called_at
+                    ]);
                 }
 
-                return $nextQueue;
+                return [
+                    'completed' => $completedQueue,
+                    'next' => $nextQueue
+                ];
             });
+
+            $message = 'Queue completed.';
+            if ($result['next']) {
+                $message .= ' Next queue called: ' . $result['next']->queue_number;
+            } else {
+                $message .= ' No more queues waiting.';
+            }
 
             return response()->json([
                 'success' => true,
-                'message' => $result ? 'Next queue called: ' . $result->queue_number : 'No more queues waiting',
-                'queue' => $result
+                'message' => $message,
+                'completed_queue' => $result['completed'] ? [
+                    'id' => $result['completed']->id,
+                    'queue_number' => $result['completed']->queue_number,
+                    'completed_at' => $result['completed']->completed_at->toISOString()
+                ] : null,
+                'queue' => $result['next'] ? [
+                    'id' => $result['next']->id,
+                    'queue_number' => $result['next']->queue_number,
+                    'status' => $result['next']->status,
+                    'called_at' => $result['next']->called_at->toISOString()
+                ] : null
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Error moving to next queue: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to move to next queue'], 500);
+            Log::error('Error moving to next queue: ' . $e->getMessage(), [
+                'user_id' => $user->id ?? null,
+                'exception' => get_class($e),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to complete queue: ' . $e->getMessage()
+            ], 500);
         }
     }
 
     /**
      * Transfer queue to another counter
+     * POST /counter/transfer
      */
     public function transferQueue(Request $request)
     {
-        $user = Auth::user();
-        
-        if (!$user->isCounter() || !$user->is_online) {
-            return response()->json(['error' => 'Counter must be online'], 403);
-        }
-
-        // Get parameters from GET request
-        $queueId = $request->query('queue_id') ?? $request->input('queue_id');
-        $targetCounterId = $request->query('to_counter_id') ?? $request->input('to_counter_id');
-
-        if (!$queueId || !$targetCounterId) {
-            return response()->json([
-                'error' => 'Missing required parameters: queue_id and to_counter_id'
-            ], 422);
-        }
-
-        // Validate queue exists
-        $queue = Queue::find($queueId);
-        if (!$queue) {
-            return response()->json(['error' => 'Queue not found'], 404);
-        }
-
-        // Validate target counter exists
-        $targetCounter = User::find($targetCounterId);
-        if (!$targetCounter) {
-            return response()->json(['error' => 'Target counter not found'], 404);
-        }
-
         try {
+            $user = Auth::user();
+            
+            // Validate user and counter status
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Authentication required'
+                ], 401);
+            }
+            
+            if (!$user->isCounter()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Counter role required'
+                ], 403);
+            }
+            
+            if (!$user->is_online) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Counter must be online to transfer queues'
+                ], 403);
+            }
+
+            // Get parameters from POST body or query string
+            $queueId = $request->input('queue_id') ?? $request->query('queue_id');
+            $targetCounterId = $request->input('to_counter_id') ?? $request->query('to_counter_id');
+
+            // Validate required parameters
+            if (!$queueId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Queue ID is required'
+                ], 422);
+            }
+            
+            if (!$targetCounterId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Target counter ID is required'
+                ], 422);
+            }
+
+            // Validate queue exists
+            $queue = Queue::find($queueId);
+            if (!$queue) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Queue not found'
+                ], 404);
+            }
+
+            // Verify queue belongs to current counter
+            if ($queue->counter_id != $user->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This queue does not belong to your counter'
+                ], 403);
+            }
+
+            // Validate target counter exists and is online
+            $targetCounter = User::find($targetCounterId);
+            if (!$targetCounter) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Target counter not found'
+                ], 404);
+            }
+            
+            if (!$targetCounter->isCounter()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Target is not a valid counter'
+                ], 400);
+            }
+            
+            if (!$targetCounter->is_online) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Target counter is offline'
+                ], 400);
+            }
+            
+            if ($targetCounter->id == $user->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot transfer to the same counter'
+                ], 400);
+            }
+
             $result = DB::transaction(function () use ($queue, $targetCounter, $user) {
-
-                // Verify queue belongs to current counter
-                if ($queue->counter_id !== $user->id) {
-                    throw new \Exception('Queue does not belong to this counter');
-                }
-
-                // Verify target counter is online
-                if (!$targetCounter->is_online) {
-                    throw new \Exception('Target counter is offline');
-                }
-
+                // Store original counter for logging
+                $originalCounterId = $queue->counter_id;
+                
                 // Transfer queue
                 $queue->counter_id = $targetCounter->id;
                 $queue->transferred_from = $user->id;
                 $queue->transferred_at = now();
                 $queue->status = 'waiting'; // Reset to waiting for new counter
+                $queue->called_at = null; // Clear called_at since it's now waiting
                 $queue->save();
+
+                Log::info('Queue transferred', [
+                    'queue_id' => $queue->id,
+                    'queue_number' => $queue->queue_number,
+                    'from_counter_id' => $originalCounterId,
+                    'to_counter_id' => $targetCounter->id,
+                    'transferred_at' => $queue->transferred_at
+                ]);
 
                 return $queue;
             });
 
             return response()->json([
                 'success' => true,
-                'message' => 'Queue transferred successfully',
-                'queue' => $result
+                'message' => 'Queue ' . $result->queue_number . ' transferred to Counter ' . $targetCounter->counter_number,
+                'queue' => [
+                    'id' => $result->id,
+                    'queue_number' => $result->queue_number,
+                    'status' => $result->status,
+                    'new_counter_id' => $result->counter_id,
+                    'new_counter_number' => $targetCounter->counter_number,
+                    'transferred_at' => $result->transferred_at->toISOString()
+                ]
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Error transferring queue: ' . $e->getMessage());
-            return response()->json(['error' => $e->getMessage()], 500);
+            Log::error('Error transferring queue: ' . $e->getMessage(), [
+                'user_id' => $user->id ?? null,
+                'queue_id' => $queueId ?? null,
+                'target_counter_id' => $targetCounterId ?? null,
+                'exception' => get_class($e),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to transfer queue: ' . $e->getMessage()
+            ], 500);
         }
     }
 
     /**
      * Skip current queue
+     * POST /counter/skip
      */
     public function skipQueue(Request $request)
     {
-        $user = Auth::user();
-        
-        if (!$user->isCounter() || !$user->is_online) {
-            return response()->json(['error' => 'Counter must be online'], 403);
-        }
-
         try {
+            $user = Auth::user();
+            
+            // Validate user and counter status
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Authentication required'
+                ], 401);
+            }
+            
+            if (!$user->isCounter()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Counter role required'
+                ], 403);
+            }
+            
+            if (!$user->is_online) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Counter must be online'
+                ], 403);
+            }
+
             $queue = DB::transaction(function () use ($user) {
                 $currentQueue = $user->getCurrentQueue();
                 
                 if (!$currentQueue) {
-                    throw new \Exception('No queue to skip');
+                    return null;
                 }
 
                 $currentQueue->status = 'skipped';
                 $currentQueue->skipped_at = now();
                 $currentQueue->save();
 
+                Log::info('Queue skipped', [
+                    'queue_id' => $currentQueue->id,
+                    'queue_number' => $currentQueue->queue_number,
+                    'counter_id' => $user->id,
+                    'skipped_at' => $currentQueue->skipped_at
+                ]);
+
                 return $currentQueue;
             });
+
+            if (!$queue) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No current queue to skip'
+                ], 404);
+            }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Queue ' . $queue->queue_number . ' has been skipped',
-                'queue' => $queue
+                'queue' => [
+                    'id' => $queue->id,
+                    'queue_number' => $queue->queue_number,
+                    'status' => $queue->status,
+                    'skipped_at' => $queue->skipped_at->toISOString()
+                ]
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Error skipping queue: ' . $e->getMessage());
-            return response()->json(['error' => $e->getMessage()], 500);
+            Log::error('Error skipping queue: ' . $e->getMessage(), [
+                'user_id' => $user->id ?? null,
+                'exception' => get_class($e),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to skip queue: ' . $e->getMessage()
+            ], 500);
         }
     }
 
     /**
      * Recall a skipped queue
-     * Accepts both GET and POST requests
+     * POST /counter/recall
      */
     public function recallQueue(Request $request)
     {
-        $user = Auth::user();
-        
-        if (!$user || !$user->isCounter()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Counter role required'
-            ], 403);
-        }
-
-        if (!$user->is_online) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Counter must be online'
-            ], 403);
-        }
-
-        // Get queue_id from GET, POST, or request body
-        $queueId = $request->input('queue_id') ?? $request->query('queue_id');
-
-        if (!$queueId) {
-            return response()->json([
-                'success' => false,
-                'message' => 'The queue id field is required.'
-            ], 422);
-        }
-
         try {
-            // Verify queue exists
+            $user = Auth::user();
+            
+            // Validate user and counter status
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Authentication required'
+                ], 401);
+            }
+            
+            if (!$user->isCounter()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Counter role required'
+                ], 403);
+            }
+
+            if (!$user->is_online) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Counter must be online'
+                ], 403);
+            }
+
+            // Get queue_id from POST body or query string
+            $queueId = $request->input('queue_id') ?? $request->query('queue_id');
+
+            if (!$queueId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Queue ID is required'
+                ], 422);
+            }
+
+            // Check if counter already has an active queue
+            $currentQueue = $user->getCurrentQueue();
+            if ($currentQueue) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Please complete or skip current queue before recalling another',
+                    'current_queue' => [
+                        'id' => $currentQueue->id,
+                        'queue_number' => $currentQueue->queue_number
+                    ]
+                ], 400);
+            }
+
+            // Find the queue
             $queue = Queue::find($queueId);
             
             if (!$queue) {
@@ -395,27 +653,11 @@ class CounterController extends Controller
                 ], 404);
             }
 
-            // Log verification details for debugging
-            Log::info('Recall queue verification', [
-                'user_id' => $user->id,
-                'user_counter_id' => $user->id,
-                'queue_id' => $queue->id,
-                'queue_counter_id' => $queue->counter_id,
-                'queue_status' => $queue->status,
-                'user_matches' => $queue->counter_id == $user->id
-            ]);
-
             // Verify queue belongs to current counter
             if ($queue->counter_id != $user->id) {
-                Log::warning('Queue ownership mismatch', [
-                    'queue_counter_id' => $queue->counter_id,
-                    'user_id' => $user->id,
-                    'user_counter_id' => $user->id
-                ]);
-                
                 return response()->json([
                     'success' => false,
-                    'message' => 'This queue belongs to Counter ' . $queue->counter_id . '. Only the assigned counter can perform this action.'
+                    'message' => 'This queue belongs to another counter'
                 ], 403);
             }
 
@@ -428,16 +670,18 @@ class CounterController extends Controller
             }
 
             // Recall the queue
-            $result = DB::transaction(function () use ($queue) {
+            $result = DB::transaction(function () use ($queue, $user) {
                 $queue->status = 'called';
                 $queue->called_at = now();
                 $queue->skipped_at = null;
                 $queue->save();
 
-                // Broadcast queue called event
-                if (config('broadcasting.default') !== 'null') {
-                    broadcast(new QueueCalled($queue));
-                }
+                Log::info('Queue recalled', [
+                    'queue_id' => $queue->id,
+                    'queue_number' => $queue->queue_number,
+                    'counter_id' => $user->id,
+                    'recalled_at' => $queue->called_at
+                ]);
 
                 return $queue;
             });
@@ -445,19 +689,25 @@ class CounterController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Queue ' . $result->queue_number . ' has been recalled',
-                'queue' => $result
+                'queue' => [
+                    'id' => $result->id,
+                    'queue_number' => $result->queue_number,
+                    'status' => $result->status,
+                    'called_at' => $result->called_at->toISOString()
+                ]
             ]);
 
         } catch (\Exception $e) {
             Log::error('Error recalling queue: ' . $e->getMessage(), [
-                'queue_id' => $queueId,
-                'user_id' => $user->id,
-                'exception' => get_class($e)
+                'queue_id' => $queueId ?? null,
+                'user_id' => $user->id ?? null,
+                'exception' => get_class($e),
+                'trace' => $e->getTraceAsString()
             ]);
             
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => 'Failed to recall queue: ' . $e->getMessage()
             ], 500);
         }
     }

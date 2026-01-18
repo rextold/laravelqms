@@ -104,8 +104,9 @@ Route::prefix('{organization_code}')->group(function () {
         Route::get('/generate-queue', [KioskController::class, 'generateQueue'])->name('generate');
     });
 
-    // Monitor Display (public, read-only)
-    Route::prefix('monitor')->name('monitor.')->middleware(['organization.context', 'allow.public'])->group(function () {
+    // Monitor Display (public, read-only) - NO authentication required
+    // These routes are accessible without login for public display screens
+    Route::prefix('monitor')->name('monitor.')->middleware(['organization.context', 'allow.public'])->withoutMiddleware(['auth'])->group(function () {
         Route::get('/', [MonitorController::class, 'index'])->name('index');
         Route::get('/data', [MonitorController::class, 'getData'])->name('data');
     });
