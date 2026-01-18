@@ -648,7 +648,9 @@ function toggleMinimize(force) {
 // ============================================================
 
 function makeCounterRequest(action, params = {}) {
-    const url = new URL(`/${ORG_CODE}/counter/${action}`, window.location.origin);
+    // Ensure organization code is included in URL
+    const orgCode = ORG_CODE || window.location.pathname.split('/')[1];
+    const url = new URL(`/${orgCode}/counter/${action}`, window.location.origin);
     
     // Prepare form data for POST request
     const formData = new FormData();
