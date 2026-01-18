@@ -210,6 +210,20 @@ class VideoController extends Controller
             
             return redirect()->back()->with('error', 'Failed to delete video: ' . $e->getMessage());
         }
+    }    public function updateControl(Request $request)
+    {
+        $validated = $request->validate([
+            'is_playing' => 'required|boolean',
+            'volume' => 'required|integer|min:0|max:100',
+            'bell_volume' => 'nullable|integer|min:0|max:100',
+            'current_video_id' => 'nullable|exists:videos,id',
+        ]);
+
+        $control = VideoControl::getCurrent();
+        $control->update($validated);
+
+        return response()->json(['success' => true]);
+    }
         public function updateControl(Request $request)
         {
             $validated = $request->validate([
