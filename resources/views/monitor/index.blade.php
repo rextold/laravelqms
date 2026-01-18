@@ -627,7 +627,6 @@
     </audio>
     <script>
         const orgCode = '{{ $companyCode }}';
-        const orgId = '{{ $organization->id }}';
         let currentPlayingVideo = null;
         let refreshInterval = null;
         let lastDataUpdate = Date.now();
@@ -1193,7 +1192,7 @@
             function subscribeToVideoControl(echo) {
                 try {
                     if (!echo) return;
-                    echo.channel('video-control.' + orgId)
+                    echo.channel('video-control')
                         .listen('VideoControlUpdated', (payload) => {
                             try {
                                 // Payload contains { control, meta }

@@ -22,17 +22,8 @@ class VideoControlUpdated implements ShouldBroadcastNow
 
     public function broadcastOn()
     {
-        // Broadcast on an organization-scoped public channel so only monitors for
-        // that organization receive updates. Fallback to global channel if missing.
-        $orgId = null;
-        try {
-            $orgId = $this->control->organization_id ?? null;
-        } catch (\Throwable $_) {
-            $orgId = null;
-        }
-
-        $channel = $orgId ? 'video-control.' . $orgId : 'video-control';
-        return new Channel($channel);
+        // Broadcast on a public channel; monitors can subscribe if configured.
+        return new Channel('video-control');
     }
 
     public function broadcastWith()

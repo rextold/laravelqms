@@ -182,8 +182,6 @@ Route::prefix('{organization_code}')->group(function () {
                 // Video Management
                 Route::prefix('videos')->name('videos.')->group(function () {
                     Route::get('/', [VideoController::class, 'index'])->name('index');
-                    Route::get('/make', [VideoController::class, 'showMakeVideoForm'])->name('make');
-                    Route::post('/make', [VideoController::class, 'buildVideo'])->name('make.post');
                     Route::post('/', [VideoController::class, 'store'])->name('store');
                     Route::put('/{video}', [VideoController::class, 'update'])->name('update');
                     Route::delete('/{video}', [VideoController::class, 'destroy'])->name('destroy');

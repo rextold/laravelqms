@@ -8,7 +8,6 @@ use App\Models\VideoControl;
 use App\Models\PlaylistItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use App\Jobs\BuildSlideshowVideo;
 
 class VideoController extends Controller
 {
@@ -286,60 +285,6 @@ class VideoController extends Controller
             'message' => 'Now playing: ' . $video->title,
             'video' => $video
         ]);
-    }
-
-    /**
-     * Show Make Video form (slideshow builder).
-     */
-    public function showMakeVideoForm()
-    {
-        return view('admin.videos.make');
-    }
-
-    /**
-     * Build video from uploaded images and optional audio using ffmpeg.
-     */
-    public function buildVideo(Request $request)
-    {
-        // Basic validation
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'images' => 'required|array|min:1',
-            'images.*' => 'required|image|mimes:jpg,jpeg,png,gif',
-            'audio' => 'nullable|mimes:mp3,wav,ogg',
-            'duration' => 'nullable|numeric|min:1|max:60',
-        ]);
-
-        // Server-side processing is queued. Store uploaded files to a temp folder and dispatch a job.
-        $orgCode = $request->route('organization_code');
-        $organization = \App\Models\Organization::where('organization_code', $orgCode)->firstOrFail();
-
-        $duration = (float) ($validated['duration'] ?? 5);
-
-        $tmpBase = storage_path('app/tmp_makevideo/' . $organization->id . '/' . uniqid());
-        @mkdir($tmpBase, 0775, true);
-
-        $imagePaths = [];
-        foreach ($request->file('images') as $i => $img) {
-            $name = ($i + 1) . '_' . preg_replace('/[^A-Za-z0-9_\-\.]/', '_', $img->getClientOriginalName());
-            $path = $tmpBase . DIRECTORY_SEPARATOR . $name;
-            $img->move($tmpBase, $name);
-            $imagePaths[] = $path;
-        }
-
-        $audioPath = null;
-        if ($request->hasFile('audio')) {
-            $audio = $request->file('audio');
-            $audioName = 'audio_' . preg_replace('/[^A-Za-z0-9_\-\.]/', '_', $audio->getClientOriginalName());
-            $audio->move($tmpBase, $audioName);
-            $audioPath = $tmpBase . DIRECTORY_SEPARATOR . $audioName;
-        }
-
-        // Dispatch job to process ffmpeg in background
-        BuildSlideshowVideo::dispatch($organization->id, $validated['title'], $imagePaths, $audioPath, $duration);
-
-        return redirect()->route('admin.videos.index', ['organization_code' => request()->route('organization_code')])
-            ->with('success', 'Video build job queued. It will appear when processing completes.');
     }
 
     public function unmute(Request $request)
