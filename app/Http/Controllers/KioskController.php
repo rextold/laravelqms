@@ -45,7 +45,7 @@ class KioskController extends Controller
         $organization = Organization::where('organization_code', $request->route('organization_code'))->firstOrFail();
         $counters = User::onlineCounters()
             ->where('organization_id', $organization->id)
-            ->get(['id', 'display_name', 'counter_number', 'short_description']);
+            ->get(['id', 'display_name', 'counter_number', 'short_description', 'is_online']);
 
         return response()->json([
             'counters' => $counters,
