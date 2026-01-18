@@ -657,13 +657,13 @@ class CounterController extends Controller
                 ]
             ]);
 
-        // } catch (\Exception $e) {
-        //     Log::error('Error fetching counter data: ' . $e->getMessage());
-        //     return response()->json([
-        //         'success' => false,
-        //         'message' => 'Failed to fetch counter data'
-        //     ], 500);
-        // }
+        } catch (\Exception $e) {
+            Log::error('Error fetching counter data: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch counter data'
+            ], 500);
+        }
     }
 
     /**
