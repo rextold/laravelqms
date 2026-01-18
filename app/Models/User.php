@@ -47,9 +47,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
-    ];
-
-    protected $casts = [
+    ];    protected $casts = [
         'is_online' => 'boolean',
         'password' => 'hashed',
         'organization_id' => 'integer',
@@ -124,6 +122,16 @@ class User extends Authenticatable
         return $this->queues()
             ->where('status', 'skipped')
             ->orderBy('updated_at')
+            ->get();
+    }
+
+    public function getOnlineCounters()
+    {
+        return User::where('organization_id', $this->organization_id)
+            ->where('role', 'counter')
+            ->where('is_online', true)
+            ->where('id', '!=', $this->id)
+            ->orderBy('counter_number')
             ->get();
     }
 }
