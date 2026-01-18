@@ -244,7 +244,8 @@ class CounterController extends Controller
 
 
     /**
-     * Move current queue to completed and optionally call next
+     * Complete current queue (does NOT auto-call next queue)
+     * Counter must manually click "Call Next" to serve next customer
      * POST /counter/move-next
      */
     public function moveToNext(Request $request)
@@ -274,54 +275,48 @@ class CounterController extends Controller
                 ], 403);
             }
 
-            $result = DB::transaction(function () use ($user) {
-                // Get and complete current queue
+            $completedQueue = DB::transaction(function () use ($user) {
+                // Get current queue
                 $currentQueue = $user->getCurrentQueue();
-                $completedQueue = null;
                 
-                if ($currentQueue) {
-                    $currentQueue->status = 'completed';
-                    $currentQueue->completed_at = now();
-                    $currentQueue->save();
-                    $completedQueue = $currentQueue;
-                    
-                    Log::info('Queue completed', [
-                        'queue_id' => $currentQueue->id,
-                        'queue_number' => $currentQueue->queue_number,
-                        'counter_id' => $user->id,
-                        'completed_at' => $currentQueue->completed_at
-                    ]);
+                if (!$currentQueue) {
+                    return null;
                 }
+                
+                // Mark current queue as completed
+                $currentQueue->status = 'completed';
+                $currentQueue->completed_at = now();
+                $currentQueue->save();
+                
+                Log::info('Queue completed', [
+                    'queue_id' => $currentQueue->id,
+                    'queue_number' => $currentQueue->queue_number,
+                    'counter_id' => $user->id,
+                    'counter_number' => $user->counter_number,
+                    'completed_at' => $currentQueue->completed_at
+                ]);
 
-                // Get and call next waiting queue
-                $nextQueue = Queue::where('counter_id', $user->id)
-                    ->where('status', 'waiting')
-                    ->orderBy('created_at', 'asc')
-                    ->lockForUpdate()
-                    ->first();
+                // DO NOT auto-call next queue
+                // Counter must explicitly click "Call Next" to serve next customer
 
-                if ($nextQueue) {
-                    $nextQueue->status = 'called';
-                    $nextQueue->called_at = now();
-                    $nextQueue->save();
-                    
-                    Log::info('Next queue called after completion', [
-                        'queue_id' => $nextQueue->id,
-                        'queue_number' => $nextQueue->queue_number,
-                        'counter_id' => $user->id,
-                        'called_at' => $nextQueue->called_at
-                    ]);
-                }
-
-                return [
-                    'completed' => $completedQueue,
-                    'next' => $nextQueue
-                ];
+                return $currentQueue;
             });
 
-            $message = 'Queue completed.';
-            if ($result['next']) {
-                $message .= ' Next queue called: ' . $result['next']->queue_number;
+            if (!$completedQueue) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No current queue to complete'
+                ], 404);
+            }
+
+            // Count remaining waiting queues for informational message
+            $waitingCount = Queue::where('counter_id', $user->id)
+                ->where('status', 'waiting')
+                ->count();
+
+            $message = 'Queue ' . $completedQueue->queue_number . ' completed.';
+            if ($waitingCount > 0) {
+                $message .= ' ' . $waitingCount . ' queue(s) waiting. Click "Call Next" to serve.';
             } else {
                 $message .= ' No more queues waiting.';
             }
@@ -329,21 +324,17 @@ class CounterController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => $message,
-                'completed_queue' => $result['completed'] ? [
-                    'id' => $result['completed']->id,
-                    'queue_number' => $result['completed']->queue_number,
-                    'completed_at' => $result['completed']->completed_at->toISOString()
-                ] : null,
-                'queue' => $result['next'] ? [
-                    'id' => $result['next']->id,
-                    'queue_number' => $result['next']->queue_number,
-                    'status' => $result['next']->status,
-                    'called_at' => $result['next']->called_at->toISOString()
-                ] : null
+                'completed_queue' => [
+                    'id' => $completedQueue->id,
+                    'queue_number' => $completedQueue->queue_number,
+                    'completed_at' => $completedQueue->completed_at->toISOString()
+                ],
+                'waiting_count' => $waitingCount,
+                'queue' => null // No auto-called queue
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Error moving to next queue: ' . $e->getMessage(), [
+            Log::error('Error completing queue: ' . $e->getMessage(), [
                 'user_id' => $user->id ?? null,
                 'exception' => get_class($e),
                 'trace' => $e->getTraceAsString()
