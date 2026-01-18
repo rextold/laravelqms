@@ -30,27 +30,6 @@ class CounterController extends Controller
     /**
      * Get analytics data for counter performance
      */
-    protected function getAnalyticsData(User $user)
-    {
-        try {
-            $organization = $user->organization;
-            
-            $analytics = [
-                'daily_served' => $this->counterService->getCounterAnalytics($user->id, 'daily_served'),
-                'avg_wait_time' => $this->counterService->getCounterAnalytics($user->id, 'avg_wait_time'),
-                'avg_service_time' => $this->counterService->getCounterAnalytics($user->id, 'avg_service_time'),
-                'efficiency' => $this->counterService->getCounterAnalytics($user->id, 'efficiency'),
-                'peak_hours' => $this->counterService->getCounterAnalytics($user->id, 'peak_hours'),
-                'organization_settings' => OrganizationSetting::getSettings($organization->id)
-            ];
-
-            return $analytics;
-
-        } catch (\Exception $e) {
-            Log::error('Analytics data error: ' . $e->getMessage());
-            return ['error' => 'Failed to load analytics data'];
-        }
-    }
 
     /**
      * Show counter call/service panel
