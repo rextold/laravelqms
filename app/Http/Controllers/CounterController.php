@@ -75,45 +75,66 @@ class CounterController extends Controller
     }
 
     /**
-     * Toggle counter online/offline status
+     * Toggle counter online/offline status (GET method for simple toggle)
      */
     public function toggleOnline(Request $request)
     {
         $user = Auth::user();
         $organization = $request->attributes->get('organization');
         
-        if (!$user->isCounter()) {
-            return response()->json(['error' => 'Access denied'], 403);
+        if (!$user || !$user->isCounter()) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Access denied - Counter role required'
+            ], 403);
         }
 
         try {
-            DB::transaction(function () use ($user) {
+            $newOnlineStatus = DB::transaction(function () use ($user) {
                 $user->is_online = !$user->is_online;
                 $user->save();
 
-                // Broadcast status update
-                if (config('broadcasting.default') !== 'null') {
-                    broadcast(new CounterStatusUpdated($user));
+                // Broadcast status update if broadcasting is enabled
+                try {
+                    if (config('broadcasting.default') !== 'null') {
+                        broadcast(new \App\Events\CounterStatusUpdated($user));
+                    }
+                } catch (\Exception $e) {
+                    Log::warning('Failed to broadcast counter status: ' . $e->getMessage());
+                    // Continue even if broadcast fails
                 }
+
+                return $user->is_online;
             });
 
-            $message = $user->is_online ? 'You are now online and ready to serve customers.' : 'You are now offline.';
+            $message = $newOnlineStatus ? 
+                'You are now online and ready to serve customers.' : 
+                'You are now offline.';
             
-            if ($request->expectsJson()) {
+            // Always return JSON for GET requests (makes it easier for AJAX/Fetch calls)
+            if ($request->expectsJson() || $request->is('*/counter/toggle-online')) {
                 return response()->json([
                     'success' => true,
                     'message' => $message,
-                    'is_online' => $user->is_online
-                ]);
+                    'is_online' => $newOnlineStatus
+                ], 200);
             }
 
+            // Fallback to redirect if not expecting JSON
             return redirect()->back()->with('success', $message);
 
         } catch (\Exception $e) {
-            Log::error('Error toggling counter status: ' . $e->getMessage());
+            Log::error('Error toggling counter status: ' . $e->getMessage(), [
+                'user_id' => $user->id ?? null,
+                'organization_id' => $organization->id ?? null
+            ]);
             
-            if ($request->expectsJson()) {
-                return response()->json(['error' => 'Failed to update status'], 500);
+            if ($request->expectsJson() || $request->is('*/counter/toggle-online')) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Failed to update status',
+                    'message' => $e->getMessage()
+                ], 500);
             }
             
             return redirect()->back()->with('error', 'Failed to update status');

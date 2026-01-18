@@ -89,16 +89,27 @@ class AuthController extends Controller
     {
         $user = Auth::user();
         
-        // Set counter offline on logout
+        // Set counter offline on logout (both for GET and POST)
         if ($user && $user->isCounter()) {
-            $user->update(['is_online' => false]);
+            try {
+                $user->update(['is_online' => false]);
+            } catch (\Exception $e) {
+                Log::warning('Failed to set counter offline on logout: ' . $e->getMessage());
+                // Continue with logout even if offline update fails
+            }
         }
 
         Auth::logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        
+        // Safely invalidate session
+        try {
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        } catch (\Exception $e) {
+            Log::warning('Session invalidation error: ' . $e->getMessage());
+        }
 
-        return redirect(route('login'));
+        return redirect(route('login'))->with('message', 'You have been logged out successfully.');
     }
 
     /**

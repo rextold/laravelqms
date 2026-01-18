@@ -45,7 +45,7 @@ Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 });
-// GET /logout route for GET method logout
+// GET /logout route for simple GET method logout (no POST redirect needed)
 Route::get('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
 // Test routes
@@ -180,9 +180,8 @@ Route::prefix('{organization_code}')->group(function () {
                 return redirect()->to(route('counter.panel', ['organization_code' => request()->route('organization_code')]));
             })->name('view');
             
-            // Counter operations - use POST for state-changing operations
-            // Middleware validates: 1) POST method, 2) Counter role, 3) Online status
-            Route::post('/toggle-online', [CounterController::class, 'toggleOnline'])->name('toggle-online');
+            // Counter operations - use GET for toggle-online and POST for state-changing operations
+            Route::get('/toggle-online', [CounterController::class, 'toggleOnline'])->name('toggle-online');
             Route::post('/call-next', [CounterController::class, 'callNext'])->name('call-next');
             Route::post('/move-next', [CounterController::class, 'moveToNext'])->name('move-next');
             Route::post('/transfer', [CounterController::class, 'transferQueue'])->name('transfer');
