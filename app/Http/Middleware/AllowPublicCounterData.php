@@ -3,28 +3,22 @@
 namespace App\Http\Middleware;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Closure;
 
 class AllowPublicCounterData
 {
     /**
      * Allow public access to counter data endpoint without authentication.
-     * Also allows authenticated users regardless of query parameters.
+     * Used for kiosk and monitor displays.
      */
     public function handle(Request $request, Closure $next)
     {
-        // Allow authenticated users unconditionally
-        if (Auth::check()) {
-            return $next($request);
-        }
-
-        // Allow public access if counter_id is provided
+        // If counter_id is provided, allow public access
         if ($request->query('counter_id')) {
             return $next($request);
         }
 
-        // Fallback to default behavior (which may result in a 403 if no other auth middleware runs)
+        // Otherwise, continue with normal request processing
         return $next($request);
     }
 }
