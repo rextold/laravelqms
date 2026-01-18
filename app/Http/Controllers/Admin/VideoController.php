@@ -210,52 +210,52 @@ class VideoController extends Controller
             
             return redirect()->back()->with('error', 'Failed to delete video: ' . $e->getMessage());
         }
-    }
-    public function updateControl(Request $request)
-    {
-        $validated = $request->validate([
-            'is_playing' => 'required|boolean',
-            'volume' => 'required|integer|min:0|max:100',
-            'bell_volume' => 'nullable|integer|min:0|max:100',
-            'current_video_id' => 'nullable|exists:videos,id',
-            'bell_choice' => 'nullable|string',
-            'video_muted' => 'nullable|boolean',
-            'autoplay' => 'nullable|boolean',
-            'loop' => 'nullable|boolean',
-        ]);
+        public function updateControl(Request $request)
+        {
+            $validated = $request->validate([
+                'is_playing' => 'required|boolean',
+                'volume' => 'required|integer|min:0|max:100',
+                'bell_volume' => 'nullable|integer|min:0|max:100',
+                'current_video_id' => 'nullable|exists:videos,id',
+                'bell_choice' => 'nullable|string',
+                'video_muted' => 'nullable|boolean',
+                'autoplay' => 'nullable|boolean',
+                'loop' => 'nullable|boolean',
+            ]);
 
-        $control = VideoControl::getCurrent();
+            $control = VideoControl::getCurrent();
 
-        // Only set columns that actually exist to avoid migration issues
-        $columnsToSet = [
-            'is_playing', 'volume', 'bell_volume', 'current_video_id',
-            'bell_choice', 'video_muted', 'autoplay', 'loop'
-        ];
+            // Only set columns that actually exist to avoid migration issues
+            $columnsToSet = [
+                'is_playing', 'volume', 'bell_volume', 'current_video_id',
+                'bell_choice', 'video_muted', 'autoplay', 'loop'
+            ];
 
-        foreach ($columnsToSet as $col) {
-            if (array_key_exists($col, $validated)) {
-                // check if column exists on table
-                if (\Illuminate\Support\Facades\Schema::hasColumn('video_controls', $col)) {
-                    $control->{$col} = $validated[$col];
-                } else {
-                    // store transient meta if needed (not persisted)
-                    $control->{$col} = $validated[$col];
+            foreach ($columnsToSet as $col) {
+                if (array_key_exists($col, $validated)) {
+                    // check if column exists on table
+                    if (\Illuminate\Support\Facades\Schema::hasColumn('video_controls', $col)) {
+                        $control->{$col} = $validated[$col];
+                    } else {
+                        // store transient meta if needed (not persisted)
+                        $control->{$col} = $validated[$col];
+                    }
                 }
             }
+
+            $control->save();
+
+            // Broadcast update so monitors can receive push updates (if broadcasting configured)
+            try {
+                event(new \App\Events\VideoControlUpdated($control, []));
+            } catch (\Throwable $e) {
+                // non-fatal if broadcasting not configured
+                \Log::debug('VideoControlUpdated broadcast failed: ' . $e->getMessage());
+            }
+
+            return response()->json(['success' => true, 'control' => $control]);
         }
 
-        $control->save();
-
-        // Broadcast update so monitors can receive push updates (if broadcasting configured)
-        try {
-            event(new \App\Events\VideoControlUpdated($control, []));
-        } catch (\Throwable $e) {
-            // non-fatal if broadcasting not configured
-            \Log::debug('VideoControlUpdated broadcast failed: ' . $e->getMessage());
-        }
-
-        return response()->json(['success' => true, 'control' => $control]);
-    }
     /**
      * Set specific video to play now on monitor
      */
