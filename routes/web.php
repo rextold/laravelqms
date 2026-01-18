@@ -188,7 +188,6 @@ Route::prefix('{organization_code}')->group(function () {
                     Route::post('/order', [VideoController::class, 'updateOrder'])->name('order');
                     Route::post('/{video}/toggle', [VideoController::class, 'toggleActive'])->name('toggle');
                     Route::post('/control', [VideoController::class, 'updateControl'])->name('control');
-                    Route::post('/unmute', [VideoController::class, 'unmute'])->name('unmute');
                     Route::post('/upload-bell', [VideoController::class, 'uploadBellSound'])->name('upload-bell');
                     Route::post('/reset-bell', [VideoController::class, 'resetBellSound'])->name('reset-bell');
                     Route::post('/set-now-playing', [VideoController::class, 'setNowPlaying'])->name('set-now-playing');

@@ -918,7 +918,6 @@
         }
         function updateVideo(videoControl) {
             const player = document.getElementById('videoPlayer');
-                    const isTempUnmuted = videoControl && videoControl.unmute_until && (Date.parse(videoControl.unmute_until) > Date.now());
             
             // If no control or playback disabled, show paused state
             if (!videoControl || !videoControl.is_playing) {
@@ -968,9 +967,10 @@
             }
 
             // Play YouTube embed or local video
-                if (video.is_youtube && video.youtube_embed_url) {
-                    // If there's a temporary unmute requested, override mute param
-                    const muteParam = isTempUnmuted ? 0 : ((videoControl && typeof videoControl.video_muted !== 'undefined') ? (videoControl.video_muted ? 1 : 0) : 1);
+            if (video.is_youtube && video.youtube_embed_url) {
+                    // Force autoplay with mute to satisfy browser autoplay policies.
+                    // The monitor will play the bell for alerts; video remains muted by default.
+                    const muteParam = 1; // ensure autoplay works across browsers
                     const autoplayParams = `?autoplay=1&mute=${muteParam}&loop=1&modestbranding=1&rel=0&enablejsapi=1`;
                 const src = video.youtube_embed_url + autoplayParams;
                 const existing = player.querySelector('iframe');
@@ -988,9 +988,7 @@
                     `;
                     const v = player.querySelector('video');
                     if (v) {
-                            // Respect video_muted flag from control when available, otherwise default to muted
-                            const shouldMute = isTempUnmuted ? false : ((videoControl && typeof videoControl.video_muted !== 'undefined') ? !!videoControl.video_muted : true);
-                            v.muted = shouldMute;
+                            v.muted = !isSoundEnabled();
                             v.volume = (videoControl && typeof videoControl.volume === 'number') ? (videoControl.volume / 100) : 0.8;
                             v.play().catch(e => console.log('Video play failed:', e));
                     }
@@ -1015,24 +1013,6 @@
                     </div>
                 `;
             }
-
-            // If a temporary unmute is requested, schedule re-mute when it expires
-            try {
-                if (window._videoUnmuteTimer) {
-                    clearTimeout(window._videoUnmuteTimer);
-                    window._videoUnmuteTimer = null;
-                }
-                if (videoControl && videoControl.unmute_until) {
-                    const until = Date.parse(videoControl.unmute_until);
-                    const ms = until - Date.now();
-                    if (ms > 0) {
-                        window._videoUnmuteTimer = setTimeout(() => {
-                            // Force reloading control on expiry so server state is respected
-                            refreshMonitorData();
-                        }, ms + 250);
-                    }
-                }
-            } catch (e) { /* ignore */ }
         }
 
         function updateMarquee(marquee) {
@@ -1139,77 +1119,6 @@
                 navigator.wakeLock?.request('screen').catch(() => {});
             }
         }, 5000);
-    </script>
-    <script>
-        // Real-time listener: try to initialize Laravel Echo + Pusher if broadcasting is configured
-        (function(){
-            const broadcastDriver = {!! json_encode(config('broadcasting.default')) !!};
-            if (!broadcastDriver || broadcastDriver === 'null') return; // broadcasting not enabled
-
-            const pusherKey = {!! json_encode(config('broadcasting.connections.pusher.key')) !!};
-            const pusherCluster = {!! json_encode(data_get(config('broadcasting.connections.pusher.options'), 'cluster')) !!};
-
-            function loadScript(src){
-                return new Promise((res, rej) => {
-                    const s = document.createElement('script');
-                    s.src = src;
-                    s.async = true;
-                    s.onload = () => res();
-                    s.onerror = () => rej(new Error('Failed to load ' + src));
-                    document.head.appendChild(s);
-                });
-            }
-
-            async function ensureEcho() {
-                try {
-                    if (typeof Echo !== 'undefined') return window.Echo;
-
-                    // Load Pusher and Echo from CDN as a convenience when not bundled
-                    if (typeof Pusher === 'undefined') {
-                        await loadScript('https://js.pusher.com/7.2/pusher.min.js');
-                    }
-                    if (typeof Echo === 'undefined') {
-                        await loadScript('https://cdn.jsdelivr.net/npm/laravel-echo/dist/echo.iife.js');
-                    }
-
-                    // Initialize Echo with pusher settings if possible
-                    if (typeof Echo !== 'undefined' && typeof Pusher !== 'undefined') {
-                        window.Echo = new Echo({
-                            broadcaster: 'pusher',
-                            key: pusherKey || undefined,
-                            cluster: pusherCluster || undefined,
-                            forceTLS: true,
-                            enabledTransports: ['ws', 'wss', 'xhr_polling']
-                        });
-                        return window.Echo;
-                    }
-                } catch (e) {
-                    console.debug('Echo init failed:', e);
-                }
-                return null;
-            }
-
-            function subscribeToVideoControl(echo) {
-                try {
-                    if (!echo) return;
-                    echo.channel('video-control')
-                        .listen('VideoControlUpdated', (payload) => {
-                            try {
-                                // Payload contains { control, meta }
-                                const ctrl = payload.control || {};
-                                if (payload.meta && payload.meta.unmute_until) {
-                                    ctrl.unmute_until = payload.meta.unmute_until;
-                                }
-                                // Apply control update immediately
-                                updateVideo(ctrl);
-                            } catch (err) { console.debug('VideoControlUpdated handler error', err); }
-                        });
-                } catch (e) { console.debug('subscribe error', e); }
-            }
-
-            // Initialize in background; if it fails we keep polling as fallback
-            ensureEcho().then(subscribeToVideoControl).catch(() => {});
-        })();
     </script>
     <script src="{{ asset('js/settings-sync.js') }}"></script>
 </body>

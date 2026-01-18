@@ -224,51 +224,6 @@ class VideoController extends Controller
 
         return response()->json(['success' => true]);
     }
-        public function updateControl(Request $request)
-        {
-            $validated = $request->validate([
-                'is_playing' => 'required|boolean',
-                'volume' => 'required|integer|min:0|max:100',
-                'bell_volume' => 'nullable|integer|min:0|max:100',
-                'current_video_id' => 'nullable|exists:videos,id',
-                'bell_choice' => 'nullable|string',
-                'video_muted' => 'nullable|boolean',
-                'autoplay' => 'nullable|boolean',
-                'loop' => 'nullable|boolean',
-            ]);
-
-            $control = VideoControl::getCurrent();
-
-            // Only set columns that actually exist to avoid migration issues
-            $columnsToSet = [
-                'is_playing', 'volume', 'bell_volume', 'current_video_id',
-                'bell_choice', 'video_muted', 'autoplay', 'loop'
-            ];
-
-            foreach ($columnsToSet as $col) {
-                if (array_key_exists($col, $validated)) {
-                    // check if column exists on table
-                    if (\Illuminate\Support\Facades\Schema::hasColumn('video_controls', $col)) {
-                        $control->{$col} = $validated[$col];
-                    } else {
-                        // store transient meta if needed (not persisted)
-                        $control->{$col} = $validated[$col];
-                    }
-                }
-            }
-
-            $control->save();
-
-            // Broadcast update so monitors can receive push updates (if broadcasting configured)
-            try {
-                event(new \App\Events\VideoControlUpdated($control, []));
-            } catch (\Throwable $e) {
-                // non-fatal if broadcasting not configured
-                \Log::debug('VideoControlUpdated broadcast failed: ' . $e->getMessage());
-            }
-
-            return response()->json(['success' => true, 'control' => $control]);
-        }
 
     /**
      * Set specific video to play now on monitor
@@ -298,53 +253,6 @@ class VideoController extends Controller
             'message' => 'Now playing: ' . $video->title,
             'video' => $video
         ]);
-    }
-
-    public function unmute(Request $request)
-    {
-        $validated = $request->validate([
-            'seconds' => 'nullable|integer|min:1|max:600'
-        ]);
-        $orgCode = $request->route('organization_code');
-        $organization = \App\Models\Organization::where('organization_code', $orgCode)->firstOrFail();
-
-        $control = VideoControl::getCurrent();
-
-        // If database has video_muted column, unset it
-        if (\\Illuminate\\Support\\Facades\\Schema::hasColumn('video_controls', 'video_muted')) {
-            $control->video_muted = false;
-            $control->save();
-        }
-
-        $seconds = $validated['seconds'] ?? 10;
-        $until = now()->addSeconds($seconds);
-
-        // Persist unmute_until on the control if column exists
-        try {
-            if (\Illuminate\Support\Facades\Schema::hasColumn('video_controls', 'unmute_until')) {
-                $control->unmute_until = $until;
-                $control->save();
-            }
-        } catch (\Throwable $e) {
-            \Log::debug('Failed to persist unmute_until: ' . $e->getMessage());
-        }
-
-        // store a transient cache key as fallback so monitor/data can include unmute_until
-        try {
-            \Illuminate\Support\\Facades\\Cache::put('video_control_unmute_until_' . $organization->id, $until->toDateTimeString(), $seconds);
-        } catch (\Throwable $e) {
-            \Log::debug('Cache put failed for unmute_until: ' . $e->getMessage());
-        }
-
-        // Broadcast a transient unmute instruction to monitors
-        try {
-            $meta = ['unmute_seconds' => $seconds, 'unmute_until' => $until->toDateTimeString(), 'organization_id' => $organization->id];
-            event(new \App\Events\VideoControlUpdated($control, $meta));
-        } catch (\Throwable $e) {
-            \Log::debug('VideoControlUpdated unmute broadcast failed: ' . $e->getMessage());
-        }
-
-        return response()->json(['success' => true, 'unmute_seconds' => $seconds, 'unmute_until' => $until->toDateTimeString()]);
     }
 
     public function update(Request $request, Video $video)
@@ -463,12 +371,6 @@ class VideoController extends Controller
             'control' => [
                 'current_video_id' => $control->current_video_id,
                 'is_playing' => $control->is_playing,
-                'volume' => $control->volume ?? 50,
-                'bell_volume' => $control->bell_volume ?? 100,
-                'bell_choice' => $control->bell_choice ?? null,
-                'video_muted' => $control->video_muted ?? false,
-                'autoplay' => $control->autoplay ?? false,
-                'loop' => $control->loop ?? false,
                 'repeat_mode' => $control->repeat_mode,
                 'is_shuffle' => $control->is_shuffle,
                 'is_sequence' => $control->is_sequence,
