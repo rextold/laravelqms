@@ -213,6 +213,7 @@ class VideoController extends Controller
     }
     public function updateControl(Request $request)
     {
+        
         $validated = $request->validate([
             'is_playing' => 'required|boolean',
             'volume' => 'required|integer|min:0|max:100',
