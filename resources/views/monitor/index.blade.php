@@ -554,10 +554,7 @@
             </div>
 
             <div class="header-right flex items-center gap-3">
-                <button id="soundToggle" title="Toggle notification sound" class="bg-white bg-opacity-10 hover:bg-opacity-20 rounded-md px-3 py-2 text-white flex items-center gap-2" style="border: none;">
-                    <i id="soundIcon" class="fas fa-volume-up"></i>
-                    <span class="hidden sm:inline text-sm">Sound</span>
-                </button>
+                <!-- sound toggle removed; notification bell will play when counters blink -->
             </div>
 
             <div class="header-center">
@@ -639,33 +636,15 @@
         const notificationSound = document.getElementById('notificationSound');
 
         // Sound toggle and unlocking for autoplay-restricted browsers
-        const SOUND_KEY = 'monitorSoundEnabled';
-        const soundToggleBtn = document.getElementById('soundToggle');
-        const soundIcon = document.getElementById('soundIcon');
+        // Ensure notification sound is available and attempt to unlock on first interaction
+        notificationSound.muted = false;
 
         function isSoundEnabled() {
-            const v = localStorage.getItem(SOUND_KEY);
-            return v === null ? true : v === '1';
-        }
-
-        function updateSoundUI() {
-            const enabled = isSoundEnabled();
-            notificationSound.muted = !enabled;
-            if (soundIcon) {
-                soundIcon.className = enabled ? 'fas fa-volume-up' : 'fas fa-volume-mute';
-            }
-        }
-
-        function toggleSound() {
-            const newVal = !isSoundEnabled();
-            localStorage.setItem(SOUND_KEY, newVal ? '1' : '0');
-            updateSoundUI();
-            // Try to unlock audio on user toggle
-            tryUnlockAudio();
+            // Sound is always enabled for the monitor display; notification bell will play on alerts
+            return true;
         }
 
         function tryUnlockAudio() {
-            // Attempt a short play/pause to unlock audio on browsers requiring user gesture
             try {
                 notificationSound.currentTime = 0;
                 const p = notificationSound.play();
@@ -678,15 +657,9 @@
             } catch (e) { console.log('unlock audio error', e); }
         }
 
-        // Initialize sound settings
-        if (soundToggleBtn) {
-            soundToggleBtn.addEventListener('click', toggleSound);
-        }
-        updateSoundUI();
-
-        // On first user interaction anywhere, attempt to unlock audio if enabled
+        // On first user interaction anywhere, attempt to unlock audio so bell can autoplay on alerts
         function onFirstInteraction() {
-            if (isSoundEnabled()) tryUnlockAudio();
+            tryUnlockAudio();
             window.removeEventListener('pointerdown', onFirstInteraction);
             window.removeEventListener('keydown', onFirstInteraction);
         }
