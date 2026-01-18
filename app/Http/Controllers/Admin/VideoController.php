@@ -311,7 +311,7 @@ class VideoController extends Controller
         $control = VideoControl::getCurrent();
 
         // If database has video_muted column, unset it
-        if (\Illuminate\Support\Facades\Schema::hasColumn('video_controls', 'video_muted')) {
+        if (\\Illuminate\\Support\\Facades\\Schema::hasColumn('video_controls', 'video_muted')) {
             $control->video_muted = false;
             $control->save();
         }
@@ -331,7 +331,7 @@ class VideoController extends Controller
 
         // store a transient cache key as fallback so monitor/data can include unmute_until
         try {
-            \Illuminate\Support\Facades\Cache::put('video_control_unmute_until_' . $organization->id, $until->toDateTimeString(), $seconds);
+            \Illuminate\Support\\Facades\\Cache::put('video_control_unmute_until_' . $organization->id, $until->toDateTimeString(), $seconds);
         } catch (\Throwable $e) {
             \Log::debug('Cache put failed for unmute_until: ' . $e->getMessage());
         }
