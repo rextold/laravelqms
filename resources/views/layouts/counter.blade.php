@@ -192,12 +192,12 @@
                             <div class="text-xs text-gray-500" id="headerDate"></div>
                         </div>
                         
-                        <!-- Online/Offline Status Icon with Pulse Animation -->
+                        <!-- Online/Offline Status Toggle Button -->
                         <button id="btnToggleOnline" type="button" 
-                                class="px-3 py-2 rounded-lg transition-all duration-300 flex items-center space-x-2" 
-                                title="Click to toggle online/offline status">
-                            <i id="statusIcon" class="fas fa-circle text-green-500 status-active" style="font-size: 0.75rem;"></i>
-                            <span id="statusLabel" class="text-xs font-semibold text-green-600">Online</span>
+                                class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-all duration-300 flex items-center" 
+                                title="{{ $counter->is_online ?? false ? 'Online - Click to go offline' : 'Offline - Click to go online' }}">
+                            <i id="statusIcon" class="fas fa-circle {{ $counter->is_online ?? false ? 'text-green-500' : 'text-red-500' }}" style="font-size: 0.6rem;"></i>
+                            <span id="statusLabel" class="text-xs font-semibold {{ $counter->is_online ?? false ? 'text-green-600' : 'text-red-600' }} ml-2">{{ $counter->is_online ?? false ? 'Online' : 'Offline' }}</span>
                         </button>
                         
                         <!-- Minimize/Restore button -->
@@ -288,60 +288,18 @@
         }
 
         // Bind logout button click handler
-document.addEventListener('DOMContentLoaded', function() {
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', handleLogout);
-        console.log('[INIT] Logout button listener attached');
-    } else {
-        console.warn('[INIT] Logout button not found in DOM');
-    }
-    
-    // Bind online/offline toggle button
-    const toggleOnlineBtn = document.getElementById('btnToggleOnline');
-    if (toggleOnlineBtn) {
-        // Set initial state
-        fetch(`/${window.location.pathname.split('/')[1]}/counter/status`, {
-            method: 'GET',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
+        document.addEventListener('DOMContentLoaded', function() {
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', handleLogout);
+                console.log('[LAYOUT] Logout button listener attached');
+            } else {
+                console.warn('[LAYOUT] Logout button not found in DOM');
             }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                toggleOnlineBtn.innerHTML = data.is_online 
-                    ? '<i class="fas fa-power-off text-green-600"></i>' 
-                    : '<i class="fas fa-power-off text-gray-600"></i>';
-                toggleOnlineBtn.title = data.is_online ? 'Online - Click to go offline' : 'Offline - Click to go online';
-            }
-        })
-        .catch(error => console.error('Error getting initial online status:', error));
-        
-        // Add click handler
-        toggleOnlineBtn.addEventListener('click', function() {
-            fetch(`/${window.location.pathname.split('/')[1]}/counter/toggle-online`, {
-                method: 'GET',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    toggleOnlineBtn.innerHTML = data.is_online 
-                        ? '<i class="fas fa-power-off text-green-600"></i>' 
-                        : '<i class="fas fa-power-off text-gray-600"></i>';
-                    toggleOnlineBtn.title = data.is_online ? 'Online - Click to go offline' : 'Offline - Click to go online';
-                }
-            })
-            .catch(error => console.error('Error toggling online status:', error));
+            
+            // Note: Online/offline toggle button is handled in call.blade.php
+            // to ensure proper state management with the counter panel
         });
-        console.log('[INIT] Online toggle button listener attached');
-    } else {
-        console.warn('[INIT] Online toggle button not found in DOM');
-    }
-});
 
         // Minimize/Restore functionality
         function toggleMinimize(minimize = null) {

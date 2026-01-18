@@ -1,6 +1,6 @@
 @extends('layouts.counter')
 
-@section('title', 'Service Station')
+@section('title', 'Service Station - Counter {{ $counter->counter_number }}')
 
 @section('content')
 <div class="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
@@ -18,11 +18,11 @@
                     </div>
                     <div id="currentNumber" class="queue-number font-extrabold text-gray-900 mb-6 tracking-wider">---</div>
                     
-                    <!-- Action Buttons -->
+                    <!-- Action Buttons - 5 buttons only, no toggle -->
                     <div class="grid grid-cols-2 md:grid-cols-5 gap-3 max-w-4xl mx-auto">
                         <button type="button" id="btnCallNext" 
                                 class="counter-btn flex items-center justify-center px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold shadow-sm" disabled>
-                            <i class="fas fa-bell mr-2"></i>
+                            <i class="fas fa-phone mr-2"></i>
                             Call Next
                         </button>
                         
@@ -49,11 +49,6 @@
                             <i class="fas fa-exchange-alt mr-2"></i>
                             Transfer
                         </button>
-                        
-                        <button type="button" id="btnToggleOnline" 
-                                class="counter-btn flex items-center justify-center p-3 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-semibold shadow-sm" title="Toggle Online">
-                            <i class="fas fa-power-off"></i>
-                        </button>
                     </div>
                 </div>
             </div>
@@ -67,13 +62,9 @@
                             <i class="fas fa-users text-amber-600 mr-2"></i>
                             Waiting Queue
                         </h3>
-                        <span id="waitingCount" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                            0
-                        </span>
+                        <span id="waitingCount" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">0</span>
                     </div>
-                    <div id="waitingList" class="queue-list max-h-80 overflow-y-auto">
-                        <!-- Waiting queue items will be populated here -->
-                    </div>
+                    <div id="waitingList" class="space-y-2 max-h-80 overflow-y-auto"></div>
                 </div>
 
                 <!-- Skipped Queue -->
@@ -83,18 +74,14 @@
                             <i class="fas fa-clock text-orange-600 mr-2"></i>
                             Skipped Queue
                         </h3>
-                        <span id="skippedCount" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                            0
-                        </span>
+                        <span id="skippedCount" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">0</span>
                     </div>
-                    <div id="skippedList" class="queue-list max-h-80 overflow-y-auto">
-                        <!-- Skipped queue items will be populated here -->
-                    </div>
+                    <div id="skippedList" class="space-y-2 max-h-80 overflow-y-auto"></div>
                 </div>
             </div>
 
             <!-- Quick Stats -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
                     <div class="flex items-center">
                         <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -147,992 +134,471 @@
     </div>
 </div>
 
-    <!-- Minimized dock bar (for easy corner docking) -->
-    <div id="panelDock" class="hidden fixed bottom-4 right-4 bg-white rounded-lg shadow-md px-4 py-3 flex items-center space-x-4 z-40">
-        <div class="text-sm font-semibold text-gray-700">Counter {{ $counter->counter_number }}</div>
-        <div class="flex items-baseline space-x-2">
-            <div class="text-xs text-gray-500">Now</div>
-            <div id="dockCurrentNumber" class="text-xl font-extrabold text-gray-900">---</div>
-        </div>
-        <button type="button" id="dockRestoreBtn" class="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition" title="Restore">
-            <i class="fas fa-window-restore"></i>
-        </button>
-    </div>
-
-<style nonce="{{ session('csp_nonce', '') }}">
-.responsive-queue-number { font-size: 6rem; }
-@media (orientation: portrait) { .responsive-queue-number { font-size: 4.5rem; } }
-@media (max-width: 768px) and (orientation: portrait) { .responsive-queue-number { font-size: 3rem; } }
-@media (max-width: 768px) and (orientation: landscape) { .responsive-queue-number { font-size: 3.5rem; } }
-</style>
-
 <!-- Transfer Queue Modal -->
-<div id="transfer-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300 opacity-0">
-    <div id="transfer-modal-content" class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 transform transition-all duration-300 scale-95 opacity-0">
-        <!-- Header -->
-        <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4 rounded-t-2xl">
+<div id="transfer-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div id="transfer-modal-content" class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4">
+        <div class="bg-gradient-to-r from-purple-500 to-purple-600 px-6 py-4 rounded-t-2xl">
             <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-3">
-                    <i class="fas fa-exchange-alt text-white text-xl"></i>
-                    <h3 class="text-xl font-bold text-white">Transfer Queue</h3>
-                </div>
-                <button type="button" id="closeTransferModalBtn" class="text-white hover:text-gray-200 text-2xl leading-none">&times;</button>
+                <h3 class="text-xl font-bold text-white"><i class="fas fa-exchange-alt mr-2"></i>Transfer Queue</h3>
+                <button type="button" id="closeTransferModalBtn" class="text-white hover:text-gray-200 text-2xl">&times;</button>
             </div>
         </div>
-
-        <!-- Body -->
         <div class="px-6 py-4">
             <p class="text-gray-700 mb-4">Select a counter to transfer the current queue:</p>
-            <div id="countersList" class="space-y-2 max-h-64 overflow-y-auto">
-                <!-- Populated dynamically -->
-            </div>
-            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
-                <p class="text-sm text-blue-800">
-                    <i class="fas fa-info-circle mr-2"></i>
-                    <strong>Note:</strong> The queue number will remain the same (first come first serve).
-                </p>
-            </div>
+            <div id="countersList" class="space-y-2 max-h-64 overflow-y-auto"></div>
         </div>
-
-        <!-- Footer -->
-        <div class="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3 border-t border-gray-200">
-                        <button type="button" id="cancelTransferBtn" class="counter-btn px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold">Cancel</button>
-                        <button type="button" id="confirmTransferBtn" class="counter-btn px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold">
-                            <i class="fas fa-exchange-alt mr-2"></i>Transfer Customer
-                        </button>
-                    </div>
+        <div class="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3">
+            <button type="button" id="cancelTransferBtn" class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold">Cancel</button>
+        </div>
     </div>
 </div>
 
 <!-- Skip Confirmation Modal -->
-<div id="skip-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300 opacity-0">
-    <div id="skip-modal-content" class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 transform transition-all duration-300 scale-95 opacity-0">
-        <!-- Header -->
+<div id="skip-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div id="skip-modal-content" class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4">
         <div class="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-4 rounded-t-2xl">
             <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-3">
-                    <i class="fas fa-forward text-white text-xl"></i>
-                    <h3 class="text-xl font-bold text-white">Skip Current Queue?</h3>
-                </div>
-                <button type="button" id="closeSkipModalBtn" class="text-white hover:text-gray-200 text-2xl leading-none">&times;</button>
+                <h3 class="text-xl font-bold text-white"><i class="fas fa-forward mr-2"></i>Skip Current Queue?</h3>
+                <button type="button" id="closeSkipModalBtn" class="text-white hover:text-gray-200 text-2xl">&times;</button>
             </div>
         </div>
-
-        <!-- Body -->
         <div class="px-6 py-4">
-            <p class="text-gray-700 mb-4">Are you sure you want to skip the current customer queue?</p>
+            <p class="text-gray-700 mb-4">Are you sure you want to skip the current customer?</p>
             <div class="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                <p class="text-sm text-orange-800">
-                    <i class="fas fa-info-circle mr-2"></i>
-                    <strong>Note:</strong> The skipped queue will be moved to the skipped list and can be recalled later.
-                </p>
+                <p class="text-sm text-orange-800"><i class="fas fa-info-circle mr-2"></i>The skipped queue can be recalled later.</p>
             </div>
         </div>
-
-        <!-- Footer -->
-        <div class="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3 border-t border-gray-200">
-            <button type="button" id="cancelSkipBtn" class="counter-btn px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold">Cancel</button>
-            <button type="button" id="confirmSkipBtn" class="counter-btn px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold">
-                <i class="fas fa-forward mr-2"></i>Skip Queue
-            </button>
+        <div class="bg-gray-50 px-6 py-4 rounded-b-2xl flex justify-end space-x-3">
+            <button type="button" id="cancelSkipBtn" class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold">Cancel</button>
+            <button type="button" id="confirmSkipBtn" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold">Skip Queue</button>
         </div>
     </div>
 </div>
 
 @push('styles')
 <style nonce="{{ session('csp_nonce', '') }}">
-html, body { overflow: hidden; }
+html, body { overflow-x: hidden; }
+.queue-item { @apply flex items-center justify-between p-3 bg-white rounded-lg shadow-sm border border-gray-200 mb-2; }
 </style>
 @endpush
 
 @push('scripts')
 <script nonce="{{ session('csp_nonce', '') }}">
-// ============================================================
-// COUNTER PANEL - MAIN CONFIGURATION
-// ============================================================
-const COUNTER_ID = {{ $counter->id }};
-const COUNTER_NUM = {{ $counter->counter_number }};
-const ORG_CODE = '{{ request()->route('organization_code') }}';
-
-// Get CSRF token from meta tag with fallback
-let csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
-                  document.querySelector('input[name="_token"]')?.value || 
-                  '{{ csrf_token() }}';
-
-// Ensure CSRF token is available
-if (!csrfToken) {
-    console.error('CRITICAL: CSRF token not found! Counter operations will fail.');
-    csrfToken = '{{ csrf_token() }}';
-}
-
-// Function to refresh CSRF token dynamically
-function refreshCSRFTokenFromPage() {
-    const newToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    if (newToken && newToken !== csrfToken) {
-        csrfToken = newToken;
-        console.log('CSRF token refreshed');
-    }
-}
-
-// Diagnostic logging for troubleshooting
-console.log('Counter Panel Configuration:', {
-    counter_id: COUNTER_ID,
-    counter_num: COUNTER_NUM,
-    org_code: ORG_CODE,
-    csrf_token: csrfToken ? 'Present (length: ' + csrfToken.length + ')' : 'MISSING - CRITICAL',
-    user_agent: navigator.userAgent.substring(0, 50),
-    env: 'production',
-    timestamp: new Date().toISOString()
-});
-
-// State Management
-let currentQueueData = null;
-let onlineCounters = [];
-let selectedTransferQueueId = null;
-let lastErrorTime = 0;
-let counterFetchInFlight = false;
-let counterFetchController = null;
-
-const ACTION_COOLDOWN_SECONDS = 3;
-const buttonCooldowns = new Map();
-const FETCH_INTERVAL = 1000; // 1 second real-time updates
-
-// ============================================================
-// UTILITY FUNCTIONS
-// ============================================================
-
-function isButtonCooling(btnEl) {
-    if (!btnEl) return false;
-    const until = buttonCooldowns.get(btnEl.id);
-    return typeof until === 'number' && Date.now() < until;
-}
-
-function getCooldownRemainingSeconds(btnEl) {
-    if (!btnEl) return 0;
-    const until = buttonCooldowns.get(btnEl.id);
-    if (typeof until !== 'number') return 0;
-    return Math.max(0, Math.ceil((until - Date.now()) / 1000));
-}
-
-function startButtonCooldown(btnEl, seconds = ACTION_COOLDOWN_SECONDS) {
-    if (!btnEl || !btnEl.id) return;
-    const existing = buttonCooldowns.get(btnEl.id);
-    if (typeof existing === 'number' && Date.now() < existing) return;
-
-    const until = Date.now() + (seconds * 1000);
-    buttonCooldowns.set(btnEl.id, until);
-
-    if (!btnEl.dataset.originalHtml) {
-        btnEl.dataset.originalHtml = btnEl.innerHTML;
-    }
-
-    btnEl.disabled = true;
-
-    const tick = () => {
-        const remaining = getCooldownRemainingSeconds(btnEl);
-        if (remaining <= 0) {
-            buttonCooldowns.delete(btnEl.id);
-            if (btnEl.dataset.originalHtml) btnEl.innerHTML = btnEl.dataset.originalHtml;
-            delete btnEl.dataset.originalHtml;
-            return;
-        }
-
-        const baseHtml = btnEl.dataset.originalHtml || btnEl.innerHTML;
-        btnEl.innerHTML = `${baseHtml} <span class="ml-2 text-xs opacity-90">(${remaining}s)</span>`;
+(function() {
+    'use strict';
+    
+    // ============================================================
+    // CONFIGURATION
+    // ============================================================
+    const CONFIG = {
+        counterId: {{ $counter->id }},
+        counterNum: {{ $counter->counter_number }},
+        orgCode: '{{ request()->route('organization_code') }}',
+        csrfToken: '{{ csrf_token() }}',
+        pollInterval: 2000,
+        cooldownSeconds: 3
     };
-
-    tick();
-    const timer = setInterval(() => {
-        const remaining = getCooldownRemainingSeconds(btnEl);
-        if (remaining <= 0) {
-            clearInterval(timer);
-            tick();
-            return;
-        }
-        tick();
-    }, 250);
-}
-
-function runActionWithCooldown(btnEl, actionFn, seconds = ACTION_COOLDOWN_SECONDS) {
-    if (btnEl && isButtonCooling(btnEl)) return;
-    if (btnEl) startButtonCooldown(btnEl, seconds);
-
-    return Promise.resolve()
-        .then(actionFn)
-        .catch(err => {
-            if (btnEl && btnEl.id) {
-                buttonCooldowns.delete(btnEl.id);
-                if (btnEl.dataset.originalHtml) btnEl.innerHTML = btnEl.dataset.originalHtml;
-                delete btnEl.dataset.originalHtml;
-            }
-            console.error('Action error:', err);
-            
-            // Suppress 403 errors silently - don't interrupt user
-            if (err.message && err.message.includes('403')) {
-                console.warn('Access error (HTTP 403) - automatic retry in progress');
-                return;
-            }
-            
-            // Only alert for non-403 errors
-            // alert(err || 'Action failed. Please try again.');
-        });
-}
-
-
-
-function formatDisplayQueue(queueNumber) {
-    if (!queueNumber) return '---';
-    const parts = String(queueNumber).split('-');
-    return parts.length > 0 ? (parts[parts.length - 1] || String(queueNumber)) : String(queueNumber);
-}
-
-function playNotificationSound() {
-    try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const now = audioContext.currentTime;
+    
+    // ============================================================
+    // STATE
+    // ============================================================
+    let state = {
+        currentQueue: null,
+        waitingQueues: [],
+        skippedQueues: [],
+        onlineCounters: [],
+        servedToday: 0,
+        isOnline: {{ $counter->is_online ? 'true' : 'false' }},
+        isFetching: false,
+        buttonCooldowns: new Map()
+    };
+    
+    // ============================================================
+    // HELPERS
+    // ============================================================
+    function getCSRFToken() {
+        return document.querySelector('meta[name="csrf-token"]')?.content || CONFIG.csrfToken;
+    }
+    
+    function formatQueueNumber(queueNumber) {
+        if (!queueNumber) return '---';
+        const parts = String(queueNumber).split('-');
+        return parts[parts.length - 1] || queueNumber;
+    }
+    
+    function playSound() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const now = ctx.currentTime;
+            [523, 659, 784].forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.value = freq;
+                osc.type = 'sine';
+                gain.gain.setValueAtTime(0.3, now + i * 0.15);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.15 + 0.3);
+                osc.start(now + i * 0.15);
+                osc.stop(now + i * 0.15 + 0.3);
+            });
+        } catch (e) { console.log('Sound error:', e); }
+    }
+    
+    function showToast(message, type = 'success') {
+        const toast = document.createElement('div');
+        toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 text-white font-medium ${type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-blue-600'}`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+    
+    function setCooldown(btnId, seconds = CONFIG.cooldownSeconds) {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
         
-        const playChime = (startTime, frequency, duration) => {
-            const osc = audioContext.createOscillator();
-            const gain = audioContext.createGain();
-            
-            osc.connect(gain);
-            gain.connect(audioContext.destination);
-            osc.frequency.value = frequency;
-            osc.type = 'sine';
-            gain.gain.setValueAtTime(0.35, startTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
-            osc.start(startTime);
-            osc.stop(startTime + duration);
+        state.buttonCooldowns.set(btnId, Date.now() + seconds * 1000);
+        btn.disabled = true;
+        
+        const originalHtml = btn.innerHTML;
+        const interval = setInterval(() => {
+            const remaining = Math.ceil((state.buttonCooldowns.get(btnId) - Date.now()) / 1000);
+            if (remaining <= 0) {
+                clearInterval(interval);
+                state.buttonCooldowns.delete(btnId);
+                btn.innerHTML = originalHtml;
+                updateButtonStates();
+            } else {
+                btn.innerHTML = originalHtml + ` (${remaining}s)`;
+            }
+        }, 250);
+    }
+    
+    // ============================================================
+    // API REQUESTS
+    // ============================================================
+    function apiRequest(action, params = {}, method = 'POST') {
+        const url = `/${CONFIG.orgCode}/counter/${action}`;
+        const options = {
+            method: method,
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCSRFToken()
+            },
+            credentials: 'same-origin'
         };
         
-        playChime(now, 523, 0.35);
-        playChime(now + 0.4, 659, 0.35);
-        playChime(now + 0.8, 784, 0.4);
-    } catch (e) {
-        console.log('Audio play error:', e);
-    }
-}
-
-// ============================================================
-// DATA RENDERING
-// ============================================================
-
-function renderLists(data) {
-    // Current queue
-    currentQueueData = data.current_queue;
-    const current = data.current_queue ? formatDisplayQueue(data.current_queue.queue_number) : '---';
-    
-    const currentNum = document.getElementById('currentNumber');
-    if (currentNum) currentNum.textContent = current;
-    
-    const dockNum = document.getElementById('dockCurrentNumber');
-    if (dockNum) dockNum.textContent = current;
-    
-    // Store online counters
-    onlineCounters = data.online_counters || [];
-    
-    // Update button states
-    const hasCurrentQueue = !!data.current_queue;
-    const hasWaitingQueues = data.waiting_queues && data.waiting_queues.length > 0;
-    
-    const btnNotify = document.getElementById('btnNotify');
-    const btnSkip = document.getElementById('btnSkip');
-    const btnComplete = document.getElementById('btnComplete');
-    const btnTransfer = document.getElementById('btnTransfer');
-    const btnCallNext = document.getElementById('btnCallNext');
-
-    if (btnNotify) btnNotify.disabled = !hasCurrentQueue || isButtonCooling(btnNotify);
-    if (btnSkip) btnSkip.disabled = !hasCurrentQueue || isButtonCooling(btnSkip);
-    if (btnComplete) btnComplete.disabled = !hasCurrentQueue || isButtonCooling(btnComplete);
-    if (btnTransfer) btnTransfer.disabled = !hasCurrentQueue || onlineCounters.length === 0 || isButtonCooling(btnTransfer);
-    if (btnCallNext) btnCallNext.disabled = !hasWaitingQueues || hasCurrentQueue || isButtonCooling(btnCallNext);
-
-    // Update waiting count
-    const waitingCount = document.getElementById('waitingCount');
-    if (waitingCount) {
-        waitingCount.textContent = hasWaitingQueues ? data.waiting_queues.length : '0';
-    }
-
-    // Update served today
-    const servedToday = data.served_today || 0;
-    const servedTodayMain = document.getElementById('servedToday');
-    if (servedTodayMain) servedTodayMain.textContent = servedToday;
-
-    // Waiting queues
-    const waitingList = document.getElementById('waitingList');
-    if (waitingList) {
-        waitingList.innerHTML = '';
-        if (data.waiting_queues && Array.isArray(data.waiting_queues)) {
-            data.waiting_queues.forEach(w => {
-                        const row = document.createElement('div');
-                        row.className = 'queue-item';
-                        row.innerHTML = `
-                            <div class="flex items-center">
-                                <span class="text-lg font-bold text-gray-800 mr-3">${formatDisplayQueue(w.queue_number)}</span>
-                                <span class="text-gray-600">${w.customer_name || 'Customer'}</span>
-                            </div>
-                            <span class="text-sm text-gray-500">${new Date(w.created_at).toLocaleTimeString()}</span>
-                        `;
-                        waitingList.appendChild(row);
-                    });
-        }
-    }
-
-    // Skipped queues
-    const skippedList = document.getElementById('skippedList');
-    if (skippedList) {
-        skippedList.innerHTML = '';
-        if (data.skipped && Array.isArray(data.skipped)) {
-            data.skipped.forEach(s => {
-                const row = document.createElement('div');
-                row.className = 'queue-item bg-orange-50';
-                row.innerHTML = `
-                    <div class="flex items-center">
-                        <span class="text-lg font-bold text-orange-700 mr-3">${formatDisplayQueue(s.queue_number)}</span>
-                        <span class="text-gray-600">${s.customer_name || 'Customer'}</span>
-                    </div>
-                    <div class="flex items-center space-x-2">
-                        <span class="text-sm text-gray-500">${new Date(s.created_at).toLocaleTimeString()}</span>
-                        <button type="button" class="bg-blue-600 text-white px-3 py-1 rounded text-sm" onclick="recallQueue(${s.id}, event)">Recall</button>
-                    </div>
-                `;
-                skippedList.appendChild(row);
+        if (method === 'POST') {
+            const formData = new FormData();
+            formData.append('_token', getCSRFToken());
+            formData.append('counter_id', CONFIG.counterId);
+            Object.keys(params).forEach(key => {
+                if (params[key] !== undefined && params[key] !== null) {
+                    formData.append(key, params[key]);
+                }
             });
+            options.body = formData;
         }
+        
+        console.log(`[API] ${method} ${action}`, params);
+        
+        return fetch(url, options)
+            .then(response => {
+                if (!response.ok) {
+                    console.error(`[API] ${action} failed: HTTP ${response.status}`);
+                    if (response.status === 401 || response.status === 403) {
+                        showToast('Session expired. Please refresh.', 'error');
+                    }
+                    return { success: false, message: `HTTP ${response.status}` };
+                }
+                return response.json();
+            })
+            .catch(err => {
+                console.error(`[API] ${action} error:`, err);
+                return { success: false, message: err.message };
+            });
     }
-}
-
-// ============================================================
-// FETCH & POLLING
-// ============================================================
-
-
-// Cached data for fallback scenarios
-let lastSuccessfulData = null;
-
-function handleFallbackData() {
-    console.log('Using cached counter data as fallback');
-    if (lastSuccessfulData) {
-        renderLists(lastSuccessfulData);
-    } else {
-        // If no cached data, render empty state
-        renderLists({
-            success: true,
-            current_queue: null,
-            waiting_queues: [],
-            skipped: [],
-            online_counters: [],
-            served_today: 0,
-            stats: {
-                waiting: 0,
-                completed_today: 0,
-                avg_wait_time: 0,
-                avg_service_time: 0
+    
+    // ============================================================
+    // DATA FETCHING
+    // ============================================================
+    function fetchData() {
+        if (state.isFetching) return;
+        state.isFetching = true;
+        
+        const url = `/${CONFIG.orgCode}/counter/data?counter_id=${CONFIG.counterId}`;
+        
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
             },
-            analytics: {
-                hourly: Array(24).fill(0),
-                weekly: Array(7).fill(0),
-                weekly_days: [],
-                wait_times: Array(7).fill(0)
+            credentials: 'same-origin'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                state.currentQueue = data.current_queue;
+                state.waitingQueues = data.waiting_queues || [];
+                state.skippedQueues = data.skipped || [];
+                state.onlineCounters = data.online_counters || [];
+                state.servedToday = data.served_today || 0;
+                state.isOnline = data.online_status;
+                
+                renderUI();
+                updateOnlineStatus();
+            }
+        })
+        .catch(err => console.error('[FETCH] Error:', err))
+        .finally(() => { state.isFetching = false; });
+    }
+    
+    // ============================================================
+    // UI RENDERING
+    // ============================================================
+    function renderUI() {
+        // Current queue number
+        document.getElementById('currentNumber').textContent = formatQueueNumber(state.currentQueue?.queue_number);
+        
+        // Stats
+        document.getElementById('servedToday').textContent = state.servedToday;
+        document.getElementById('waitingCount').textContent = state.waitingQueues.length;
+        document.getElementById('skippedCount').textContent = state.skippedQueues.length;
+        
+        // Waiting list
+        const waitingList = document.getElementById('waitingList');
+        waitingList.innerHTML = state.waitingQueues.map(q => `
+            <div class="queue-item">
+                <span class="text-lg font-bold text-gray-800">${formatQueueNumber(q.queue_number)}</span>
+                <span class="text-sm text-gray-500">${new Date(q.created_at).toLocaleTimeString()}</span>
+            </div>
+        `).join('') || '<p class="text-gray-500 text-center py-4">No waiting queues</p>';
+        
+        // Skipped list
+        const skippedList = document.getElementById('skippedList');
+        skippedList.innerHTML = state.skippedQueues.map(q => `
+            <div class="queue-item bg-orange-50">
+                <span class="text-lg font-bold text-orange-700">${formatQueueNumber(q.queue_number)}</span>
+                <button onclick="window.counterActions.recall(${q.id})" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">Recall</button>
+            </div>
+        `).join('') || '<p class="text-gray-500 text-center py-4">No skipped queues</p>';
+        
+        updateButtonStates();
+    }
+    
+    function updateButtonStates() {
+        const hasCurrentQueue = !!state.currentQueue;
+        const hasWaitingQueues = state.waitingQueues.length > 0;
+        
+        const buttons = {
+            btnCallNext: hasWaitingQueues && !hasCurrentQueue,
+            btnNotify: hasCurrentQueue,
+            btnComplete: hasCurrentQueue,
+            btnSkip: hasCurrentQueue,
+            btnTransfer: hasCurrentQueue && state.onlineCounters.length > 0
+        };
+        
+        Object.keys(buttons).forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn && !state.buttonCooldowns.has(id)) {
+                btn.disabled = !buttons[id];
             }
         });
     }
-}
-
-
-
-function fetchData() {
-    if (counterFetchInFlight) return;
-    counterFetchInFlight = true;
-
-    try {
-        if (counterFetchController) {
-            counterFetchController.abort();
+    
+    function updateOnlineStatus() {
+        const statusIcon = document.getElementById('statusIcon');
+        const statusLabel = document.getElementById('statusLabel');
+        const toggleBtn = document.getElementById('btnToggleOnline');
+        
+        if (state.isOnline) {
+            if (statusIcon) {
+                statusIcon.className = 'fas fa-circle text-green-500';
+                statusIcon.style.animation = 'pulse 2s infinite';
+            }
+            if (statusLabel) {
+                statusLabel.textContent = 'Online';
+                statusLabel.className = 'text-xs font-semibold text-green-600 ml-1';
+            }
+            if (toggleBtn) toggleBtn.title = 'Online - Click to go offline';
+        } else {
+            if (statusIcon) {
+                statusIcon.className = 'fas fa-circle text-red-500';
+                statusIcon.style.animation = 'none';
+            }
+            if (statusLabel) {
+                statusLabel.textContent = 'Offline';
+                statusLabel.className = 'text-xs font-semibold text-red-600 ml-1';
+            }
+            if (toggleBtn) toggleBtn.title = 'Offline - Click to go online';
         }
-        counterFetchController = new AbortController();
-    } catch (e) {
-        counterFetchController = null;
     }
     
-    const url = new URL(`/${ORG_CODE}/counter/data`, window.location.origin);
-    url.searchParams.append('counter_id', COUNTER_ID);
-    console.log('Fetching counter data from', url.toString());
-    
-    fetch(url, {
-        method: 'GET',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRF-TOKEN': csrfToken,
-            'Accept': 'application/json'
+    // ============================================================
+    // COUNTER ACTIONS
+    // ============================================================
+    const actions = {
+        callNext: function() {
+            setCooldown('btnCallNext');
+            apiRequest('call-next').then(data => {
+                if (data.success) {
+                    playSound();
+                    showToast('Queue called: ' + formatQueueNumber(data.queue?.queue_number));
+                    fetchData();
+                } else {
+                    showToast(data.message || 'Failed to call next', 'error');
+                }
+            });
         },
-        credentials: 'same-origin',
-        signal: counterFetchController ? counterFetchController.signal : undefined,
-    })
-        .then(response => {
-            // Handle authentication errors gracefully
-            if (response.status === 403 || response.status === 401) {
-                console.warn(`Counter endpoint ${response.status} - authentication issue. Check user permissions and session.`);
-                handleFallbackData();
-                counterFetchInFlight = false;
+        
+        notify: function() {
+            setCooldown('btnNotify');
+            apiRequest('notify').then(data => {
+                if (data.success) {
+                    playSound();
+                    showToast('Customer notified for queue: ' + (data.queue_number || formatQueueNumber(state.currentQueue?.queue_number)));
+                    fetchData();
+                } else {
+                    showToast(data.message || 'Failed to notify', 'error');
+                }
+            });
+        },
+        
+        complete: function() {
+            setCooldown('btnComplete');
+            apiRequest('move-next').then(data => {
+                if (data.success) {
+                    if (data.queue) playSound();
+                    showToast(data.message || 'Queue completed');
+                    fetchData();
+                } else {
+                    showToast(data.message || 'Failed to complete', 'error');
+                }
+            });
+        },
+        
+        skip: function() {
+            document.getElementById('skip-modal').classList.remove('hidden');
+        },
+        
+        confirmSkip: function() {
+            document.getElementById('skip-modal').classList.add('hidden');
+            setCooldown('btnSkip');
+            apiRequest('skip').then(data => {
+                if (data.success) {
+                    showToast('Queue skipped');
+                    fetchData();
+                } else {
+                    showToast(data.message || 'Failed to skip', 'error');
+                }
+            });
+        },
+        
+        transfer: function() {
+            if (state.onlineCounters.length === 0) {
+                showToast('No counters available for transfer', 'error');
                 return;
             }
             
-            if (response.status === 500) {
-                console.error('Counter endpoint returned HTTP 500 - Server error. Check Laravel logs at storage/logs/laravel.log');
-                throw new Error(`Server Error (HTTP 500) - Check Laravel logs for details`);
-            }
+            const countersList = document.getElementById('countersList');
+            countersList.innerHTML = state.onlineCounters.map(c => `
+                <button onclick="window.counterActions.confirmTransfer(${c.id})" class="w-full text-left p-3 bg-gray-100 hover:bg-blue-100 rounded-lg">
+                    <span class="font-semibold">Counter ${c.counter_number}</span>
+                    <span class="text-sm text-gray-600 ml-2">${c.display_name || ''}</span>
+                </button>
+            `).join('');
             
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-            
-            return response.json().then(data => {
-                if (data.success) {
-                    // Cache successful data for fallback
-                    lastSuccessfulData = data;
-                    renderLists(data);
-                    lastErrorTime = 0;
-                } else {
-                    console.warn('Counter data response not successful:', data);
-                    handleFallbackData();
-                }
-            });
-        })
-        .catch(err => {
-            if (err && err.name === 'AbortError') return;
-            
-            // Suppress repeated errors
-            const now = Date.now();
-            if (now - lastErrorTime > 5000) {
-                console.error('Counter refresh failed:', err);
-                console.error('Diagnostic Info:', {
-                    url: url.toString(),
-                    counter_id: COUNTER_ID,
-                    org_code: ORG_CODE,
-                    timestamp: new Date().toISOString()
-                });
-                lastErrorTime = now;
-            }
-            
-            // Use fallback data on network errors
-            handleFallbackData();
-        })
-        .finally(() => {
-            counterFetchInFlight = false;
-        });
-}
-
-// ============================================================
-// MINIMIZE/RESTORE
-// ============================================================
-
-let isMinimized = false;
-
-function setMinimized(minimized) {
-    isMinimized = !!minimized;
-    const header = document.getElementById('panelHeader');
-    const main = document.getElementById('panelMain');
-    const dock = document.getElementById('panelDock');
-    const btn = document.getElementById('btnToggleMinimize');
-
-    if (isMinimized) {
-        if (header) header.classList.add('hidden');
-        if (main) main.classList.add('hidden');
-        if (dock) dock.classList.remove('hidden');
-        try { closeSkipModal(); } catch (e) {}
-        try { closeTransferModal(); } catch (e) {}
-    } else {
-        if (header) header.classList.remove('hidden');
-        if (main) main.classList.remove('hidden');
-        if (dock) dock.classList.add('hidden');
-    }
-
-    if (btn) {
-        btn.title = isMinimized ? 'Restore' : 'Minimize';
-        btn.innerHTML = isMinimized ? '<i class="fas fa-window-restore"></i>' : '<i class="fas fa-window-minimize"></i>';
-    }
-
-    try {
-        localStorage.setItem('counterPanelMinimized', isMinimized ? '1' : '0');
-    } catch (e) {}
-}
-
-function toggleMinimize(force) {
-    if (typeof force === 'boolean') {
-        setMinimized(force);
-        return;
-    }
-    setMinimized(!isMinimized);
-}
-
-// ============================================================
-// COUNTER ACTIONS - ALL USING POST REQUESTS
-// ============================================================
-
-function makeCounterRequest(action, params = {}) {
-    // Refresh CSRF token before each request (production safety)
-    refreshCSRFTokenFromPage();
-    
-    // Validate CSRF token
-    if (!csrfToken) {
-        console.error('CSRF token not available for action:', action);
-        return Promise.resolve({ success: false, message: 'Security token missing', critical: true });
-    }
-    
-    // Ensure organization code is included in URL
-    const orgCode = ORG_CODE || window.location.pathname.split('/')[1];
-    const url = new URL(`/${orgCode}/counter/${action}`, window.location.origin);
-    
-    // Prepare form data for POST request
-    const formData = new FormData();
-    formData.append('_token', csrfToken);
-    formData.append('counter_id', COUNTER_ID);
-    
-    Object.keys(params).forEach(key => {
-        if (params[key] !== undefined && params[key] !== null && key !== 'counter_id') {
-            formData.append(key, params[key]);
-        }
-    });
-
-    console.log(`[${new Date().toISOString()}] Counter Request: ${action}`, {
-        url: url.toString(),
-        params: Object.fromEntries(formData),
-        csrfTokenLength: csrfToken.length
-    });
-
-    return fetch(url.toString(), {
-        method: 'POST',
-        headers: {
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRF-TOKEN': csrfToken
+            document.getElementById('transfer-modal').classList.remove('hidden');
         },
-        body: formData,
-        credentials: 'same-origin',
-        cache: 'no-store'
-    })
-        .then(response => {
-            console.log(`Counter action '${action}' response: HTTP ${response.status}`);
-            
-            if (response.status === 401 || response.status === 403) {
-                console.error(`Authentication error (HTTP ${response.status}) for action '${action}'`);
-                console.error('Possible causes:');
-                console.error('  - User session expired');
-                console.error('  - Missing authentication middleware on route');
-                console.error('  - CSRF token mismatch');
-                console.error('  - User lacks permission to perform action');
-                
-                // Check if we're truly authenticated
-                if (response.status === 401) {
-                    console.warn('Attempting to refresh authentication...');
-                    return fetch(`/${orgCode}/refresh-auth`, { 
-                        method: 'GET',
-                        credentials: 'same-origin',
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                    }).then(() => {
-                        // Retry after refresh
-                        return makeCounterRequest(action, params);
-                    }).catch(() => {
-                        return { success: false, message: 'Session expired. Please login again.', requiresReauth: true };
-                    });
-                }
-                
-                return { success: false, suppressed: true };
-            }
-            
-            if (response.status === 500) {
-                console.error('Server error (HTTP 500) for action:', action);
-                console.error('Check server logs at: storage/logs/laravel.log');
-                return response.json().then(data => ({
-                    success: false,
-                    message: 'Server error',
-                    debug: data
-                })).catch(() => ({
-                    success: false,
-                    message: 'Server error (HTTP 500)'
-                }));
-            }
-            
-            if (!response.ok) {
-                return { success: false, message: `HTTP ${response.status}` };
-            }
-            
-            return response.json();
-        })
-        .catch(err => {
-            if (err && err.name === 'AbortError') {
-                console.log(`Counter request '${action}' was cancelled`);
-                return { success: false, message: 'Request cancelled', cancelled: true };
-            }
-            
-            console.error(`Counter request error for '${action}':`, err);
-            console.error('Diagnostic Info:', {
-                url: url.toString(),
-                counter_id: COUNTER_ID,
-                org_code: orgCode,
-                action: action,
-                error: err.message,
-                timestamp: new Date().toISOString()
-            });
-            
-            return { success: false, message: err.message || 'Network error' };
-        });
-}
-
-function notifyCustomer(btnEl, event) {
-    if (event) event.preventDefault();
-    return runActionWithCooldown(btnEl, () =>
-        makeCounterRequest('notify', { counter_id: COUNTER_ID })
-            .then((data) => {
-                if (data && data.success) {
-                    console.log('Notify successful for counter ID:', data.counter_id);
-                    playNotificationSound();
-                    fetchData();
-                } else if (data && data.suppressed) {
-                    // Silently continue
-                    fetchData();
-                } else {
-                    throw new Error(data?.message || 'Notification failed');
-                }
-            })
-    );
-    return false;
-}
-
-function skipCurrent() {
-    openSkipModal();
-}
-
-function moveToNext(btnEl) {
-    return runActionWithCooldown(btnEl, () =>
-        makeCounterRequest('move-next')
-            .then((data) => {
-                if (data.success || data.suppressed) {
-                    fetchData();
-                } else {
-                    throw new Error(data?.message || 'Failed to move to next');
-                }
-            })
-    );
-}
-
-function callNext(btnEl) {
-    return runActionWithCooldown(btnEl, () =>
-        makeCounterRequest('call-next')
-            .then((data) => {
-                if (data.success || data.suppressed) {
-                    playNotificationSound();
-                    fetchData();
-                } else {
-                    throw new Error(data?.message || 'Failed to call next');
-                }
-            })
-    );
-}
-
-function recallQueue(queueId, event) {
-    if (event) event.preventDefault();
-    
-    if (!queueId) {
-        alert('Invalid queue ID');
-        return;
-    }
-
-    makeCounterRequest('recall', { queue_id: queueId })
-        .then((data) => {
-            if (data.success) {
-                playNotificationSound();
-                fetchData();
-            } else if (data.suppressed) {
-                // Silently retry
-                fetchData();
-            } else {
-                alert(data?.message || 'Recall failed');
-                fetchData();
-            }
-        });
-}
-
-function confirmSkip(btnEl) {
-    closeSkipModal();
-    return runActionWithCooldown(btnEl, () =>
-        makeCounterRequest('skip')
-            .then((data) => {
-                if (data.success || data.suppressed) {
-                    fetchData();
-                } else {
-                    throw new Error(data?.message || 'Failed to skip');
-                }
-            })
-    );
-}
-
-function confirmTransfer(toCounterId) {
-    if (!selectedTransferQueueId) {
-        alert('No queue to transfer');
-        closeTransferModal();
-        return;
-    }
-
-    closeTransferModal();
-
-    makeCounterRequest('transfer', {
-        queue_id: selectedTransferQueueId,
-        to_counter_id: toCounterId
-    })
-        .then(data => {
-            if (data.success) {
-                selectedTransferQueueId = null;
-                fetchData();
-            } else if (data.suppressed) {
-                selectedTransferQueueId = null;
-                fetchData();
-            } else {
-                alert('Transfer failed: ' + (data.message || 'Unknown error'));
-                selectedTransferQueueId = null;
-                fetchData();
-            }
-        });
-}
-
-function toggleOnline(btnEl) {
-    return runActionWithCooldown(btnEl, () =>
-        $.ajax({
-            url: `/${ORG_CODE}/counter/toggle-online`,
-            type: 'GET',
-            success: (data) => {
-                if (data.success) {
-                    fetchData();
-                    // Update button appearance based on new status
-                    if (data.is_online) {
-                        btnEl.classList.remove('bg-gray-600');
-                        btnEl.classList.add('bg-green-600');
-                    } else {
-                        btnEl.classList.remove('bg-green-600');
-                        btnEl.classList.add('bg-gray-600');
-                    }
-                } else {
-                    throw new Error(data?.message || 'Failed to toggle online status');
-                }
-            }
-        })
-    );
-}
-
-// ============================================================
-// MODAL FUNCTIONS
-// ============================================================
-
-function openSkipModal() {
-    const modal = document.getElementById('skip-modal');
-    const content = document.getElementById('skip-modal-content');
-    modal.classList.remove('hidden');
-    setTimeout(() => {
-        modal.classList.add('opacity-100');
-        content.classList.remove('scale-95', 'opacity-0');
-        content.classList.add('scale-100', 'opacity-100');
-    }, 10);
-}
-
-function closeSkipModal() {
-    const modal = document.getElementById('skip-modal');
-    const content = document.getElementById('skip-modal-content');
-    content.classList.remove('scale-100', 'opacity-100');
-    content.classList.add('scale-95', 'opacity-0');
-    setTimeout(() => {
-        modal.classList.add('hidden');
-    }, 300);
-}
-
-function openTransferModal() {
-    const idToTransfer = currentQueueData ? currentQueueData.id : null;
-    if (!idToTransfer) {
-        alert('No queue to transfer');
-        return;
-    }
-
-    selectedTransferQueueId = idToTransfer;
-
-    if (onlineCounters.length === 0) {
-        alert('No available counters to transfer to');
-        return;
-    }
-
-    const modal = document.getElementById('transfer-modal');
-    const content = document.getElementById('transfer-modal-content');
-    const countersList = document.getElementById('countersList');
-
-    countersList.innerHTML = onlineCounters.map(counter => `
-        <button type="button" onclick="confirmTransfer(${counter.id})" class="queue-item hover:bg-blue-50 cursor-pointer">
-            <div class="font-semibold text-gray-800">Counter ${counter.counter_number}</div>
-            <div class="text-sm text-gray-600">${counter.display_name}</div>
-        </button>
-    `).join('');
-
-    modal.classList.remove('hidden');
-    setTimeout(() => {
-        modal.classList.add('opacity-100');
-        content.classList.remove('scale-95', 'opacity-0');
-        content.classList.add('scale-100', 'opacity-100');
-    }, 10);
-}
-
-function closeTransferModal() {
-    const modal = document.getElementById('transfer-modal');
-    const content = document.getElementById('transfer-modal-content');
-    content.classList.remove('scale-100', 'opacity-100');
-    content.classList.add('scale-95', 'opacity-0');
-    setTimeout(() => {
-        modal.classList.add('hidden');
-    }, 300);
-}
-
-// ============================================================
-// INITIALIZATION
-// ============================================================
-
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('[INIT] Counter panel initialization starting...');
-    
-    // Rapid polling for real-time updates
-    const pollInterval = setInterval(function() {
-        try {
-            fetchData();
-        } catch (err) {
-            console.error('[POLL] Error in polling:', err);
-        }
-    }, FETCH_INTERVAL);
-    
-    // Initial fetch and set counter to online on login
-    try {
-        fetchData().then(() => {
-            // Initialize toggle online button state
-            const toggleBtn = document.getElementById('btnToggleOnline');
-            if (toggleBtn && currentCounterData) {
-                if (!currentCounterData.is_online) {
-                    // Auto set to online on login
-                    toggleOnline(toggleBtn);
-                } else {
-                    toggleBtn.classList.remove('bg-gray-600');
-                    toggleBtn.classList.add('bg-green-600');
-                }
-            }
-        });
-    } catch (err) {
-        console.error('[INIT] Error in initial fetch:', err);
-    }
-
-    // Handle visibility changes
-    document.addEventListener('visibilitychange', function() {
-        if (!document.hidden) {
-            console.log('[VISIBILITY] Counter panel restored, refreshing data...');
-            try {
-                fetchData();
-            } catch (err) {
-                console.error('[VISIBILITY] Error refreshing data:', err);
-            }
-        }
-    });
-
-    // Handle network changes
-    window.addEventListener('online', function() {
-        console.log('[NETWORK] Network restored - resuming operations');
-        try {
-            fetchData();
-        } catch (err) {
-            console.error('[NETWORK] Error on network restore:', err);
-        }
-    });
-
-    window.addEventListener('offline', function() {
-        console.warn('[NETWORK] Network disconnected - using cached data');
-    });
-    
-    // Setup event listeners for action buttons with comprehensive error handling
-    console.log('[INIT] Setting up event listeners...');
-    
-    const buttonConfig = [
-        { id: 'btnCallNext', handler: 'callNext', label: 'Call Next' },
-        { id: 'btnNotify', handler: 'notifyCustomer', label: 'Notify' },
-        { id: 'btnComplete', handler: 'moveToNext', label: 'Complete' },
-        { id: 'btnSkip', handler: 'skipCurrent', label: 'Skip' },
-        { id: 'btnTransfer', handler: 'openTransferModal', label: 'Transfer' },
-        { id: 'btnToggleOnline', handler: 'toggleOnline', label: 'Toggle Online' }
-    ];
-    
-    const elementsFound = {};
-    
-    // Bind main action buttons
-    buttonConfig.forEach(config => {
-        const btn = document.getElementById(config.id);
-        elementsFound[config.id] = !!btn;
         
-        if (btn) {
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                try {
-                    console.log(`[ACTION] ${config.label} button clicked`);
-                    
-                    // Execute handler with proper context
-                    if (config.handler === 'notifyCustomer') {
-                        notifyCustomer(this, e);
-                    } else if (config.handler === 'moveToNext') {
-                        moveToNext(this);
-                    } else if (config.handler === 'callNext') {
-                        callNext(this);
-                    } else if (config.handler === 'skipCurrent') {
-                        skipCurrent();
-                    } else if (config.handler === 'openTransferModal') {
-                        openTransferModal();
-                    }
-                } catch (err) {
-                    console.error(`[ACTION] Error in ${config.label}:`, err);
+        confirmTransfer: function(toCounterId) {
+            document.getElementById('transfer-modal').classList.add('hidden');
+            setCooldown('btnTransfer');
+            
+            apiRequest('transfer', {
+                queue_id: state.currentQueue?.id,
+                to_counter_id: toCounterId
+            }).then(data => {
+                if (data.success) {
+                    showToast('Queue transferred');
+                    fetchData();
+                } else {
+                    showToast(data.message || 'Failed to transfer', 'error');
                 }
             });
-        } else {
-            console.warn(`[INIT] Button element not found: ${config.id}`);
-        }
-    });
-    
-    console.log('[INIT] Action buttons setup complete:', elementsFound);
-    
-    // Bind modal control buttons
-    const modalButtons = [
-        { id: 'dockRestoreBtn', handler: () => toggleMinimize(false) },
-        { id: 'closeTransferModalBtn', handler: closeTransferModal },
-        { id: 'cancelTransferBtn', handler: closeTransferModal },
-        { id: 'confirmTransferBtn', handler: () => confirmTransfer() },
-        { id: 'closeSkipModalBtn', handler: closeSkipModal },
-        { id: 'cancelSkipBtn', handler: closeSkipModal },
-        { id: 'confirmSkipBtn', handler: function() { confirmSkip(this); } }
-    ];
-    
-    modalButtons.forEach(btn => {
-        const el = document.getElementById(btn.id);
-        if (el) {
-            el.addEventListener('click', function(e) {
-                try {
-                    e.preventDefault();
-                    btn.handler.call(this, e);
-                } catch (err) {
-                    console.error(`[MODAL] Error with ${btn.id}:`, err);
+        },
+        
+        recall: function(queueId) {
+            apiRequest('recall', { queue_id: queueId }).then(data => {
+                if (data.success) {
+                    playSound();
+                    showToast('Queue recalled');
+                    fetchData();
+                } else {
+                    showToast(data.message || 'Failed to recall', 'error');
+                }
+            });
+        },
+        
+        toggleOnline: function() {
+            fetch(`/${CONFIG.orgCode}/counter/toggle-online`, {
+                method: 'GET',
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    state.isOnline = data.is_online;
+                    updateOnlineStatus();
+                    showToast(data.is_online ? 'You are now online' : 'You are now offline');
                 }
             });
         }
+    };
+    
+    // Expose actions globally for onclick handlers
+    window.counterActions = actions;
+    
+    // ============================================================
+    // EVENT LISTENERS
+    // ============================================================
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('[INIT] Counter panel starting...');
+        
+        // Bind action buttons
+        document.getElementById('btnCallNext')?.addEventListener('click', actions.callNext);
+        document.getElementById('btnNotify')?.addEventListener('click', actions.notify);
+        document.getElementById('btnComplete')?.addEventListener('click', actions.complete);
+        document.getElementById('btnSkip')?.addEventListener('click', actions.skip);
+        document.getElementById('btnTransfer')?.addEventListener('click', actions.transfer);
+        
+        // Bind modal buttons
+        document.getElementById('confirmSkipBtn')?.addEventListener('click', actions.confirmSkip);
+        document.getElementById('cancelSkipBtn')?.addEventListener('click', () => document.getElementById('skip-modal').classList.add('hidden'));
+        document.getElementById('closeSkipModalBtn')?.addEventListener('click', () => document.getElementById('skip-modal').classList.add('hidden'));
+        document.getElementById('cancelTransferBtn')?.addEventListener('click', () => document.getElementById('transfer-modal').classList.add('hidden'));
+        document.getElementById('closeTransferModalBtn')?.addEventListener('click', () => document.getElementById('transfer-modal').classList.add('hidden'));
+        
+        // Bind header toggle button
+        document.getElementById('btnToggleOnline')?.addEventListener('click', actions.toggleOnline);
+        
+        // Initial fetch
+        fetchData();
+        
+        // Polling
+        setInterval(fetchData, CONFIG.pollInterval);
+        
+        // Visibility change handler
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) fetchData();
+        });
+        
+        console.log('[INIT] Counter panel ready');
     });
-    
-    // Restore minimized state from localStorage if available
-    try {
-        const wasMinimized = localStorage.getItem('counterPanelMinimized') === '1';
-        if (wasMinimized) {
-            setMinimized(true);
-        }
-    } catch (e) {
-        console.log('[INIT] localStorage not available');
-    }
-    
-    console.log('[INIT] Counter panel initialization complete');
-});
+})();
 </script>
 @endpush
 @endsection

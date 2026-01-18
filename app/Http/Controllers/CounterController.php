@@ -727,12 +727,20 @@ class CounterController extends Controller
         }
     }
     /**
-     * Send customer notification
+     * Send customer notification - updates notified_at in database
      */
     public function notifyCustomer(Request $request)
     {
         $user = Auth::user();
         $organization = $request->attributes->get('organization');
+
+        // Verify counter role and online status
+        if (!$user || !$user->isCounter()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Counter role required'
+            ], 403);
+        }
 
         try {
             // Get current queue for this counter
@@ -744,32 +752,50 @@ class CounterController extends Controller
                 ], 400);
             }
 
-            // Send notification through configured channel
-            $result = $this->counterService->sendCustomerNotification(
-                $user,
-                $currentQueue->queue_number,
-                $request->notification_method,
-                $request->message
-            );
+            // Update the notified_at timestamp in the database
+            $currentQueue->notified_at = now();
+            $currentQueue->save();
 
-            if (!$result['success']) {
-                return response()->json([
-                    'success' => false,
-                    'message' => $result['message']
-                ], 400);
+            Log::info('Customer notification sent', [
+                'counter_id' => $user->id,
+                'counter_number' => $user->counter_number,
+                'queue_id' => $currentQueue->id,
+                'queue_number' => $currentQueue->queue_number,
+                'notified_at' => $currentQueue->notified_at,
+                'organization_id' => $organization->id ?? null
+            ]);
+
+            // Broadcast notification event if broadcasting is enabled
+            if (config('broadcasting.default') !== 'null') {
+                try {
+                    broadcast(new \App\Events\CustomerNotified($currentQueue, $user));
+                } catch (\Exception $e) {
+                    Log::warning('Failed to broadcast notification: ' . $e->getMessage());
+                    // Continue even if broadcast fails - the database update is more important
+                }
             }
 
             return response()->json([
                 'success' => true,
-                'message' => 'Notification sent successfully',
-                'queue_number' => $currentQueue->queue_number
+                'message' => 'Customer notified successfully',
+                'queue_number' => $currentQueue->queue_number,
+                'queue_id' => $currentQueue->id,
+                'counter_id' => $user->id,
+                'counter_number' => $user->counter_number,
+                'notified_at' => $currentQueue->notified_at->toISOString()
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Notification error: ' . $e->getMessage());
+            Log::error('Notification error: ' . $e->getMessage(), [
+                'counter_id' => $user->id ?? null,
+                'organization_id' => $organization->id ?? null,
+                'exception' => get_class($e),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to send notification'
+                'message' => 'Failed to send notification: ' . $e->getMessage()
             ], 500);
         }
     }
