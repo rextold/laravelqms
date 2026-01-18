@@ -558,12 +558,17 @@ class CounterController extends Controller
                     'waiting_queues' => $waitingQueues->map(fn($q) => [
                         'id' => $q->id,
                         'queue_number' => $q->queue_number,
+                        'customer_name' => $q->customer_name,
+                        'created_at' => $q->created_at,
                     ])->values(),
                     'skipped' => $skippedQueues->map(fn($q) => [
                         'id' => $q->id,
                         'queue_number' => $q->queue_number,
+                        'customer_name' => $q->customer_name,
+                        'created_at' => $q->created_at,
                     ])->values(),
                     'online_counters' => $onlineCounters,
+                    'served_today' => $stats['completed_today'] ?? 0,
                     // Dashboard stats and analytics
                     'stats' => $stats,
                     'analytics' => $analytics
