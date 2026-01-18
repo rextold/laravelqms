@@ -19,11 +19,16 @@ class VideoControl extends Model
         'video_muted',
         'autoplay',
         'loop',
+        'repeat_mode',
+        'is_shuffle',
+        'is_sequence',
         'organization_id',
     ];
 
     protected $casts = [
         'is_playing' => 'boolean',
+        'is_shuffle' => 'boolean',
+        'is_sequence' => 'boolean',
         'video_muted' => 'boolean',
         'autoplay' => 'boolean',
         'loop' => 'boolean',

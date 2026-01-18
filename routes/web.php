@@ -190,7 +190,6 @@ Route::prefix('{organization_code}')->group(function () {
                     Route::post('/control', [VideoController::class, 'updateControl'])->name('control');
                     Route::post('/unmute', [VideoController::class, 'unmute'])->name('unmute');
                     Route::post('/upload-bell', [VideoController::class, 'uploadBellSound'])->name('upload-bell');
-                    Route::post('/upload-chunk', [VideoController::class, 'uploadChunk'])->name('upload-chunk');
                     Route::post('/reset-bell', [VideoController::class, 'resetBellSound'])->name('reset-bell');
                     Route::post('/set-now-playing', [VideoController::class, 'setNowPlaying'])->name('set-now-playing');
                 });
@@ -201,7 +200,7 @@ Route::prefix('{organization_code}')->group(function () {
                     Route::post('/add', [VideoController::class, 'addToPlaylist'])->name('add');
                     Route::post('/remove', [VideoController::class, 'removeFromPlaylist'])->name('remove');
                     Route::post('/reorder', [VideoController::class, 'reorderPlaylist'])->name('reorder');
-                    // Playlist control endpoint removed (controls deprecated)
+                    Route::post('/control', [VideoController::class, 'updatePlaylistControl'])->name('control');
                     Route::post('/now-playing', [VideoController::class, 'setNowPlaying'])->name('now-playing');
                 });
                 

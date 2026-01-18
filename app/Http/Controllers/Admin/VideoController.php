@@ -389,99 +389,6 @@ class VideoController extends Controller
         }
     }
 
-    /**
-     * Handle chunked video upload. Accepts chunks and assembles when complete.
-     * Expects form fields or headers: upload_id, chunk_index (0-based), total_chunks, filename, title (optional)
-     * File field name: chunk
-     */
-    public function uploadChunk(Request $request)
-    {
-        $orgCode = $request->route('organization_code');
-        $organization = \App\Models\Organization::where('organization_code', $orgCode)->firstOrFail();
-
-        $uploadId = $request->input('upload_id') ?? $request->header('Upload-Id');
-        $index = (int) ($request->input('chunk_index') ?? $request->header('Upload-Index', 0));
-        $total = (int) ($request->input('total_chunks') ?? $request->header('Upload-Total', 1));
-        $filename = $request->input('filename') ?? $request->header('Upload-Filename');
-
-        if (!$uploadId || !$filename) {
-            return response()->json(['error' => 'Missing upload_id or filename'], 400);
-        }
-
-        if (!$request->hasFile('chunk')) {
-            return response()->json(['error' => 'No chunk file provided'], 400);
-        }
-
-        $file = $request->file('chunk');
-
-        // Save chunk to temporary local storage: storage/app/tmp_uploads/{orgId}/{uploadId}/{index}
-        $tmpDir = storage_path('app/tmp_uploads/' . $organization->id . '/' . $uploadId);
-        if (!is_dir($tmpDir)) {
-            @mkdir($tmpDir, 0775, true);
-        }
-
-        $chunkPath = $tmpDir . DIRECTORY_SEPARATOR . str_pad($index, 8, '0', STR_PAD_LEFT) . '.part';
-        try {
-            $file->move($tmpDir, basename($chunkPath));
-        } catch (\Throwable $e) {
-            return response()->json(['error' => 'Failed to store chunk: ' . $e->getMessage()], 500);
-        }
-
-        // If this is the last chunk, assemble the file
-        if ($index + 1 >= $total) {
-            $finalName = uniqid() . '_' . preg_replace('/[^A-Za-z0-9_\-\.]/', '_', $filename);
-            $finalRelative = 'videos/' . $finalName;
-            $finalPath = storage_path('app/public/' . $finalRelative);
-
-            try {
-                $out = fopen($finalPath, 'ab');
-                for ($i = 0; $i < $total; $i++) {
-                    $part = $tmpDir . DIRECTORY_SEPARATOR . str_pad($i, 8, '0', STR_PAD_LEFT) . '.part';
-                    if (!file_exists($part)) {
-                        // missing chunk
-                        fclose($out);
-                        return response()->json(['error' => 'Missing chunk index: ' . $i], 500);
-                    }
-                    $in = fopen($part, 'rb');
-                    while (!feof($in)) {
-                        $buf = fread($in, 8192);
-                        if ($buf === false) break;
-                        fwrite($out, $buf);
-                    }
-                    fclose($in);
-                }
-                fclose($out);
-
-                // cleanup temp chunks
-                foreach (glob($tmpDir . DIRECTORY_SEPARATOR . '*.part') as $p) {
-                    @unlink($p);
-                }
-                @rmdir($tmpDir);
-
-                // Create Video record
-                $video = Video::create([
-                    'title' => $request->input('title') ?? $filename,
-                    'video_type' => 'file',
-                    'file_path' => $finalRelative,
-                    'order' => Video::where('organization_id', $organization->id)->max('order') + 1,
-                    'is_active' => true,
-                    'organization_id' => $organization->id,
-                ]);
-
-                return response()->json(['success' => true, 'video' => [
-                    'id' => $video->id,
-                    'title' => $video->title,
-                    'file_path' => asset('storage/' . $video->file_path),
-                ]]);
-
-            } catch (\Throwable $e) {
-                return response()->json(['error' => 'Failed to assemble chunks: ' . $e->getMessage()], 500);
-            }
-        }
-
-        return response()->json(['success' => true, 'chunk_index' => $index]);
-    }
-
     public function resetBellSound()
     {
         $control = VideoControl::getCurrent();
@@ -549,6 +456,9 @@ class VideoController extends Controller
                 'video_muted' => $control->video_muted ?? false,
                 'autoplay' => $control->autoplay ?? false,
                 'loop' => $control->loop ?? false,
+                'repeat_mode' => $control->repeat_mode,
+                'is_shuffle' => $control->is_shuffle,
+                'is_sequence' => $control->is_sequence,
             ]
         ]);
     }
