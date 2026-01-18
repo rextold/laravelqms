@@ -254,6 +254,15 @@ const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribut
                   document.querySelector('input[name="_token"]')?.value || 
                   '{{ csrf_token() }}';
 
+// Diagnostic logging for troubleshooting
+console.log('Counter Panel Configuration:', {
+    counter_id: COUNTER_ID,
+    counter_num: COUNTER_NUM,
+    org_code: ORG_CODE,
+    csrf_token: csrfToken ? 'Present' : 'Missing',
+    user_agent: navigator.userAgent.substring(0, 50)
+});
+
 // State Management
 let currentQueueData = null;
 let onlineCounters = [];
@@ -540,10 +549,15 @@ function fetchData() {
         .then(response => {
             // Handle authentication errors gracefully
             if (response.status === 403 || response.status === 401) {
-                console.warn(`Counter endpoint ${response.status} - using fallback data`);
+                console.warn(`Counter endpoint ${response.status} - authentication issue. Check user permissions and session.`);
                 handleFallbackData();
                 counterFetchInFlight = false;
                 return;
+            }
+            
+            if (response.status === 500) {
+                console.error('Counter endpoint returned HTTP 500 - Server error. Check Laravel logs at storage/logs/laravel.log');
+                throw new Error(`Server Error (HTTP 500) - Check Laravel logs for details`);
             }
             
             if (!response.ok) {
@@ -569,6 +583,12 @@ function fetchData() {
             const now = Date.now();
             if (now - lastErrorTime > 5000) {
                 console.error('Counter refresh failed:', err);
+                console.error('Diagnostic Info:', {
+                    url: url.toString(),
+                    counter_id: COUNTER_ID,
+                    org_code: ORG_CODE,
+                    timestamp: new Date().toISOString()
+                });
                 lastErrorTime = now;
             }
             
