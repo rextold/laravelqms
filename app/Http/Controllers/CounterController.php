@@ -169,7 +169,41 @@ class CounterController extends Controller
             Log::error('Error calling next queue: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to call next queue'], 500);
         }
-    }    /**
+    }
+
+    /**
+     * Send customer notification
+     */
+    public function notifyCustomer(Request $request)
+    {
+        $user = Auth::user();
+        $organization = $request->attributes->get('organization');
+
+        try {
+            $queue = Queue::findOrFail($request->queue_id);
+
+            if ($queue->counter_id !== $user->id) {
+                return response()->json(['error' => 'Not authorized for this queue'], 403);
+            }
+
+            // Send notification through configured channel
+$this->counterService->sendCustomerNotification(
+    queue: $queue,
+    method: $request->notification_method,
+    message: $request->message
+);
+            return response()->json([
+                'success' => true,
+                'message' => 'Notification sent successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Notification error: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to send notification'], 500);
+        }
+    }
+
+    /**
      * Move current queue to completed and call next
      */
     public function moveToNext(Request $request = null)

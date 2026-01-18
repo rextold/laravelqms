@@ -112,7 +112,7 @@ Route::prefix('{organization_code}')->group(function () {
     
     // Public counter data endpoint - accessible without authentication (supports ?counter_id query param)
     // Used by kiosk, monitor, and counter panel for real-time updates
-    Route::prefix('counter')->name('counter.')->middleware(['auth', 'organization.context', 'allow.public'])->group(function () {
+    Route::prefix('counter')->name('counter.')->middleware(['web', 'auth', 'organization.context', 'allow.public'])->group(function () {
         Route::get('/data', [CounterController::class, 'getData'])->name('public-data');
     });
 
@@ -186,7 +186,7 @@ Route::prefix('{organization_code}')->group(function () {
             Route::post('/call-next', [CounterController::class, 'callNext'])->name('call-next');
             Route::post('/move-next', [CounterController::class, 'moveToNext'])->name('move-next');
             Route::post('/transfer', [CounterController::class, 'transferQueue'])->name('transfer');
-            Route::post('/notify', [CounterController::class, 'notifyCustomer'])->name('notify');
+            Route::post('/notify', [CounterController::class, 'notifyCustomer'])->name('notify')->middleware('web');
             Route::post('/skip', [CounterController::class, 'skipQueue'])->name('skip');
             Route::post('/recall', [CounterController::class, 'recallQueue'])->name('recall');
         });
