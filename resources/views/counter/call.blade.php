@@ -49,6 +49,12 @@
                             <i class="fas fa-exchange-alt mr-2"></i>
                             Transfer
                         </button>
+                        
+                        <button type="button" id="btnToggleOnline" 
+                                class="counter-btn flex items-center justify-center px-4 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-semibold shadow-sm">
+                            <i class="fas fa-power-off mr-2"></i>
+                            Toggle Online
+                        </button>
                     </div>
                 </div>
             </div>
@@ -890,6 +896,27 @@ function confirmTransfer(toCounterId) {
         });
 }
 
+function toggleOnline(btnEl) {
+    return runActionWithCooldown(btnEl, () =>
+        makeCounterRequest('toggle-online')
+            .then((data) => {
+                if (data.success) {
+                    fetchData();
+                    // Update button appearance based on new status
+                    if (data.is_online) {
+                        btnEl.classList.remove('bg-gray-600');
+                        btnEl.classList.add('bg-green-600');
+                    } else {
+                        btnEl.classList.remove('bg-green-600');
+                        btnEl.classList.add('bg-gray-600');
+                    }
+                } else {
+                    throw new Error(data?.message || 'Failed to toggle online status');
+                }
+            })
+    );
+}
+
 // ============================================================
 // MODAL FUNCTIONS
 // ============================================================
@@ -976,7 +1003,19 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initial fetch
     try {
-        fetchData();
+        fetchData().then(() => {
+            // Initialize toggle online button state
+            const toggleBtn = document.getElementById('btnToggleOnline');
+            if (toggleBtn && currentCounterData) {
+                if (currentCounterData.is_online) {
+                    toggleBtn.classList.remove('bg-gray-600');
+                    toggleBtn.classList.add('bg-green-600');
+                } else {
+                    toggleBtn.classList.remove('bg-green-600');
+                    toggleBtn.classList.add('bg-gray-600');
+                }
+            }
+        });
     } catch (err) {
         console.error('[INIT] Error in initial fetch:', err);
     }
@@ -1015,7 +1054,8 @@ document.addEventListener('DOMContentLoaded', function() {
         { id: 'btnNotify', handler: 'notifyCustomer', label: 'Notify' },
         { id: 'btnComplete', handler: 'moveToNext', label: 'Complete' },
         { id: 'btnSkip', handler: 'skipCurrent', label: 'Skip' },
-        { id: 'btnTransfer', handler: 'openTransferModal', label: 'Transfer' }
+        { id: 'btnTransfer', handler: 'openTransferModal', label: 'Transfer' },
+        { id: 'btnToggleOnline', handler: 'toggleOnline', label: 'Toggle Online' }
     ];
     
     const elementsFound = {};
