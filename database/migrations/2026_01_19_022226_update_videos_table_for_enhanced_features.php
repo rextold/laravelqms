@@ -39,10 +39,9 @@ return new class extends Migration
             }
             
             // Playlist and scheduling features
-            if (!Schema::hasColumn('videos', 'playlist_id')) {
+            if (Schema::hasTable('playlists') && !Schema::hasColumn('videos', 'playlist_id')) {
                 $table->foreignId('playlist_id')->nullable()->constrained()->onDelete('set null')->after('organization_id');
-            }
-            
+            }            
             if (!Schema::hasColumn('videos', 'start_date')) {
                 $table->date('start_date')->nullable()->after('is_active');
             }
