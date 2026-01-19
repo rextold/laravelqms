@@ -83,58 +83,17 @@ class QueueService
                 }
 
                 $nextSeq = $lastSeq + 1;
+                $settings->last_queue_sequence = $nextSeq;
+                $settings->save();
 
-                // Try to create the Queue record with a few retries to handle duplicate-key races
-                $maxAttempts = 8;
-                $attempt = 0;
-                $createdQueue = null;
+                $queueNumber = str_pad((string) $nextSeq, $digits, '0', STR_PAD_LEFT);
 
-                while ($attempt < $maxAttempts) {
-                    $attempt++;
-                    $queueNumber = str_pad((string) $nextSeq, $digits, '0', STR_PAD_LEFT);
-
-                    try {
-                        $createdQueue = Queue::create([
-                            'queue_number' => $queueNumber,
-                            'counter_id' => $counter->id,
-                            'organization_id' => $organizationId,
-                            'status' => 'waiting',
-                        ]);
-
-                        // Persist the last sequence (we are inside a transaction, so this will commit together)
-                        $settings->last_queue_sequence = $nextSeq;
-                        $settings->save();
-
-                        break; // success
-                    } catch (\Illuminate\Database\QueryException $qe) {
-                        // Duplicate key on queue number - try the next sequence
-                        $msg = $qe->getMessage();
-                        if (strpos($msg, 'Duplicate entry') !== false || strpos($msg, 'UNIQUE') !== false) {
-                            \Log::warning('Duplicate queue_number detected, retrying with next sequence', [
-                                'organization_id' => $organizationId,
-                                'attempt' => $attempt,
-                                'queue_number' => $queueNumber,
-                                'error' => $msg,
-                            ]);
-
-                            $nextSeq++;
-                            // update the tentative sequence so other processes don't repeat same number
-                            $settings->last_queue_sequence = $nextSeq - 1;
-                            $settings->save();
-
-                            continue; // try again
-                        }
-
-                        // Unknown DB error - rethrow to outer catch
-                        throw $qe;
-                    }
-                }
-
-                if (!$createdQueue) {
-                    throw new \RuntimeException('Failed to create queue after multiple attempts');
-                }
-
-                return $createdQueue;
+                return Queue::create([
+                    'queue_number' => $queueNumber,
+                    'counter_id' => $counter->id,
+                    'organization_id' => $organizationId,
+                    'status' => 'waiting',
+                ]);
             });
         } catch (\Throwable $e) {
             // Transaction failed (possible lock wait or DB issue). Fall back to a non-blocking approach.
@@ -171,59 +130,21 @@ class QueueService
             }
 
             $nextSeq = $lastSeq + 1;
+            $queueNumber = str_pad((string) $nextSeq, $digits, '0', STR_PAD_LEFT);
 
-            // Best-effort: try creating with retries to handle race conditions without locks
-            $maxAttempts = 8;
-            $attempt = 0;
-            $createdQueue = null;
-
-            while ($attempt < $maxAttempts) {
-                $attempt++;
-                $queueNumber = str_pad((string) $nextSeq, $digits, '0', STR_PAD_LEFT);
-
-                try {
-                    $createdQueue = Queue::create([
-                        'queue_number' => $queueNumber,
-                        'counter_id' => $counter->id,
-                        'organization_id' => $organizationId,
-                        'status' => 'waiting',
-                    ]);
-
-                    // Try to persist the last_queue_sequence best-effort (no locking)
-                    try {
-                        OrganizationSetting::where('organization_id', $organizationId)->update(['last_queue_sequence' => $nextSeq, 'last_queue_sequence_date' => now()->toDateString()]);
-                    } catch (\Throwable $_) {
-                        // ignore persistence errors on fallback
-                    }
-
-                    break;
-                } catch (\Illuminate\Database\QueryException $qe) {
-                    $msg = $qe->getMessage();
-                    if (strpos($msg, 'Duplicate entry') !== false || strpos($msg, 'UNIQUE') !== false) {
-                        \Log::warning('Duplicate queue_number detected on fallback, retrying', [
-                            'organization_id' => $organizationId,
-                            'attempt' => $attempt,
-                            'queue_number' => $queueNumber,
-                            'error' => $msg,
-                        ]);
-                        $nextSeq++;
-
-                        // Try to persist the incremental sequence
-                        try {
-                            OrganizationSetting::where('organization_id', $organizationId)->update(['last_queue_sequence' => $nextSeq - 1]);
-                        } catch (\Throwable $_) {}
-
-                        continue;
-                    }
-                    throw $qe;
-                }
+            // Try to persist the last_queue_sequence best-effort (no locking)
+            try {
+                OrganizationSetting::where('organization_id', $organizationId)->update(['last_queue_sequence' => $nextSeq]);
+            } catch (\Throwable $_) {
+                // ignore persistence errors on fallback
             }
 
-            if (!$createdQueue) {
-                throw new \RuntimeException('Failed to create queue after multiple attempts (fallback)');
-            }
-
-            $queue = $createdQueue;
+            $queue = Queue::create([
+                'queue_number' => $queueNumber,
+                'counter_id' => $counter->id,
+                'organization_id' => $organizationId,
+                'status' => 'waiting',
+            ]);
         }
 
         if ($this->shouldBroadcast()) {
