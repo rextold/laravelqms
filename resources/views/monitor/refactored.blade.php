@@ -836,8 +836,13 @@
         </div>
     </div>
     
-    <!-- Notification Sound -->
+    <!-- Notification Sound - Uses uploaded custom bell or default -->
     <audio id="notificationSound" preload="auto" crossorigin="anonymous">
+        @if($videoControl && $videoControl->bell_sound_path)
+            <!-- Custom uploaded bell sound -->
+            <source src="{{ asset('storage/' . $videoControl->bell_sound_path) }}" type="audio/{{ pathinfo($videoControl->bell_sound_path, PATHINFO_EXTENSION) }}">
+        @endif
+        <!-- Fallback default bell sound -->
         <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFAtGmN7yvmwhBjiKz/HPgTQGG2W07O2hUhELRZff8r5sIQc4iM/x0H40BhtktOztolIRC0WX3/K+bCEHOIjP8dB+NAYbZLTs7aFSEQtFl9/yvmwhBziIz/HQfjQGG2S07O2hUhELRZff8r5sIQc4h8/x0H40BhtktOztolIRC0SX3vK+bCEHN4fP8c9+MwYaZLPr7aFSEQxEl97yvmwhBzeHz/HPfjMGGmSz6+2hUhEMRJfe8r5sIQc3h8/xz34zBhpks+vtoVIRDESX3vK+ayEHN4bP8c9+MwYaZLPr7aFSEQxEl97yv2shBzeGz/HPfTMGGmSz6+2hUhEMRJfe8r9rIQc3hs/xz30zBhpks+vtoVIRDESX3vK/ayEHN4bP8c99MwYaZLPr7aFSEQxEl97yv2shBzeGz/HPfTMGGmSz6+2hUhEMRJfe8r9rIQc3hs/xz30zBhpks+vtoVIRDESX3vK/ayEHN4bP8c99MwYaZLPr7aFSEQxEl97yv2shBzeGz/HPfTMGGmSz6+2hUhEMRJfe8r9rIQc3hs/xz30zBhpks+vtoVIRDESX3vK/ayEHN4bP8c99MwYaZLPr7aFSEQxEl97yv2shBzeGz/HPfTMGGmSz6+2hUhEMRJfe8r9rIQc3hs/xz30zBhpks+vtoVIRDESX3vK/ayEHN4bP8c99MwYaZLPr7aFSEQxEl97yv2shBzeGz/HPfTMGGmSz6+2hUhEMRJfe8r9rIQc3hs/xz30zBhpks+vtoVIRDESX3vK/ayEHN4bP8c99MwYaZLPr7aFSEQxEl97yv2shBzeGz/HPfTMGGmSz6+2hUhEMRJfe8r9rIQc3hs/xz30zBhpks+vtoVIRDESX3vK/ayEHN4bP8c99MwYaZLPr7aFSEQxEl97yv2shBzeGz/HPfTMGGmSz6+2hUhEMRJfe8r9rIQc3hs/xz30zBhpks+vtoVIRDESX3vK/ayEHN4bP8c99MwYaZLPr7aFSEQxEl97yv2shBzeGz/HPfTMGGmSz6+2hUhEMRJfe8r9rIQc3hs/xz30zBhpks+vtoVIRDESX3vK/ayEHN4bP8c99MwYaZLPr7aFSEQxEl97yv2shBzeGz/HPfTMGGmSz6+2hUhEMRJfe8r9rIQc3hs/xz30zBhpks+vtoVIRDESX3vK/ayEHN4bP8c99MwYaZLPr7aFSEQxEl97yv2shBzeGz/HPfTMGGmSz6+2hUhEMRJfe8r9rIQ=" type="audio/wav">
         Your browser does not support the audio element.
     </audio>
@@ -868,7 +873,7 @@
             videoControl: @json($videoControl ?? null),
         };
         
-        // Debug: Log video information
+        // Debug: Log video and audio information
         console.log('📹 Video Debug Info:');
         console.log('- Total videos:', STATE.videos.length);
         console.log('- Videos:', STATE.videos);
@@ -883,6 +888,23 @@
                 is_active: v.is_active
             });
         });
+        
+        // Debug: Log notification bell sound info
+        const notifAudio = document.getElementById('notificationSound');
+        if (notifAudio) {
+            const sources = notifAudio.querySelectorAll('source');
+            console.log('🔔 Notification Bell Sound Info:');
+            console.log('- Total sources:', sources.length);
+            sources.forEach((source, idx) => {
+                console.log(`  ${idx + 1}. ${source.src.substring(0, 100)}... (${source.type})`);
+            });
+            @if($videoControl && $videoControl->bell_sound_path)
+            console.log('- Using CUSTOM uploaded bell sound');
+            console.log('- Bell path: {{ $videoControl->bell_sound_path }}');
+            @else
+            console.log('- Using DEFAULT base64 bell sound');
+            @endif
+        }
         
         let refreshTimer = null;
         let callBannerTimer = null;

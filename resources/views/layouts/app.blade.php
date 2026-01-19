@@ -94,39 +94,58 @@
             -ms-overflow-style: none;  /* IE and Edge */
             scrollbar-width: none;  /* Firefox */
         }
-        /* Collapsed sidebar styles */
+        /* Sidebar toggle styles - Complete hide/show */
         .sidebar {
-            transition: width 0.3s ease;
+            transition: transform 0.3s ease, opacity 0.3s ease;
         }
-        .sidebar.collapsed {
-            width: 5rem;
-        }
-        .sidebar.collapsed .sidebar-text {
+        
+        /* Desktop: Hide completely when toggled */
+        .sidebar.hidden {
+            transform: translateX(-100%);
             opacity: 0;
-            width: 0;
-            overflow: hidden;
+            pointer-events: none;
         }
-        .sidebar.collapsed .logo-text {
-            display: none;
-        }
-        .sidebar.collapsed .user-info-text {
-            display: none;
-        }
-        .sidebar.collapsed .sidebar-link {
-            justify-content: center;
-            padding-left: 1.5rem;
-            padding-right: 1.5rem;
-        }
-        .sidebar.collapsed .external-label {
-            display: none;
-        }
+        
+        /* Mobile: Hidden by default, show when toggled */
         @media (max-width: 768px) {
             .sidebar {
                 transform: translateX(-100%);
-                transition: transform 0.3s ease;
+                opacity: 0;
+                transition: transform 0.3s ease, opacity 0.3s ease;
             }
             .sidebar.mobile-open {
                 transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        /* Logout button - always on top with high z-index */
+        .logout-mobile {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 9999;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+        }
+        
+        .logout-mobile:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(239, 68, 68, 0.5);
+        }
+        
+        @media (min-width: 769px) {
+            .logout-mobile {
+                display: none;
             }
         }
     </style>
@@ -134,6 +153,12 @@
 </head>
 <body class="bg-gray-50" data-organization-code="{{ request()->route('organization_code') ?? (auth()->user() && auth()->user()->organization ? auth()->user()->organization->organization_code : '') }}">
     @if(auth()->check() && !request()->is('monitor*') && !request()->is('kiosk*'))
+    <!-- Mobile Logout Button - Always on top -->
+    <a href="#" onclick="handleLogout(event)" class="logout-mobile">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>Logout</span>
+    </a>
+    
     <div class="flex h-screen overflow-hidden">
         <!-- Sidebar -->
         <aside id="sidebar" class="sidebar w-64 gradient-bg text-white flex-shrink-0 fixed h-full z-50 md:relative">
@@ -322,7 +347,25 @@
 
     <script>
         function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('mobile-open');
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('mobile-open');
+            
+            // Close sidebar when clicking outside on mobile
+            if (sidebar.classList.contains('mobile-open')) {
+                setTimeout(() => {
+                    document.addEventListener('click', closeSidebarOnClickOutside);
+                }, 100);
+            }
+        }
+        
+        function closeSidebarOnClickOutside(e) {
+            const sidebar = document.getElementById('sidebar');
+            const hamburger = e.target.closest('[onclick="toggleSidebar()"]');
+            
+            if (!sidebar.contains(e.target) && !hamburger) {
+                sidebar.classList.remove('mobile-open');
+                document.removeEventListener('click', closeSidebarOnClickOutside);
+            }
         }
 
         // Auto-refresh CSRF token every 30 minutes to prevent page expiration
@@ -364,24 +407,28 @@
         
         resetInactivityTimer();
 
-        // Sidebar collapse/expand functionality
+        // Sidebar toggle functionality - Complete hide/show
         const sidebar = document.getElementById('sidebar');
         const sidebarToggle = document.getElementById('sidebarToggle');
         
-        // Load saved state from localStorage
-        const sidebarState = localStorage.getItem('sidebarCollapsed');
-        if (sidebarState === 'true') {
-            sidebar.classList.add('collapsed');
+        // Load saved state from localStorage (desktop only)
+        if (window.innerWidth > 768) {
+            const sidebarState = localStorage.getItem('sidebarHidden');
+            if (sidebarState === 'true') {
+                sidebar.classList.add('hidden');
+            }
         }
         
         // Toggle sidebar on button click
         sidebarToggle.addEventListener('click', function(e) {
             e.preventDefault();
-            sidebar.classList.toggle('collapsed');
+            sidebar.classList.toggle('hidden');
             
-            // Save state to localStorage
-            const isCollapsed = sidebar.classList.contains('collapsed');
-            localStorage.setItem('sidebarCollapsed', isCollapsed);
+            // Save state to localStorage (desktop only)
+            if (window.innerWidth > 768) {
+                const isHidden = sidebar.classList.contains('hidden');
+                localStorage.setItem('sidebarHidden', isHidden);
+            }
         });
 
         // Handle logout with GET method
