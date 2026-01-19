@@ -140,55 +140,82 @@
             font-weight: 500;
         }
         
-        /* Call Notification Banner - Always Visible in Front (Not Hidden) */
+        /* Call Notification Banner - Upper Center with Bell Icon */
         .call-banner {
-            position: absolute;
+            position: fixed;
             left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
+            top: 100px;
+            transform: translateX(-50%);
             opacity: 1;
             pointer-events: none;
-            z-index: 10;
-            transition: all 0.3s ease;
+            z-index: 1000;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
         
         .call-banner.empty {
             opacity: 0;
+            transform: translateX(-50%) translateY(-20px);
         }
         
         .call-banner-card {
-            background: rgba(0, 0, 0, 0.9);
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.95), rgba(16, 25, 62, 0.95));
             backdrop-filter: blur(20px);
             border: 3px solid var(--accent);
-            border-radius: 20px;
-            padding: 1rem 2rem;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
-            min-width: 400px;
+            border-radius: 24px;
+            padding: 1.5rem 2.5rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 
+                        0 0 40px rgba(16, 185, 129, 0.3);
+            min-width: 450px;
             text-align: center;
+            position: relative;
+        }
+        
+        .call-banner-card::before {
+            content: '\f0f3';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 2.5rem;
+            color: var(--accent);
+            animation: bell-ring 1s ease-in-out infinite;
+            text-shadow: 0 0 20px var(--accent);
+        }
+        
+        @keyframes bell-ring {
+            0%, 100% { transform: translateX(-50%) rotate(0deg); }
+            10%, 30% { transform: translateX(-50%) rotate(-15deg); }
+            20%, 40% { transform: translateX(-50%) rotate(15deg); }
+            50% { transform: translateX(-50%) rotate(0deg); }
         }
         
         .call-banner-title {
-            font-size: 0.9rem;
-            font-weight: 700;
+            font-size: 1rem;
+            font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: rgba(255, 255, 255, 0.9);
-            margin-bottom: 0.5rem;
+            letter-spacing: 0.15em;
+            color: var(--accent);
+            margin-bottom: 0.75rem;
+            margin-top: 0.5rem;
         }
         
         .call-banner-number {
-            font-size: 2.5rem;
+            font-size: 3.5rem;
             font-weight: 900;
-            color: var(--accent);
-            text-shadow: 0 4px 20px var(--accent);
-            margin-bottom: 0.25rem;
+            color: white;
+            text-shadow: 0 4px 30px var(--accent);
+            margin-bottom: 0.5rem;
             line-height: 1;
+            letter-spacing: 0.05em;
         }
         
         .call-banner-counter {
-            font-size: 1rem;
-            font-weight: 600;
-            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.9);
+            letter-spacing: 0.02em;
         }
         
         .header-time {
@@ -379,85 +406,55 @@
             border-radius: 3px;
         }
         
-        /* Now Serving Items */
-        .serving-item {
-            padding: 1rem 1.25rem;
-            border-bottom: 1px solid var(--border);
+        /* Now Serving Items - Compact Format like Counter 1: 0002 */
+        .serving-row {
+            padding: 0.85rem 1.25rem;
+            border-bottom: 1px solid rgba(16, 185, 129, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
             transition: all 0.3s ease;
-            animation: slideInRight 0.5s ease;
         }
         
-        .serving-item:last-child {
+        .serving-row:last-child {
             border-bottom: none;
         }
         
-        .serving-item.notify {
-            background: rgba(16, 185, 129, 0.1);
+        /* Blink animation - only 5 times when called/notified */
+        .serving-row.notify {
+            background: rgba(16, 185, 129, 0.12);
             border-left: 4px solid rgba(16, 185, 129, 0.8);
-            animation: blink-five-times 1.5s ease-in-out;
+            animation: blink-five-times 1.5s ease-in-out 1;
         }
         
         @keyframes blink-five-times {
             0%, 10%, 20%, 30%, 40%, 50%, 60%, 70%, 80%, 90%, 100% { 
-                background: rgba(16, 185, 129, 0.1);
-                border-left-color: rgba(16, 185, 129, 0.8);
+                background: rgba(16, 185, 129, 0.12);
+                border-left-color: rgba(16, 185, 129, 0.9);
             }
             5%, 15%, 25%, 35%, 45%, 55%, 65%, 75%, 85%, 95% { 
-                background: rgba(16, 185, 129, 0.05);
+                background: rgba(16, 185, 129, 0.03);
                 border-left-color: rgba(16, 185, 129, 0.3);
             }
         }
         
-        @keyframes slideInRight {
-            from {
-                opacity: 0;
-                transform: translateX(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
+        .serving-counter-label {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #10b981;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
         
-        .serving-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.5rem;
-        }
-        
-        .counter-label {
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: rgba(255, 255, 255, 0.7);
-        }
-        
-        .queue-number {
-            font-size: 1.75rem;
+        .serving-queue-number {
+            font-size: 1.4rem;
             font-weight: 900;
             color: var(--accent);
-            text-shadow: 0 2px 10px var(--accent);
-        }
-        
-        .queue-number.callout {
-            animation: pulse-scale 1.2s ease-in-out infinite;
-        }
-        
-        @keyframes pulse-scale {
-            0%, 100% { 
-                transform: scale(1);
-                text-shadow: 0 2px 10px var(--accent);
-            }
-            50% { 
-                transform: scale(1.08);
-                text-shadow: 0 4px 20px var(--accent);
-            }
-        }
-        
-        .counter-info {
-            font-size: 0.75rem;
-            color: rgba(255, 255, 255, 0.5);
-            margin-top: 0.25rem;
+            text-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+            white-space: nowrap;
+            flex-shrink: 0;
+            letter-spacing: 0.05em;
         }
         
         /* Waiting Queue Rows - Compact Format */
@@ -565,13 +562,26 @@
                 grid-template-columns: 1fr 360px;
             }
             
+            .call-banner {
+                top: 90px;
+            }
+            
             .call-banner-card {
-                min-width: 350px;
-                padding: 0.75rem 1.5rem;
+                min-width: 400px;
+                padding: 1.25rem 2rem;
+            }
+            
+            .call-banner-card::before {
+                font-size: 2rem;
+                top: -18px;
             }
             
             .call-banner-number {
-                font-size: 2rem;
+                font-size: 3rem;
+            }
+            
+            .serving-queue-number {
+                font-size: 1.3rem;
             }
         }
         
@@ -600,13 +610,34 @@
                 font-size: 1.25rem;
             }
             
+            .call-banner {
+                top: 80px;
+            }
+            
             .call-banner-card {
-                min-width: 300px;
-                padding: 0.6rem 1.25rem;
+                min-width: 350px;
+                padding: 1rem 1.75rem;
+            }
+            
+            .call-banner-card::before {
+                font-size: 1.75rem;
+                top: -16px;
             }
             
             .call-banner-number {
-                font-size: 1.75rem;
+                font-size: 2.5rem;
+            }
+            
+            .call-banner-counter {
+                font-size: 1rem;
+            }
+            
+            .serving-counter-label {
+                font-size: 0.9rem;
+            }
+            
+            .serving-queue-number {
+                font-size: 1.2rem;
             }
         }
         
@@ -628,6 +659,46 @@
             .connection-status {
                 font-size: 0.65rem;
                 padding: 4px 8px;
+            }
+            
+            .call-banner {
+                top: 70px;
+            }
+            
+            .call-banner-card {
+                min-width: 300px;
+                padding: 0.875rem 1.5rem;
+            }
+            
+            .call-banner-card::before {
+                font-size: 1.5rem;
+                top: -14px;
+            }
+            
+            .call-banner-title {
+                font-size: 0.85rem;
+            }
+            
+            .call-banner-number {
+                font-size: 2rem;
+            }
+            
+            .call-banner-counter {
+                font-size: 0.9rem;
+            }
+            
+            .serving-row {
+                padding: 0.65rem 1rem;
+                flex-direction: row;
+                gap: 0.75rem;
+            }
+            
+            .serving-counter-label {
+                font-size: 0.85rem;
+            }
+            
+            .serving-queue-number {
+                font-size: 1.1rem;
             }
             
             .waiting-row {
@@ -945,20 +1016,19 @@
             // Update previous state for next comparison
             updatePreviousState(servingCounters);
             
-            // Render serving items - only the alerted counter blinks (5 times)
+            // Render serving items in compact format: Counter 1: 0002
+            // Only the alerted counter blinks (5 times)
             const html = servingCounters.map(item => {
                 const counter = item.counter;
                 const queue = item.queue;
                 // Only this specific counter will blink if it's in the alerts array
                 const isAlert = alerts.some(a => a.queue?.id === queue?.id);
+                const counterLabel = counter.display_name || `Counter ${counter.counter_number}`;
                 
                 return `
-                    <div class="serving-item ${isAlert ? 'notify' : ''}">
-                        <div class="serving-header">
-                            <div class="counter-label">Counter ${counter.counter_number}</div>
-                        </div>
-                        <div class="queue-number">${queue.queue_number}</div>
-                        <div class="counter-info">${counter.display_name || 'Service Counter'}</div>
+                    <div class="serving-row ${isAlert ? 'notify' : ''}">
+                        <div class="serving-counter-label">${counterLabel}:</div>
+                        <div class="serving-queue-number">${queue.queue_number}</div>
                     </div>
                 `;
             }).join('');
