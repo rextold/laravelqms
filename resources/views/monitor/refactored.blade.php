@@ -771,7 +771,7 @@
             </div>
             
             <!-- Audio Status Indicator (for debugging) -->
-            <div style="position: fixed; bottom: 10px; right: 10px; display: flex; gap: 8px; z-index: 1000;">
+            <div style="position: fixed; bottom: 10px; right: 10px; display: none; gap: 8px; z-index: 1000;">
                 <div class="audio-status" id="audioStatus" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(10px); padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; display: flex; align-items: center; gap: 8px; border: 1px solid rgba(255, 255, 255, 0.1); cursor: pointer;" onclick="testNotificationSound()">
                     <i class="fas fa-volume-up"></i>
                     <span>Test Bell</span>
@@ -1108,12 +1108,16 @@
                 const alertItem = alerts[0];
                 const queueNumber = alertItem.queue?.queue_number || '';
                 const counterNumber = alertItem.counter?.counter_number || '';
+                const alertType = alertItem.alertType || 'call';
+                
+                console.log(`🚨 New alert detected: ${alertType.toUpperCase()} - Queue ${queueNumber} at Counter ${counterNumber}`);
                 
                 // Show visual banner
                 showCallBanner(alertItem);
                 
                 // Play bell and voice announcement (train station style)
-                announceQueueCall(queueNumber, counterNumber);
+                // Bell plays FIRST, then voice after 1.5 seconds
+                announceQueueCall(queueNumber, counterNumber, alertType);
             }
             
             // Update previous state for next comparison
@@ -1185,16 +1189,28 @@
                 const current = {
                     called_at: queue.called_at,
                     notified_at: queue.notified_at,
-                    recent_recall: item.recent_recall
+                    recent_recall: item.recent_recall,
+                    status: queue.status
                 };
                 
                 const prev = STATE.previousServingState.get(queueKey);
-                const isNew = !prev;
+                
+                // Detect different types of alerts:
+                // 1. New queue called (Next Serve button clicked)
+                const isNewCall = !prev || (prev.called_at !== current.called_at && current.called_at);
+                
+                // 2. Notify button clicked
                 const notifyChanged = prev && prev.notified_at !== current.notified_at && current.notified_at;
+                
+                // 3. Recall button clicked
                 const recallTriggered = current.recent_recall && (!prev || !prev.recent_recall);
                 
-                if (isNew || notifyChanged || recallTriggered) {
-                    alerts.push(item);
+                // Trigger alert for any of these events
+                if (isNewCall || notifyChanged || recallTriggered) {
+                    alerts.push({
+                        ...item,
+                        alertType: isNewCall ? 'call' : notifyChanged ? 'notify' : 'recall'
+                    });
                 }
                 
                 nextState.set(queueKey, current);
@@ -1295,18 +1311,64 @@
         }
         
         // Train station-style voice announcement
-        function announceQueueCall(queueNumber, counterNumber) {
-            // First play the bell sound
-            playNotificationSound();
+        // Plays notification bell FIRST, then voice announcement
+        function announceQueueCall(queueNumber, counterNumber, alertType = 'call') {
+            const audio = document.getElementById('notificationSound');
             
-            // Then announce via text-to-speech after a short delay
-            setTimeout(() => {
-                speakAnnouncement(queueNumber, counterNumber);
-            }, 500);
+            if (!audio) {
+                console.error('Notification sound element not found');
+                // Fallback: just speak without bell
+                speakAnnouncement(queueNumber, counterNumber, alertType);
+                return;
+            }
+            
+            try {
+                // Ensure audio is ready and unmuted
+                audio.muted = false;
+                audio.volume = 1.0;
+                audio.currentTime = 0;
+                
+                console.log('🔔 Playing notification bell...');
+                
+                // Play notification bell
+                const playPromise = audio.play();
+                
+                if (playPromise !== undefined) {
+                    playPromise
+                        .then(() => {
+                            console.log('✅ Bell played successfully');
+                            updateAudioStatus('playing');
+                            
+                            // Wait for bell to finish (approximately 1.5 seconds) before speaking
+                            setTimeout(() => {
+                                console.log('🎙️ Starting voice announcement...');
+                                speakAnnouncement(queueNumber, counterNumber, alertType);
+                            }, 1500);
+                        })
+                        .catch(error => {
+                            console.error('❌ Bell play failed:', error);
+                            updateAudioStatus('blocked');
+                            
+                            // Still try to speak even if bell fails
+                            speakAnnouncement(queueNumber, counterNumber, alertType);
+                            
+                            // Show message if blocked
+                            if (error.name === 'NotAllowedError') {
+                                showAudioBlockedMessage();
+                            }
+                        });
+                }
+            } catch (error) {
+                console.error('Error playing notification bell:', error);
+                updateAudioStatus('error');
+                
+                // Fallback: still try to speak
+                speakAnnouncement(queueNumber, counterNumber, alertType);
+            }
         }
         
         // Text-to-speech announcement function
-        function speakAnnouncement(queueNumber, counterNumber) {
+        function speakAnnouncement(queueNumber, counterNumber, alertType = 'call') {
             if (!('speechSynthesis' in window)) {
                 console.warn('Text-to-speech not supported in this browser');
                 return;
@@ -1319,8 +1381,15 @@
                 // Format the queue number for better pronunciation
                 const formattedQueueNumber = formatQueueNumberForSpeech(queueNumber);
                 
-                // Create the announcement message
-                const message = `Now calling, priority number ${formattedQueueNumber}. Please proceed to counter ${counterNumber}`;
+                // Create the announcement message based on alert type
+                let message;
+                if (alertType === 'notify') {
+                    message = `Attention, priority number ${formattedQueueNumber}. Please proceed immediately to counter ${counterNumber}`;
+                } else if (alertType === 'recall') {
+                    message = `Final call, priority number ${formattedQueueNumber}. Please proceed to counter ${counterNumber}`;
+                } else {
+                    message = `Now serving, priority number ${formattedQueueNumber}. Please proceed to counter ${counterNumber}`;
+                }
                 
                 console.log('🔊 Voice announcement:', message);
                 
@@ -1337,20 +1406,33 @@
                 const voices = window.speechSynthesis.getVoices();
                 const preferredVoice = voices.find(voice => 
                     voice.lang.startsWith('en') && 
-                    (voice.name.includes('Female') || voice.name.includes('Google'))
+                    (voice.name.includes('Female') || voice.name.includes('Google') || voice.name.includes('Samantha'))
                 );
                 
                 if (preferredVoice) {
                     utterance.voice = preferredVoice;
+                    console.log('🎤 Using voice:', preferredVoice.name);
                 }
                 
                 // Event handlers
                 utterance.onstart = () => {
                     console.log('🎙️ Voice announcement started');
+                    // Add speaking class to banner during speech
+                    const banner = document.getElementById('callBanner');
+                    if (banner) {
+                        banner.classList.add('speaking');
+                    }
                 };
                 
                 utterance.onend = () => {
                     console.log('✅ Voice announcement completed');
+                    // Remove speaking class after speech ends
+                    const banner = document.getElementById('callBanner');
+                    if (banner) {
+                        setTimeout(() => {
+                            banner.classList.remove('speaking');
+                        }, 500);
+                    }
                 };
                 
                 utterance.onerror = (event) => {
@@ -1402,7 +1484,9 @@
             console.log('🎙️ Testing voice announcement...');
             const sampleQueue = '0123';
             const sampleCounter = '5';
-            announceQueueCall(sampleQueue, sampleCounter);
+            const testType = 'call'; // Can be 'call', 'notify', or 'recall'
+            
+            announceQueueCall(sampleQueue, sampleCounter, testType);
             
             // Also show banner for visual feedback
             const banner = document.getElementById('callBanner');
@@ -1416,11 +1500,11 @@
                 
                 setTimeout(() => {
                     banner.classList.remove('speaking');
-                }, 5000);
+                }, 6000);
                 
                 setTimeout(() => {
                     banner.classList.remove('show');
-                }, 8000);
+                }, 10000);
             }
         }
         
