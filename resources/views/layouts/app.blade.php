@@ -100,10 +100,12 @@
         }
         
         /* Desktop: Hide completely when toggled */
-        .sidebar.hidden {
-            transform: translateX(-100%);
-            opacity: 0;
-            pointer-events: none;
+        @media (min-width: 769px) {
+            .sidebar.hidden {
+                transform: translateX(-100%);
+                opacity: 0;
+                pointer-events: none;
+            }
         }
         
         /* Mobile: Hidden by default, show when toggled */
@@ -111,11 +113,12 @@
             .sidebar {
                 transform: translateX(-100%);
                 opacity: 0;
-                transition: transform 0.3s ease, opacity 0.3s ease;
+                pointer-events: none;
             }
             .sidebar.mobile-open {
                 transform: translateX(0);
                 opacity: 1;
+                pointer-events: auto;
             }
         }
         
@@ -419,15 +422,38 @@
             }
         }
         
-        // Toggle sidebar on button click
-        sidebarToggle.addEventListener('click', function(e) {
-            e.preventDefault();
-            sidebar.classList.toggle('hidden');
-            
-            // Save state to localStorage (desktop only)
+        // Toggle sidebar on button click (inside sidebar)
+        if (sidebarToggle) {
+            sidebarToggle.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                if (window.innerWidth > 768) {
+                    // Desktop: toggle hidden class
+                    sidebar.classList.toggle('hidden');
+                    const isHidden = sidebar.classList.contains('hidden');
+                    localStorage.setItem('sidebarHidden', isHidden);
+                } else {
+                    // Mobile: toggle mobile-open class
+                    sidebar.classList.toggle('mobile-open');
+                }
+            });
+        }
+        
+        // Handle window resize
+        window.addEventListener('resize', function() {
             if (window.innerWidth > 768) {
-                const isHidden = sidebar.classList.contains('hidden');
-                localStorage.setItem('sidebarHidden', isHidden);
+                // Desktop: remove mobile class, restore saved state
+                sidebar.classList.remove('mobile-open');
+                const sidebarState = localStorage.getItem('sidebarHidden');
+                if (sidebarState === 'true') {
+                    sidebar.classList.add('hidden');
+                } else {
+                    sidebar.classList.remove('hidden');
+                }
+            } else {
+                // Mobile: remove desktop hidden class
+                sidebar.classList.remove('hidden');
             }
         });
 

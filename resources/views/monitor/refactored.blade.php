@@ -938,34 +938,86 @@
             if (audio) {
                 audio.muted = false;
                 audio.volume = 1.0;
+                audio.preload = 'auto';
+                
+                // Load the audio immediately
+                audio.load();
+                
+                console.log('🔔 Notification sound initialized');
+                console.log('- Sources:', audio.querySelectorAll('source').length);
+                console.log('- Ready state:', audio.readyState);
+                
+                // Check if audio loaded successfully
+                audio.addEventListener('loadeddata', () => {
+                    console.log('✅ Notification sound loaded successfully');
+                });
+                
+                audio.addEventListener('error', (e) => {
+                    console.error('❌ Notification sound load error:', e);
+                    console.error('- Error code:', audio.error?.code);
+                    console.error('- Error message:', audio.error?.message);
+                });
             }
             
             // Unlock audio on first user interaction (multiple event types)
-            const unlockEvents = ['click', 'touchstart', 'keydown', 'pointerdown'];
+            const unlockEvents = ['click', 'touchstart', 'keydown', 'pointerdown', 'mousedown'];
             unlockEvents.forEach(eventType => {
                 document.addEventListener(eventType, unlockAudio, { once: true, passive: true });
             });
+            
+            // Auto-trigger unlock after 2 seconds if no interaction
+            setTimeout(() => {
+                if (audio && audio.paused && audio.readyState === 0) {
+                    console.log('⚠️ Audio not loaded yet, attempting manual load...');
+                    audio.load();
+                }
+            }, 2000);
         }
         
         function unlockAudio() {
             const audio = document.getElementById('notificationSound');
-            if (audio) {
+            if (!audio) {
+                console.error('Audio element not found for unlock');
+                return;
+            }
+            
+            console.log('🔓 Attempting to unlock audio...');
+            
+            try {
+                // Ensure audio is ready
                 audio.muted = false;
                 audio.volume = 1.0;
                 
+                // Force reload if not loaded
+                if (audio.readyState === 0) {
+                    audio.load();
+                }
+                
                 // Try to play and immediately pause to unlock audio context
                 const playPromise = audio.play();
+                
                 if (playPromise !== undefined) {
                     playPromise
                         .then(() => {
                             audio.pause();
                             audio.currentTime = 0;
-                            console.log('Audio unlocked successfully');
+                            console.log('✅ Audio unlocked successfully');
+                            updateAudioStatus('ready');
                         })
                         .catch(error => {
-                            console.log('Audio unlock failed:', error);
+                            console.warn('⚠️ Audio unlock failed:', error.name, error.message);
+                            
+                            if (error.name === 'NotSupportedError') {
+                                console.error('Audio format not supported, trying fallback...');
+                                // Try to load again
+                                audio.load();
+                            }
                         });
+                } else {
+                    console.log('✅ Audio unlocked (no promise)');
                 }
+            } catch (error) {
+                console.error('❌ Error in unlockAudio:', error);
             }
         }
         
@@ -1338,19 +1390,34 @@
             const audio = document.getElementById('notificationSound');
             
             if (!audio) {
-                console.error('Notification sound element not found');
+                console.error('❌ Notification sound element not found');
                 // Fallback: just speak without bell
                 speakAnnouncement(queueNumber, counterNumber, alertType);
                 return;
             }
             
+            console.log('🚨 Announcement triggered:', {
+                queue: queueNumber,
+                counter: counterNumber,
+                type: alertType
+            });
+            
             try {
+                // Force reload audio if not ready
+                if (audio.readyState === 0) {
+                    console.log('⚠️ Audio not ready, loading...');
+                    audio.load();
+                }
+                
                 // Ensure audio is ready and unmuted
                 audio.muted = false;
                 audio.volume = 1.0;
                 audio.currentTime = 0;
                 
                 console.log('🔔 Playing notification bell...');
+                console.log('- Audio ready state:', audio.readyState);
+                console.log('- Audio paused:', audio.paused);
+                console.log('- Audio src:', audio.currentSrc?.substring(0, 100) + '...');
                 
                 // Play notification bell
                 const playPromise = audio.play();
@@ -1369,23 +1436,37 @@
                         })
                         .catch(error => {
                             console.error('❌ Bell play failed:', error);
+                            console.error('- Error name:', error.name);
+                            console.error('- Error message:', error.message);
                             updateAudioStatus('blocked');
                             
-                            // Still try to speak even if bell fails
-                            speakAnnouncement(queueNumber, counterNumber, alertType);
-                            
-                            // Show message if blocked
+                            // Try to unlock and play again
                             if (error.name === 'NotAllowedError') {
+                                console.log('🔓 Attempting to unlock audio...');
+                                unlockAudio();
                                 showAudioBlockedMessage();
                             }
+                            
+                            // Still try to speak even if bell fails
+                            setTimeout(() => {
+                                speakAnnouncement(queueNumber, counterNumber, alertType);
+                            }, 500);
                         });
+                } else {
+                    console.warn('⚠️ No play promise returned');
+                    // Still try to speak
+                    setTimeout(() => {
+                        speakAnnouncement(queueNumber, counterNumber, alertType);
+                    }, 1500);
                 }
             } catch (error) {
-                console.error('Error playing notification bell:', error);
+                console.error('❌ Error in announceQueueCall:', error);
                 updateAudioStatus('error');
                 
                 // Fallback: still try to speak
-                speakAnnouncement(queueNumber, counterNumber, alertType);
+                setTimeout(() => {
+                    speakAnnouncement(queueNumber, counterNumber, alertType);
+                }, 500);
             }
         }
         
@@ -1498,7 +1579,47 @@
         // Test function for manual testing
         function testNotificationSound() {
             console.log('🔔 Testing notification sound...');
-            playNotificationSound();
+            const audio = document.getElementById('notificationSound');
+            
+            if (!audio) {
+                console.error('❌ Audio element not found');
+                alert('Error: Audio element not found!');
+                return;
+            }
+            
+            console.log('📊 Audio Diagnostics:');
+            console.log('- Ready State:', audio.readyState, '(0=HAVE_NOTHING, 1=HAVE_METADATA, 2=HAVE_CURRENT_DATA, 3=HAVE_FUTURE_DATA, 4=HAVE_ENOUGH_DATA)');
+            console.log('- Network State:', audio.networkState, '(0=EMPTY, 1=IDLE, 2=LOADING, 3=NO_SOURCE)');
+            console.log('- Paused:', audio.paused);
+            console.log('- Muted:', audio.muted);
+            console.log('- Volume:', audio.volume);
+            console.log('- Duration:', audio.duration);
+            console.log('- Current Src:', audio.currentSrc);
+            console.log('- Error:', audio.error);
+            
+            const sources = audio.querySelectorAll('source');
+            console.log('- Sources:', sources.length);
+            sources.forEach((src, idx) => {
+                console.log(`  Source ${idx + 1}:`, src.src.substring(0, 80) + '...', '(type:', src.type + ')');
+            });
+            
+            // Try to play
+            audio.currentTime = 0;
+            audio.muted = false;
+            audio.volume = 1.0;
+            
+            const playPromise = audio.play();
+            if (playPromise) {
+                playPromise
+                    .then(() => {
+                        console.log('✅ Test bell played successfully!');
+                        alert('✅ Bell sound played successfully!');
+                    })
+                    .catch((error) => {
+                        console.error('❌ Test bell failed:', error);
+                        alert('❌ Bell sound failed: ' + error.message);
+                    });
+            }
         }
         
         // Test voice announcement with sample data
@@ -1538,6 +1659,10 @@
                 const text = statusEl.querySelector('span');
                 
                 switch(status) {
+                    case 'ready':
+                        icon.className = 'fas fa-volume-up text-blue-400';
+                        text.textContent = 'Bell Ready';
+                        break;
                     case 'playing':
                         icon.className = 'fas fa-volume-up text-green-400';
                         text.textContent = 'Bell OK';
