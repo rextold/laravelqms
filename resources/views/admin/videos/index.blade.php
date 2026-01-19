@@ -260,7 +260,11 @@
                             </div>
                             <div class="flex items-center space-x-2 flex-shrink-0 ml-1">
                                 <span class="playing-indicator w-2 h-2 rounded-full bg-blue-500 opacity-0 transition"></span>
-                                <div class="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition flex-shrink-0">
+                                <div class="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition flex-shrink-0">
+                                    <button type="button" class="text-gray-400 hover:text-white p-1 text-xs"
+                                            onclick="playNow({{ $video->id }})" title="Play">
+                                        <i class="fas fa-play"></i>
+                                    </button>
                                     <button type="button" class="text-gray-400 hover:text-white p-1 text-xs"
                                             onclick="openEditVideo({{ $video->id }}, '{{ addslashes($video->title) }}')" title="Edit">
                                         <i class="fas fa-pen"></i>
