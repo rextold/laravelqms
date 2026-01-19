@@ -62,5 +62,6 @@ class Kernel extends HttpKernel
         'organization.context' => \App\Http\Middleware\EnsureOrganizationContext::class,
         'role' => \App\Http\Middleware\RoleMiddleware::class,
         'allow.public' => \App\Http\Middleware\AllowPublicAccess::class,
+        'public.monitor' => \App\Http\Middleware\PublicMonitorAccess::class,
     ];
 }

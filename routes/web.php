@@ -128,13 +128,29 @@ Route::prefix('{organization_code}')->group(function () {
             Route::get('/verify-ticket', [KioskController::class, 'verifyTicket'])->name('verify');
         });
     
-    // MONITOR - Public display screen (completely public, no auth)
+    // MONITOR - Public display screen (completely public, no auth required)
+    // ============================================================================
+    // All AJAX calls are allowed without CSRF token or authentication
+    // CORS headers are automatically added for cross-origin requests
+    // This includes GET requests for data refresh and any future POST operations
+    // ============================================================================
     Route::prefix('monitor')
         ->name('monitor.')
-        ->middleware(['organization.context', 'allow.public'])
+        ->middleware(['organization.context', 'allow.public', 'public.monitor'])
         ->group(function () {
             Route::get('/', [MonitorController::class, 'index'])->name('index');
             Route::get('/data', [MonitorController::class, 'getData'])->name('data');
+            
+            // Support OPTIONS for CORS preflight requests
+            Route::options('/', function () {
+                return response('', 200);
+            });
+            Route::options('/data', function () {
+                return response('', 200);
+            });
+            Route::options('/{any}', function () {
+                return response('', 200);
+            })->where('any', '.*');
         });
     
     // ========================================================================

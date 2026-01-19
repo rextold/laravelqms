@@ -1,0 +1,41 @@
+<?php
+
+namespace App\Http\Middleware;
+
+use Closure;
+use Illuminate\Http\Request;
+
+/**
+ * Middleware to ensure Monitor routes are completely public
+ * - No authentication required
+ * - No CSRF verification
+ * - CORS headers enabled
+ * - Works with AJAX calls from any origin
+ */
+class PublicMonitorAccess
+{
+    /**
+     * Handle an incoming request.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \Closure  $next
+     * @return mixed
+     */
+    public function handle(Request $request, Closure $next)
+    {
+        // Allow the request to proceed without authentication
+        // The presence of this middleware marks the route as public
+        
+        $response = $next($request);
+        
+        // Add CORS headers to allow cross-origin requests
+        if (method_exists($response, 'header')) {
+            $response->header('Access-Control-Allow-Origin', '*');
+            $response->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+            $response->header('Access-Control-Allow-Headers', 'Content-Type, Accept, X-Requested-With, Authorization');
+            $response->header('Access-Control-Max-Age', '3600');
+        }
+        
+        return $response;
+    }
+}

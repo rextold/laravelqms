@@ -88,15 +88,16 @@ class EnsureOrganizationContext
     private function isPublicRoute(Request $request): bool
     {
         // Check for allow.public middleware
-        if (in_array('allow.public', $request->route()->middleware())) {
+        $route = $request->route();
+        if ($route && in_array('allow.public', $route->middleware())) {
             return true;
         }
         
-        // Explicitly allow monitor and kiosk routes
-        $routeName = $request->route()->getName() ?? '';
+        // Explicitly allow monitor and kiosk routes by name
+        $routeName = $route ? ($route->getName() ?? '') : '';
         $publicRoutePatterns = [
-            'monitor.',   // All monitor routes
-            'kiosk.',     // All kiosk routes
+            'monitor.',   // All monitor routes (index, data, etc.)
+            'kiosk.',     // All kiosk routes (index, generate, counters, verify)
         ];
         
         foreach ($publicRoutePatterns as $pattern) {
@@ -105,17 +106,24 @@ class EnsureOrganizationContext
             }
         }
         
-        // Also check path for public routes (fallback)
+        // Also check path for public routes (fallback for AJAX and dynamic routes)
         $path = $request->getPathInfo();
         $publicPathPatterns = [
             '/monitor',
+            '/monitor/',
             '/kiosk',
+            '/kiosk/',
         ];
         
         foreach ($publicPathPatterns as $pattern) {
             if (str_contains($path, $pattern)) {
                 return true;
             }
+        }
+        
+        // Check if request is for monitor or kiosk data endpoint
+        if (preg_match('#/[^/]+/(monitor|kiosk)(/|$)#', $path)) {
+            return true;
         }
         
         return false;
