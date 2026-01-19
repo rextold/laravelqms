@@ -192,7 +192,6 @@ Route::prefix('{organization_code}')->group(function () {
                 Route::prefix('organization-settings')->name('organization-settings.')->group(function () {
                     Route::get('/', [OrganizationSettingsController::class, 'edit'])->name('edit');
                     Route::put('/', [OrganizationSettingsController::class, 'update'])->name('update');
-                    Route::post('/reset-sequence', [OrganizationSettingsController::class, 'resetSequence'])->name('reset-sequence');
                     Route::delete('/logo', [OrganizationSettingsController::class, 'removeLogo'])->name('remove-logo');
                     Route::get('/api/get', [OrganizationSettingsController::class, 'getSettingsApi'])->name('api.get');
                 });

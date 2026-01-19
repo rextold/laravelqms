@@ -56,19 +56,9 @@ class QueueService
                     $digits = 4;
                 }
 
-                // Reset sequence automatically if last reset wasn't today
-                $today = now()->toDateString();
-                $resetToday = false;
-                if (($settings->last_queue_sequence_date ?? null) !== $today) {
-                    $settings->last_queue_sequence = 0;
-                    $settings->last_queue_sequence_date = $today;
-                    $settings->save();
-                    $resetToday = true;
-                }
-
-                // Initialize sequence from existing queues if needed (skip if we reset for today)
+                // Initialize sequence from existing queues if needed
                 $lastSeq = (int) ($settings->last_queue_sequence ?? 0);
-                if ($organizationId && $lastSeq <= 0 && !$resetToday) {
+                if ($organizationId && $lastSeq <= 0) {
                     // Fast path: queue numbers are now digits-only; use most recent row and parse suffix.
                     // This avoids full-table scans on large queue history.
                     $latestQueueNumber = (string) (Queue::where('organization_id', $organizationId)
@@ -108,22 +98,12 @@ class QueueService
             $digits = (int) ($settings->queue_number_digits ?? 4);
             if ($digits <= 0) $digits = 4;
 
-            // Auto-reset for today if needed (best-effort, no locking)
-            $today = now()->toDateString();
-            $resetToday = false;
-            if (($settings->last_queue_sequence_date ?? null) !== $today) {
-                $settings->last_queue_sequence = 0;
-                $settings->last_queue_sequence_date = $today;
-                try { $settings->save(); } catch (\Throwable $_) {}
-                $resetToday = true;
-            }
-
-            // Determine last sequence by inspecting the most recent queue number (skip if we reset today)
+            // Determine last sequence by inspecting the most recent queue number
             $latestQueueNumber = (string) (Queue::where('organization_id', $organizationId)
                 ->orderByDesc('id')
                 ->value('queue_number') ?? '');
             $lastSeq = 0;
-            if (!$resetToday && $latestQueueNumber !== '') {
+            if ($latestQueueNumber !== '') {
                 $parts = explode('-', $latestQueueNumber);
                 $suffix = end($parts);
                 $lastSeq = (int) $suffix;

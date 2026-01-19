@@ -129,20 +129,6 @@
                         <i class="fas fa-info-circle mr-2"></i>
                         <span>Example: <code id="queueExample" class="bg-gray-100 px-2 py-1 rounded">YYYYMMDD-CC-{{ str_repeat('0', $settings->queue_number_digits) }}</code></span>
                     </p>
-
-                    <div class="mt-4 flex items-center gap-3">
-                        <div class="text-sm text-gray-600">
-                            Last sequence: <span class="font-mono">{{ str_pad($settings->last_queue_sequence ?? 0, $settings->queue_number_digits ?? 4, '0', STR_PAD_LEFT) }}</span>
-                            <br>
-                            Last reset: <span class="font-mono">{{ $settings->last_queue_sequence_date ?? '—' }}</span>
-                        </div>
-                        <form method="POST" action="{{ route('admin.organization-settings.reset-sequence', ['organization_code' => request()->route('organization_code')]) }}" onsubmit="return confirm('Reset the queue sequence to 0000? Next ticket will be 0001. Are you sure?');">
-                            @csrf
-                            <button type="submit" class="inline-flex items-center px-4 py-2 bg-yellow-50 text-yellow-700 hover:bg-yellow-600 hover:text-white rounded-lg transition font-medium text-sm">
-                                <i class="fas fa-redo mr-2"></i>Reset Sequence
-                            </button>
-                        </form>
-                    </div>
                 </div>
             </div>
         </div>
