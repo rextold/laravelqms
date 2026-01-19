@@ -5,45 +5,6 @@
 
     RewriteEngine On
 
-    # Handle Authorization Header
-    RewriteCond %{HTTP:Authorization} .
-    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
-
-    # Redirect Trailing Slashes If Not A Folder...
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteCond %{REQUEST_URI} (.+)/$
-    RewriteRule ^ %1 [L,R=301]
-
-    # Send Requests To Front Controller...
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteRule ^ index.php [L]
-</IfModule>
-
-# CORS headers for Monitor and Kiosk routes
-<IfModule mod_headers.c>
-    # Match monitor and kiosk routes
-    SetEnvIf Request_URI "^/.*/monitor" IS_PUBLIC_ROUTE
-    SetEnvIf Request_URI "^/.*/kiosk" IS_PUBLIC_ROUTE
-    
-    # Add CORS headers for public routes
-    Header always set Access-Control-Allow-Origin "*" env=IS_PUBLIC_ROUTE
-    Header always set Access-Control-Allow-Methods "GET, POST, OPTIONS" env=IS_PUBLIC_ROUTE
-    Header always set Access-Control-Allow-Headers "Content-Type, Accept, X-Requested-With, X-CSRF-Token" env=IS_PUBLIC_ROUTE
-    Header always set Access-Control-Max-Age "3600" env=IS_PUBLIC_ROUTE
-    
-    # Handle preflight OPTIONS requests
-    RewriteCond %{REQUEST_METHOD} OPTIONS
-    RewriteCond %{REQUEST_URI} ^/.*/monitor [OR]
-    RewriteCond %{REQUEST_URI} ^/.*/kiosk
-    RewriteRule ^(.*)$ $1 [R=200,L]
-</IfModule><IfModule mod_rewrite.c>
-    <IfModule mod_negotiation.c>
-        Options -MultiViews -Indexes
-    </IfModule>
-
-    RewriteEngine On
-
     # Handle Angular/React Router - send 404s to index.html
     # But exclude API routes and actual files
     RewriteCond %{REQUEST_FILENAME} !-f
