@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Middleware to ensure Monitor routes are completely public
@@ -18,10 +19,10 @@ class PublicMonitorAccess
      * Handle an incoming request.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @param  \Closure  $next
-     * @return mixed
+     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @return \Symfony\Component\HttpFoundation\Response
      */
-    public function handle(Request $request, Closure $next)
+    public function handle(Request $request, Closure $next): Response
     {
         // Allow the request to proceed without authentication
         // The presence of this middleware marks the route as public
@@ -29,13 +30,10 @@ class PublicMonitorAccess
         $response = $next($request);
         
         // Add CORS headers to allow cross-origin requests
-        if (method_exists($response, 'header')) {
-            $response->header('Access-Control-Allow-Origin', '*');
-            $response->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-            $response->header('Access-Control-Allow-Headers', 'Content-Type, Accept, X-Requested-With, Authorization');
-            $response->header('Access-Control-Max-Age', '3600');
-        }
-        
-        return $response;
+        return $response
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Accept, X-Requested-With, Authorization')
+            ->header('Access-Control-Max-Age', '3600');
     }
 }

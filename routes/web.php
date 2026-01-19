@@ -136,20 +136,29 @@ Route::prefix('{organization_code}')->group(function () {
     // ============================================================================
     Route::prefix('monitor')
         ->name('monitor.')
-        ->middleware(['organization.context', 'allow.public', 'public.monitor'])
+        ->middleware(['organization.context', 'allow.public'])
         ->group(function () {
             Route::get('/', [MonitorController::class, 'index'])->name('index');
             Route::get('/data', [MonitorController::class, 'getData'])->name('data');
             
             // Support OPTIONS for CORS preflight requests
             Route::options('/', function () {
-                return response('', 200);
+                return response('', 200)
+                    ->header('Access-Control-Allow-Origin', '*')
+                    ->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+                    ->header('Access-Control-Allow-Headers', 'Content-Type, Accept, X-Requested-With');
             });
             Route::options('/data', function () {
-                return response('', 200);
+                return response('', 200)
+                    ->header('Access-Control-Allow-Origin', '*')
+                    ->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+                    ->header('Access-Control-Allow-Headers', 'Content-Type, Accept, X-Requested-With');
             });
             Route::options('/{any}', function () {
-                return response('', 200);
+                return response('', 200)
+                    ->header('Access-Control-Allow-Origin', '*')
+                    ->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+                    ->header('Access-Control-Allow-Headers', 'Content-Type, Accept, X-Requested-With');
             })->where('any', '.*');
         });
     
