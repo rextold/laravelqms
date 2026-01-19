@@ -4,26 +4,38 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Queue Display - {{ $organization->organization_name }}</title>
+    <title>Queue Monitor - {{ $organization->organization_name }}</title>
+    <meta name="description" content="Queue Management System - Customer Display Monitor">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* CSS Variables for Dynamic Theming */
         :root {
-            --primary: {{ $settings->primary_color }};
-            --secondary: {{ $settings->secondary_color }};
-            --accent: {{ $settings->accent_color }};
-            --text: {{ $settings->text_color }};
+            --primary: {{ $settings->primary_color ?? '#3b82f6' }};
+            --secondary: {{ $settings->secondary_color ?? '#8b5cf6' }};
+            --accent: {{ $settings->accent_color ?? '#10b981' }};
+            --text: {{ $settings->text_color ?? '#ffffff' }};
+            --bg-dark: #0a0a0a;
+            --bg-card: #1a1a1a;
+            --border: rgba(255, 255, 255, 0.1);
         }
+        
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
+        
         body {
             overflow: hidden;
-            background: #000;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #1a1a2e 100%);
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
+        
+        /* Monitor Grid Layout */
         .monitor-grid {
             display: grid;
             grid-template-columns: 1fr 420px;
