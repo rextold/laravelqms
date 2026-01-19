@@ -44,6 +44,13 @@ class Video extends Model
         'priority' => 'integer',
         'order' => 'integer',
     ];
+    
+    /**
+     * Attributes to append to JSON
+     */
+    protected $appends = [
+        'youtube_embed_url',
+    ];
 
     public function scopeActive($query)
     {
@@ -62,12 +69,21 @@ class Video extends Model
         $url = $this->youtube_url;
         
         // Extract video ID from various YouTube URL formats
+        // Supports: youtube.com/watch?v=, youtu.be/, youtube.com/embed/, youtube.com/v/
         preg_match('/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/', $url, $matches);
         
         $videoId = $matches[1] ?? null;
         
+        if (!$videoId) {
+            // Try alternative pattern for edge cases
+            preg_match('/[?&]v=([^&]+)/', $url, $matches);
+            $videoId = $matches[1] ?? null;
+        }
+        
         if ($videoId) {
-            return "https://www.youtube.com/embed/{$videoId}?autoplay=1&loop=1&playlist={$videoId}&controls=0&modestbranding=1&rel=0";
+            // Clean up video ID (remove any trailing parameters)
+            $videoId = substr($videoId, 0, 11);
+            return "https://www.youtube.com/embed/{$videoId}";
         }
 
         return null;

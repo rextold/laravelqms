@@ -18,7 +18,26 @@ class MonitorController extends Controller
         $organization = Organization::where('organization_code', $request->route('organization_code'))->firstOrFail();
         $companyCode = $request->route('organization_code');
         $onlineCounters = User::onlineCounters()->where('organization_id', $organization->id)->get();
-        $videos = Video::where('organization_id', $organization->id)->active()->get();
+        
+        // Get active videos and format them properly for frontend
+        $videos = Video::where('organization_id', $organization->id)
+            ->active()
+            ->get()
+            ->map(function ($video) {
+                return [
+                    'id' => $video->id,
+                    'title' => $video->title,
+                    'video_type' => $video->video_type,
+                    'file_path' => $video->file_path,
+                    'youtube_url' => $video->youtube_url,
+                    'youtube_embed_url' => $video->youtube_embed_url,
+                    'is_youtube' => $video->isYoutube(),
+                    'is_file' => $video->isFile(),
+                    'is_active' => $video->is_active,
+                    'order' => $video->order,
+                ];
+            });
+        
         $videoControl = VideoControl::getCurrent();
         $marquee = MarqueeSetting::getActiveForOrganization($organization->id);
         $settings = OrganizationSetting::where('organization_id', $organization->id)->first();
