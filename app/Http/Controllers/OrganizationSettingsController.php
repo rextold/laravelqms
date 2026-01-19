@@ -194,6 +194,33 @@ class OrganizationSettingsController extends Controller
     }
 
     /**
+     * Reset sequence to start a fresh number series (admin action)
+     */
+    public function resetSequence($organization_code)
+    {
+        $organization = Organization::where('organization_code', $organization_code)->firstOrFail();
+
+        if (!auth()->user()->isSuperAdmin() && auth()->user()->organization_id !== $organization->id) {
+            abort(403);
+        }
+
+        $settings = OrganizationSetting::where('organization_id', $organization->id)->first();
+        if (!$settings) {
+            $settings = new OrganizationSetting(['organization_id' => $organization->id]);
+        }
+
+        $settings->last_queue_sequence = 0;
+        $settings->last_queue_sequence_date = now()->toDateString();
+        $settings->save();
+
+        if (request()->expectsJson()) {
+            return response()->json(['success' => true, 'message' => 'Queue sequence reset successfully.']);
+        }
+
+        return redirect()->back()->with('success', 'Queue sequence has been reset (next ticket will be 0001).');
+    }
+
+    /**
      * Get organization settings as JSON for real-time updates
      */
     public function getSettings($organization_code)
