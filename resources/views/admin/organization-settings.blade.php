@@ -117,17 +117,6 @@
                         <option value="6" {{ $settings->queue_number_digits == 6 ? 'selected' : '' }}>6 digits (000001)</option>
                     </select>
                     <p class="text-sm text-gray-500 mt-2">Example: YYYYMMDD-CC-<code id="queueExample" class="bg-gray-100 px-2 py-1 rounded">{{ str_repeat('0', $settings->queue_number_digits) }}</code></p>
-
-                    <div class="mt-4 flex items-center gap-3">
-                        <div class="text-sm text-gray-600">
-                            Last sequence: <span id="lastSequence" class="font-mono">{{ str_pad($settings->last_queue_sequence ?? 0, $settings->queue_number_digits ?? 4, '0', STR_PAD_LEFT) }}</span>
-                            <br>
-                            Last reset: <span id="lastReset" class="font-mono">{{ $settings->last_queue_sequence_date ?? '—' }}</span>
-                        </div>
-                        <button type="button" id="resetSequenceBtn" class="inline-flex items-center px-4 py-2 bg-yellow-50 text-yellow-700 hover:bg-yellow-600 hover:text-white rounded-lg transition font-medium text-sm" onclick="confirmResetSequence();">
-                            <i class="fas fa-redo mr-2"></i>Reset Sequence
-                        </button>
-                    </div>
                 </div>
             </div>
         </div>
@@ -460,52 +449,6 @@ function showAjaxMessage(type, message) {
             setTimeout(() => { alert.remove(); }, 500);
         }
     }, 4000);
-}
-
-// Confirm then call reset API
-function confirmResetSequence() {
-    if (!confirm('Reset the queue sequence to 0000? Next ticket will be 0001. Are you sure?')) return;
-    resetSequenceAjax();
-}
-
-async function resetSequenceAjax() {
-    const orgCode = '{{ request()->route("organization_code") }}';
-    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-    const btn = document.getElementById('resetSequenceBtn');
-    const origHtml = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Resetting...';
-
-    try {
-        const res = await fetch(`/${orgCode}/admin/organization-settings/reset-sequence`, {
-            method: 'POST',
-            headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json', 'Content-Type': 'application/json' },
-            body: JSON.stringify({})
-        });
-        const data = await res.json();
-        if (res.ok && data.success) {
-            showAjaxMessage('success', data.message);
-            // Refresh settings display
-            try {
-                const apiRes = await fetch(`/${orgCode}/admin/organization-settings/api/get`);
-                const apiData = await apiRes.json();
-                if (apiRes.ok && apiData.settings) {
-                    const s = apiData.settings;
-                    document.getElementById('lastSequence').textContent = String(s.last_queue_sequence ?? 0).padStart(s.queue_number_digits ?? 4, '0');
-                    document.getElementById('lastReset').textContent = s.last_queue_sequence_date ?? new Date().toISOString().slice(0,10);
-                }
-            } catch (e) {
-                // ignore refresh errors but keep notice
-            }
-        } else {
-            showAjaxMessage('error', data.message || 'Failed to reset sequence');
-        }
-    } catch (e) {
-        showAjaxMessage('error', 'Network error: ' + e.message);
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = origHtml;
-    }
 }
 
 // Organization name live preview

@@ -209,23 +209,9 @@ class OrganizationSettingsController extends Controller
             $settings = new OrganizationSetting(['organization_id' => $organization->id]);
         }
 
-        $previous = $settings->last_queue_sequence ?? 0;
         $settings->last_queue_sequence = 0;
         $settings->last_queue_sequence_date = now()->toDateString();
         $settings->save();
-
-        // Audit log entry
-        try {
-            \App\Models\QueueResetLog::create([
-                'organization_id' => $organization->id,
-                'user_id' => auth()->id(),
-                'previous_sequence' => $previous,
-                'reset_to' => 0,
-                'note' => 'Manual reset via admin UI',
-            ]);
-        } catch (\Throwable $e) {
-            \Log::warning('Failed to create queue reset audit log', ['error' => $e->getMessage(), 'organization_id' => $organization->id]);
-        }
 
         if (request()->expectsJson()) {
             return response()->json(['success' => true, 'message' => 'Queue sequence reset successfully.']);
