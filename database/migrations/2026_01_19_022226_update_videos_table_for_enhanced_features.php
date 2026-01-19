@@ -76,11 +76,37 @@ return new class extends Migration
             if (!Schema::hasColumn('videos', 'priority')) {
                 $table->integer('priority')->default(0)->after('auto_advance');
             }
+        });
+        
+        // Add indexes in a separate schema call after all columns are confirmed to exist
+        Schema::table('videos', function (Blueprint $table) {
+            // Add indexes for better performance - only if columns exist
+            if (Schema::hasColumn('videos', 'organization_id') && 
+                Schema::hasColumn('videos', 'is_active') && 
+                Schema::hasColumn('videos', 'order')) {
+                try {
+                    $table->index(['organization_id', 'is_active', 'order'], 'videos_org_active_order_index');
+                } catch (\Exception $e) {
+                    // Index might already exist, skip
+                }
+            }
             
-            // Add indexes for better performance
-            $table->index(['organization_id', 'is_active', 'order']);
-            $table->index(['playlist_id', 'order']);
-            $table->index(['video_type', 'is_active']);
+            // Only add playlist index if playlist_id column exists
+            if (Schema::hasColumn('videos', 'playlist_id') && Schema::hasColumn('videos', 'order')) {
+                try {
+                    $table->index(['playlist_id', 'order'], 'videos_playlist_id_order_index');
+                } catch (\Exception $e) {
+                    // Index might already exist, skip
+                }
+            }
+            
+            if (Schema::hasColumn('videos', 'video_type') && Schema::hasColumn('videos', 'is_active')) {
+                try {
+                    $table->index(['video_type', 'is_active'], 'videos_type_active_index');
+                } catch (\Exception $e) {
+                    // Index might already exist, skip
+                }
+            }
         });
     }
 
@@ -90,13 +116,43 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('videos', function (Blueprint $table) {
-            // Drop indexes first
-            $table->dropIndex(['organization_id', 'is_active', 'order']);
-            $table->dropIndex(['playlist_id', 'order']);
-            $table->dropIndex(['video_type', 'is_active']);
+            // Drop indexes first - check if they exist
+            $sm = Schema::getConnection()->getDoctrineSchemaManager();
+            $indexNames = array_keys($sm->listTableIndexes('videos'));
             
-            // Drop columns in reverse order
-            $table->dropColumn([
+            if (in_array('videos_org_active_order_index', $indexNames)) {
+                $table->dropIndex('videos_org_active_order_index');
+            }
+            
+            if (in_array('videos_playlist_id_order_index', $indexNames)) {
+                $table->dropIndex('videos_playlist_id_order_index');
+            }
+            
+            if (in_array('videos_type_active_index', $indexNames)) {
+                $table->dropIndex('videos_type_active_index');
+            }
+        });
+        
+        Schema::table('videos', function (Blueprint $table) {
+            // Drop foreign key constraints first
+            if (Schema::hasColumn('videos', 'playlist_id')) {
+                try {
+                    $table->dropForeign(['playlist_id']);
+                } catch (\Exception $e) {
+                    // Foreign key might not exist
+                }
+            }
+            
+            if (Schema::hasColumn('videos', 'organization_id')) {
+                try {
+                    $table->dropForeign(['organization_id']);
+                } catch (\Exception $e) {
+                    // Foreign key might not exist
+                }
+            }
+            
+            // Drop columns if they exist
+            $columnsToDelete = [
                 'priority',
                 'auto_advance',
                 'volume',
@@ -112,7 +168,13 @@ return new class extends Migration
                 'organization_id',
                 'youtube_url',
                 'video_type'
-            ]);
+            ];
+            
+            foreach ($columnsToDelete as $column) {
+                if (Schema::hasColumn('videos', $column)) {
+                    $table->dropColumn($column);
+                }
+            }
         });
     }
 };
