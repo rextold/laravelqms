@@ -754,12 +754,6 @@
                 <span class="status-dot" id="statusDot"></span>
                 <span id="statusText">Connected</span>
             </div>
-            
-            <!-- Audio Status Indicator (for debugging) -->
-            <div class="audio-status" id="audioStatus" style="position: fixed; bottom: 10px; right: 10px; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(10px); padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; display: flex; align-items: center; gap: 8px; z-index: 1000; border: 1px solid rgba(255, 255, 255, 0.1); cursor: pointer;" onclick="testNotificationSound()">
-                <i class="fas fa-volume-up"></i>
-                <span>Test Bell</span>
-            </div>
         </div>
         
         <!-- Video Player -->
@@ -816,9 +810,8 @@
     </div>
     
     <!-- Notification Sound -->
-    <audio id="notificationSound" preload="auto" crossorigin="anonymous">
+    <audio id="notificationSound" preload="auto">
         <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFAtGmN7yvmwhBjiKz/HPgTQGG2W07O2hUhELRZff8r5sIQc4iM/x0H40BhtktOztolIRC0WX3/K+bCEHOIjP8dB+NAYbZLTs7aFSEQtFl9/yvmwhBziIz/HQfjQGG2S07O2hUhELRZff8r5sIQc4h8/x0H40BhtktOztolIRC0SX3vK+bCEHN4fP8c9+MwYaZLPr7aFSEQxEl97yvmwhBzeHz/HPfjMGGmSz6+2hUhEMRJfe8r5sIQc3h8/xz34zBhpks+vtoVIRDESX3vK+ayEHN4bP8c9+MwYaZLPr7aFSEQxEl97yv2shBzeGz/HPfTMGGmSz6+2hUhEMRJfe8r9rIQc3hs/xz30zBhpks+vtoVIRDESX3vK/ayEHN4bP8c99MwYaZLPr7aFSEQxEl97yv2shBzeGz/HPfTMGGmSz6+2hUhEMRJfe8r9rIQc3hs/xz30zBhpks+vtoVIRDESX3vK/ayEHN4bP8c99MwYaZLPr7aFSEQxEl97yv2shBzeGz/HPfTMGGmSz6+2hUhEMRJfe8r9rIQc3hs/xz30zBhpks+vtoVIRDESX3vK/ayEHN4bP8c99MwYaZLPr7aFSEQxEl97yv2shBzeGz/HPfTMGGmSz6+2hUhEMRJfe8r9rIQc3hs/xz30zBhpks+vtoVIRDESX3vK/ayEHN4bP8c99MwYaZLPr7aFSEQxEl97yv2shBzeGz/HPfTMGGmSz6+2hUhEMRJfe8r9rIQc3hs/xz30zBhpks+vtoVIRDESX3vK/ayEHN4bP8c99MwYaZLPr7aFSEQxEl97yv2shBzeGz/HPfTMGGmSz6+2hUhEMRJfe8r9rIQc3hs/xz30zBhpks+vtoVIRDESX3vK/ayEHN4bP8c99MwYaZLPr7aFSEQxEl97yv2shBzeGz/HPfTMGGmSz6+2hUhEMRJfe8r9rIQc3hs/xz30zBhpks+vtoVIRDESX3vK/ayEHN4bP8c99MwYaZLPr7aFSEQxEl97yv2shBzeGz/HPfTMGGmSz6+2hUhEMRJfe8r9rIQc3hs/xz30zBhpks+vtoVIRDESX3vK/ayEHN4bP8c99MwYaZLPr7aFSEQxEl97yv2shBzeGz/HPfTMGGmSz6+2hUhEMRJfe8r9rIQc3hs/xz30zBhpks+vtoVIRDESX3vK/ayEHN4bP8c99MwYaZLPr7aFSEQxEl97yv2shBzeGz/HPfTMGGmSz6+2hUhEMRJfe8r9rIQ=" type="audio/wav">
-        Your browser does not support the audio element.
     </audio>
     
     <script>
@@ -855,54 +848,22 @@
             initializeMarquee();
             startRefreshCycle();
             setupEventListeners();
-            
-            // Show audio unlock prompt after 2 seconds if audio hasn't been unlocked
-            setTimeout(() => {
-                const audio = document.getElementById('notificationSound');
-                if (audio && audio.paused) {
-                    console.log('💡 Audio not yet unlocked - showing prompt');
-                    updateAudioStatus('blocked');
-                }
-            }, 2000);
         });
         
         function initializeMonitor() {
             updateTime();
             setInterval(updateTime, 1000);
             
-            // Initialize audio element
-            const audio = document.getElementById('notificationSound');
-            if (audio) {
-                audio.muted = false;
-                audio.volume = 1.0;
-            }
-            
-            // Unlock audio on first user interaction (multiple event types)
-            const unlockEvents = ['click', 'touchstart', 'keydown', 'pointerdown'];
-            unlockEvents.forEach(eventType => {
-                document.addEventListener(eventType, unlockAudio, { once: true, passive: true });
-            });
+            // Unlock audio on first user interaction
+            document.addEventListener('click', unlockAudio, { once: true });
+            document.addEventListener('keydown', unlockAudio, { once: true });
         }
         
         function unlockAudio() {
             const audio = document.getElementById('notificationSound');
             if (audio) {
                 audio.muted = false;
-                audio.volume = 1.0;
-                
-                // Try to play and immediately pause to unlock audio context
-                const playPromise = audio.play();
-                if (playPromise !== undefined) {
-                    playPromise
-                        .then(() => {
-                            audio.pause();
-                            audio.currentTime = 0;
-                            console.log('Audio unlocked successfully');
-                        })
-                        .catch(error => {
-                            console.log('Audio unlock failed:', error);
-                        });
-                }
+                audio.play().then(() => audio.pause()).catch(() => {});
             }
         }
         
@@ -1203,118 +1164,10 @@
         
         function playNotificationSound() {
             const audio = document.getElementById('notificationSound');
-            if (!audio) {
-                console.error('Notification sound element not found');
-                return;
-            }
-            
-            try {
-                // Ensure audio is ready and unmuted
-                audio.muted = false;
-                audio.volume = 1.0;
+            if (audio) {
                 audio.currentTime = 0;
-                
-                // Attempt to play
-                const playPromise = audio.play();
-                
-                if (playPromise !== undefined) {
-                    playPromise
-                        .then(() => {
-                            console.log('✅ Notification sound played successfully');
-                            updateAudioStatus('playing');
-                        })
-                        .catch(error => {
-                            console.error('❌ Audio play failed:', error);
-                            updateAudioStatus('blocked');
-                            
-                            // If autoplay is blocked, try to unlock audio again
-                            if (error.name === 'NotAllowedError') {
-                                console.log('Autoplay blocked - waiting for user interaction');
-                                // Show visual indicator
-                                showAudioBlockedMessage();
-                            }
-                        });
-                }
-            } catch (error) {
-                console.error('Error playing notification sound:', error);
-                updateAudioStatus('error');
+                audio.play().catch(e => console.log('Audio play failed:', e));
             }
-        }
-        
-        // Test function for manual testing
-        function testNotificationSound() {
-            console.log('🔔 Testing notification sound...');
-            playNotificationSound();
-        }
-        
-        // Update audio status indicator
-        function updateAudioStatus(status) {
-            const statusEl = document.getElementById('audioStatus');
-            if (statusEl) {
-                const icon = statusEl.querySelector('i');
-                const text = statusEl.querySelector('span');
-                
-                switch(status) {
-                    case 'playing':
-                        icon.className = 'fas fa-volume-up text-green-400';
-                        text.textContent = 'Bell OK';
-                        break;
-                    case 'blocked':
-                        icon.className = 'fas fa-volume-mute text-red-400';
-                        text.textContent = 'Click to Enable';
-                        break;
-                    case 'error':
-                        icon.className = 'fas fa-volume-xmark text-yellow-400';
-                        text.textContent = 'Bell Error';
-                        break;
-                    default:
-                        icon.className = 'fas fa-volume-up';
-                        text.textContent = 'Test Bell';
-                }
-            }
-        }
-        
-        // Show message when audio is blocked
-        function showAudioBlockedMessage() {
-            const message = document.createElement('div');
-            message.style.cssText = `
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                background: rgba(0, 0, 0, 0.95);
-                color: white;
-                padding: 2rem;
-                border-radius: 16px;
-                border: 2px solid #ef4444;
-                z-index: 10000;
-                text-align: center;
-                max-width: 400px;
-            `;
-            message.innerHTML = `
-                <i class="fas fa-volume-xmark text-4xl mb-3" style="color: #ef4444;"></i>
-                <h3 style="font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem;">Sound Blocked</h3>
-                <p style="font-size: 0.875rem; color: rgba(255,255,255,0.8); margin-bottom: 1rem;">
-                    Click anywhere on the screen to enable notification sounds
-                </p>
-                <button onclick="this.parentElement.remove(); unlockAudio();" style="
-                    background: #10b981;
-                    color: white;
-                    padding: 0.75rem 1.5rem;
-                    border-radius: 8px;
-                    border: none;
-                    font-weight: 600;
-                    cursor: pointer;
-                ">Enable Sound</button>
-            `;
-            document.body.appendChild(message);
-            
-            // Auto-remove after 5 seconds
-            setTimeout(() => {
-                if (message.parentElement) {
-                    message.remove();
-                }
-            }, 5000);
         }
         
         // ========================================
