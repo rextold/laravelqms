@@ -157,6 +157,21 @@
             transform: translateX(-50%) translateY(0);
         }
         
+        .call-banner.speaking .call-banner-card::before {
+            animation: bell-ring 0.5s ease-in-out infinite, pulse-glow 1s ease-in-out infinite;
+        }
+        
+        @keyframes pulse-glow {
+            0%, 100% { 
+                text-shadow: 0 0 20px var(--accent);
+                transform: translateX(-50%) rotate(0deg) scale(1);
+            }
+            50% { 
+                text-shadow: 0 0 40px var(--accent), 0 0 60px var(--accent);
+                transform: translateX(-50%) rotate(0deg) scale(1.1);
+            }
+        }
+        
         .call-banner-card {
             background: linear-gradient(135deg, rgba(0, 0, 0, 0.95), rgba(16, 25, 62, 0.95));
             backdrop-filter: blur(20px);
@@ -756,9 +771,15 @@
             </div>
             
             <!-- Audio Status Indicator (for debugging) -->
-            <div class="audio-status" id="audioStatus" style="position: fixed; bottom: 10px; right: 10px; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(10px); padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; display: flex; align-items: center; gap: 8px; z-index: 1000; border: 1px solid rgba(255, 255, 255, 0.1); cursor: pointer;" onclick="testNotificationSound()">
-                <i class="fas fa-volume-up"></i>
-                <span>Test Bell</span>
+            <div style="position: fixed; bottom: 10px; right: 10px; display: flex; gap: 8px; z-index: 1000;">
+                <div class="audio-status" id="audioStatus" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(10px); padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; display: flex; align-items: center; gap: 8px; border: 1px solid rgba(255, 255, 255, 0.1); cursor: pointer;" onclick="testNotificationSound()">
+                    <i class="fas fa-volume-up"></i>
+                    <span>Test Bell</span>
+                </div>
+                <div style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(10px); padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; display: flex; align-items: center; gap: 8px; border: 1px solid rgba(255, 255, 255, 0.1); cursor: pointer;" onclick="testVoiceAnnouncement()">
+                    <i class="fas fa-microphone"></i>
+                    <span>Test Voice</span>
+                </div>
             </div>
         </div>
         
@@ -831,6 +852,10 @@
             refreshInterval: 1500, // 1.5 seconds
             reconnectDelay: 3000,
             callBannerDuration: 8000, // Show banner for 8 seconds
+            voiceEnabled: true, // Enable train station-style voice announcements
+            voiceRate: 0.9, // Speech rate (0.1 to 10)
+            voicePitch: 1.0, // Speech pitch (0 to 2)
+            voiceVolume: 1.0, // Speech volume (0 to 1)
         };
         
         const STATE = {
@@ -1078,10 +1103,17 @@
             // Detect new calls/notifications (for alerts)
             const alerts = detectAlerts(servingCounters);
             
-            // Play notification sound and show call banner if there are NEW alerts
+            // Play notification sound, show banner, and announce via voice if there are NEW alerts
             if (alerts.length > 0 && STATE.previousServingState.size > 0) {
-                playNotificationSound();
-                showCallBanner(alerts[0]);
+                const alertItem = alerts[0];
+                const queueNumber = alertItem.queue?.queue_number || '';
+                const counterNumber = alertItem.counter?.counter_number || '';
+                
+                // Show visual banner
+                showCallBanner(alertItem);
+                
+                // Play bell and voice announcement (train station style)
+                announceQueueCall(queueNumber, counterNumber);
             }
             
             // Update previous state for next comparison
@@ -1200,13 +1232,18 @@
             number.textContent = alertItem.queue?.queue_number || '—';
             counter.textContent = `Please proceed to Counter ${alertItem.counter?.counter_number || ''}`;
             
-            // Show the banner
-            banner.classList.add('show');
+            // Show the banner with speaking animation
+            banner.classList.add('show', 'speaking');
+            
+            // Remove speaking class after voice announcement completes (approximately 5 seconds)
+            setTimeout(() => {
+                banner.classList.remove('speaking');
+            }, 5000);
             
             // Hide banner after duration
             if (callBannerTimer) clearTimeout(callBannerTimer);
             callBannerTimer = setTimeout(() => {
-                banner.classList.remove('show');
+                banner.classList.remove('show', 'speaking');
             }, CONFIG.callBannerDuration);
         }
         
@@ -1257,10 +1294,134 @@
             }
         }
         
+        // Train station-style voice announcement
+        function announceQueueCall(queueNumber, counterNumber) {
+            // First play the bell sound
+            playNotificationSound();
+            
+            // Then announce via text-to-speech after a short delay
+            setTimeout(() => {
+                speakAnnouncement(queueNumber, counterNumber);
+            }, 500);
+        }
+        
+        // Text-to-speech announcement function
+        function speakAnnouncement(queueNumber, counterNumber) {
+            if (!('speechSynthesis' in window)) {
+                console.warn('Text-to-speech not supported in this browser');
+                return;
+            }
+            
+            try {
+                // Cancel any ongoing speech
+                window.speechSynthesis.cancel();
+                
+                // Format the queue number for better pronunciation
+                const formattedQueueNumber = formatQueueNumberForSpeech(queueNumber);
+                
+                // Create the announcement message
+                const message = `Now calling, priority number ${formattedQueueNumber}. Please proceed to counter ${counterNumber}`;
+                
+                console.log('🔊 Voice announcement:', message);
+                
+                // Create speech synthesis utterance
+                const utterance = new SpeechSynthesisUtterance(message);
+                
+                // Configure speech properties
+                utterance.lang = 'en-US';
+                utterance.rate = 0.9; // Slightly slower for clarity
+                utterance.pitch = 1.0;
+                utterance.volume = 1.0;
+                
+                // Try to use a female voice (more pleasant for announcements)
+                const voices = window.speechSynthesis.getVoices();
+                const preferredVoice = voices.find(voice => 
+                    voice.lang.startsWith('en') && 
+                    (voice.name.includes('Female') || voice.name.includes('Google'))
+                );
+                
+                if (preferredVoice) {
+                    utterance.voice = preferredVoice;
+                }
+                
+                // Event handlers
+                utterance.onstart = () => {
+                    console.log('🎙️ Voice announcement started');
+                };
+                
+                utterance.onend = () => {
+                    console.log('✅ Voice announcement completed');
+                };
+                
+                utterance.onerror = (event) => {
+                    console.error('❌ Voice announcement error:', event.error);
+                };
+                
+                // Speak the announcement
+                window.speechSynthesis.speak(utterance);
+                
+            } catch (error) {
+                console.error('Error in voice announcement:', error);
+            }
+        }
+        
+        // Format queue number for better speech pronunciation
+        function formatQueueNumberForSpeech(queueNumber) {
+            // Convert number to individual digits for clearer pronunciation
+            // Example: "0123" becomes "zero one two three"
+            const digitWords = {
+                '0': 'zero', '1': 'one', '2': 'two', '3': 'three', '4': 'four',
+                '5': 'five', '6': 'six', '7': 'seven', '8': 'eight', '9': 'nine'
+            };
+            
+            const digits = String(queueNumber).split('');
+            const spokenDigits = digits.map(d => digitWords[d] || d).join(' ');
+            
+            return spokenDigits;
+        }
+        
+        // Load voices when available (some browsers load voices asynchronously)
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = () => {
+                const voices = window.speechSynthesis.getVoices();
+                console.log('🎤 Available voices:', voices.length);
+            };
+            
+            // Trigger voice loading
+            window.speechSynthesis.getVoices();
+        }
+        
         // Test function for manual testing
         function testNotificationSound() {
             console.log('🔔 Testing notification sound...');
             playNotificationSound();
+        }
+        
+        // Test voice announcement with sample data
+        function testVoiceAnnouncement() {
+            console.log('🎙️ Testing voice announcement...');
+            const sampleQueue = '0123';
+            const sampleCounter = '5';
+            announceQueueCall(sampleQueue, sampleCounter);
+            
+            // Also show banner for visual feedback
+            const banner = document.getElementById('callBanner');
+            const number = document.getElementById('callBannerNumber');
+            const counter = document.getElementById('callBannerCounter');
+            
+            if (banner) {
+                number.textContent = sampleQueue;
+                counter.textContent = `Please proceed to Counter ${sampleCounter}`;
+                banner.classList.add('show', 'speaking');
+                
+                setTimeout(() => {
+                    banner.classList.remove('speaking');
+                }, 5000);
+                
+                setTimeout(() => {
+                    banner.classList.remove('show');
+                }, 8000);
+            }
         }
         
         // Update audio status indicator
