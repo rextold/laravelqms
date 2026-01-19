@@ -5,6 +5,7 @@
 /public/storage
 /public/.htaccess
 /storage/*.key
+/storage/*
 /storage/app/public/videos
 /vendor
 .env
