@@ -140,21 +140,20 @@
             font-weight: 500;
         }
         
-        /* Call Notification Banner - Inside Header */
+        /* Call Notification Banner - Always Visible in Front (Not Hidden) */
         .call-banner {
             position: absolute;
             left: 50%;
             top: 50%;
-            transform: translate(-50%, -50%) scale(0.95);
-            opacity: 0;
+            transform: translate(-50%, -50%);
+            opacity: 1;
             pointer-events: none;
-            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
             z-index: 10;
+            transition: all 0.3s ease;
         }
         
-        .call-banner.show {
-            opacity: 1;
-            transform: translate(-50%, -50%) scale(1);
+        .call-banner.empty {
+            opacity: 0;
         }
         
         .call-banner-card {
@@ -209,21 +208,22 @@
             font-weight: 500;
         }
         
-        /* Connection Status */
+        /* Connection Status - Bottom Left */
         .connection-status {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            background: rgba(0, 0, 0, 0.4);
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
             backdrop-filter: blur(10px);
-            padding: 4px 10px;
+            padding: 6px 12px;
             border-radius: 20px;
-            font-size: 0.7rem;
+            font-size: 0.75rem;
             font-weight: 600;
             display: flex;
             align-items: center;
-            gap: 6px;
-            z-index: 2;
+            gap: 8px;
+            z-index: 1000;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         .status-dot {
@@ -393,17 +393,18 @@
         
         .serving-item.notify {
             background: rgba(16, 185, 129, 0.1);
-            animation: pulse-border 1.5s ease-in-out infinite;
+            border-left: 4px solid rgba(16, 185, 129, 0.8);
+            animation: blink-five-times 1.5s ease-in-out;
         }
         
-        @keyframes pulse-border {
-            0%, 100% { 
+        @keyframes blink-five-times {
+            0%, 10%, 20%, 30%, 40%, 50%, 60%, 70%, 80%, 90%, 100% { 
                 background: rgba(16, 185, 129, 0.1);
-                border-left: 4px solid rgba(16, 185, 129, 0.8);
+                border-left-color: rgba(16, 185, 129, 0.8);
             }
-            50% { 
+            5%, 15%, 25%, 35%, 45%, 55%, 65%, 75%, 85%, 95% { 
                 background: rgba(16, 185, 129, 0.05);
-                border-left: 4px solid rgba(16, 185, 129, 0.3);
+                border-left-color: rgba(16, 185, 129, 0.3);
             }
         }
         
@@ -459,68 +460,41 @@
             margin-top: 0.25rem;
         }
         
-        /* Waiting Queue Groups */
-        .waiting-group {
-            padding: 1rem 1.25rem;
-            border-bottom: 1px solid rgba(245, 158, 11, 0.15);
-            transition: all 0.3s ease;
+        /* Waiting Queue Rows - Compact Format */
+        .waiting-row {
+            padding: 0.75rem 1.25rem;
+            border-bottom: 1px solid rgba(245, 158, 11, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.9rem;
         }
         
-        .waiting-group:hover {
-            background: rgba(245, 158, 11, 0.05);
-        }
-        
-        .waiting-group:last-child {
+        .waiting-row:last-child {
             border-bottom: none;
         }
         
-        .waiting-group-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.75rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 1px solid rgba(245, 158, 11, 0.2);
-        }
-        
-        .waiting-counter-name {
-            font-size: 0.9rem;
+        .waiting-counter-label {
             font-weight: 700;
             color: #f59e0b;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
+            white-space: nowrap;
+            min-width: fit-content;
+            flex-shrink: 0;
         }
         
-        .waiting-count-badge {
-            background: linear-gradient(135deg, #f59e0b, #d97706);
-            color: white;
-            padding: 0.25rem 0.6rem;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: 700;
-        }
-        
-        .waiting-numbers {
+        .waiting-queue-numbers {
             display: flex;
             flex-wrap: wrap;
             gap: 0.5rem;
+            flex: 1;
+            overflow: hidden;
         }
         
-        .waiting-number-badge {
-            background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.2));
-            border: 1px solid rgba(245, 158, 11, 0.4);
+        .waiting-queue-number {
             color: #fbbf24;
-            padding: 0.4rem 0.75rem;
-            border-radius: 8px;
-            font-size: 0.85rem;
             font-weight: 700;
-            transition: all 0.2s ease;
-        }
-        
-        .waiting-number-badge:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+            font-size: 0.85rem;
+            white-space: nowrap;
         }
         
         /* Empty States */
@@ -590,6 +564,15 @@
             .monitor-container {
                 grid-template-columns: 1fr 360px;
             }
+            
+            .call-banner-card {
+                min-width: 350px;
+                padding: 0.75rem 1.5rem;
+            }
+            
+            .call-banner-number {
+                font-size: 2rem;
+            }
         }
         
         @media (max-width: 1024px) {
@@ -607,6 +590,58 @@
             
             .queue-card {
                 flex: 1;
+            }
+            
+            .header-title h1 {
+                font-size: 1.25rem;
+            }
+            
+            .header-time {
+                font-size: 1.25rem;
+            }
+            
+            .call-banner-card {
+                min-width: 300px;
+                padding: 0.6rem 1.25rem;
+            }
+            
+            .call-banner-number {
+                font-size: 1.75rem;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .monitor-container {
+                padding: 5px;
+                gap: 5px;
+            }
+            
+            .header-title h1 {
+                font-size: 1rem;
+            }
+            
+            .header-logo {
+                width: 36px;
+                height: 36px;
+            }
+            
+            .connection-status {
+                font-size: 0.65rem;
+                padding: 4px 8px;
+            }
+            
+            .waiting-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+            
+            .waiting-counter-label {
+                font-size: 0.85rem;
+            }
+            
+            .waiting-queue-number {
+                font-size: 0.8rem;
             }
         }
     </style>
@@ -876,10 +911,15 @@
         function updateCountersDisplay(counters, waitingQueues) {
             updateServingCounters(counters);
             updateWaitingQueues(waitingQueues);
+            
+            // Always keep call banner updated with current state
+            updateCallBannerDisplay(counters);
         }
         
         function updateServingCounters(counters) {
             const servingList = document.getElementById('servingList');
+            
+            // Only show online counters that have active queues
             const servingCounters = counters.filter(item => item.queue);
             
             if (servingCounters.length === 0) {
@@ -893,22 +933,23 @@
                 return;
             }
             
-            // Detect new calls/notifications
+            // Detect new calls/notifications (for alerts)
             const alerts = detectAlerts(servingCounters);
             
-            // Play notification sound if there are alerts
+            // Play notification sound and show call banner if there are NEW alerts
             if (alerts.length > 0 && STATE.previousServingState.size > 0) {
                 playNotificationSound();
                 showCallBanner(alerts[0]);
             }
             
-            // Update previous state
+            // Update previous state for next comparison
             updatePreviousState(servingCounters);
             
-            // Render serving items
+            // Render serving items - only the alerted counter blinks (5 times)
             const html = servingCounters.map(item => {
                 const counter = item.counter;
                 const queue = item.queue;
+                // Only this specific counter will blink if it's in the alerts array
                 const isAlert = alerts.some(a => a.queue?.id === queue?.id);
                 
                 return `
@@ -916,7 +957,7 @@
                         <div class="serving-header">
                             <div class="counter-label">Counter ${counter.counter_number}</div>
                         </div>
-                        <div class="queue-number ${isAlert ? 'callout' : ''}">${queue.queue_number}</div>
+                        <div class="queue-number">${queue.queue_number}</div>
                         <div class="counter-info">${counter.display_name || 'Service Counter'}</div>
                     </div>
                 `;
@@ -927,6 +968,8 @@
         
         function updateWaitingQueues(waitingGroups) {
             const waitingList = document.getElementById('waitingList');
+            
+            // Only show counters that have waiting queues
             const groups = waitingGroups.filter(g => g.queues && g.queues.length > 0);
             
             if (groups.length === 0) {
@@ -939,22 +982,20 @@
                 return;
             }
             
-            const html = groups.map(group => `
-                <div class="waiting-group">
-                    <div class="waiting-group-header">
-                        <div class="waiting-counter-name">
-                            <i class="fas fa-user-clock"></i>
-                            ${group.display_name || 'Counter ' + group.counter_number}
+            // Compact format: Counter 1: 0001 0002 0003 0004
+            const html = groups.map(group => {
+                const counterName = group.display_name || `Counter ${group.counter_number}`;
+                const queueNumbers = group.queues.map(q => q.queue_number).join('   ');
+                
+                return `
+                    <div class="waiting-row">
+                        <div class="waiting-counter-label">${counterName}:</div>
+                        <div class="waiting-queue-numbers">
+                            ${group.queues.map(q => `<span class="waiting-queue-number">${q.queue_number}</span>`).join('')}
                         </div>
-                        <div class="waiting-count-badge">${group.queues.length}</div>
                     </div>
-                    <div class="waiting-numbers">
-                        ${group.queues.map(q => `
-                            <div class="waiting-number-badge">${q.queue_number}</div>
-                        `).join('')}
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
             
             waitingList.innerHTML = html;
         }
@@ -1012,17 +1053,33 @@
             const number = document.getElementById('callBannerNumber');
             const counter = document.getElementById('callBannerCounter');
             
-            if (!banner || !alertItem) return;
+            if (!banner) return;
             
-            number.textContent = alertItem.queue?.queue_number || '—';
-            counter.textContent = `Please proceed to Counter ${alertItem.counter?.counter_number || ''}`;
+            if (alertItem) {
+                // Update banner content with new call
+                number.textContent = alertItem.queue?.queue_number || '—';
+                counter.textContent = `Please proceed to Counter ${alertItem.counter?.counter_number || ''}`;
+                banner.classList.remove('empty');
+            } else {
+                // No active calls - show empty state
+                number.textContent = '—';
+                counter.textContent = 'No active calls';
+                banner.classList.add('empty');
+            }
+        }
+        
+        // Call this to update banner even when no new alerts
+        function updateCallBannerDisplay(counters) {
+            const servingCounters = counters.filter(item => item.queue);
             
-            banner.classList.add('show');
-            
-            if (callBannerTimer) clearTimeout(callBannerTimer);
-            callBannerTimer = setTimeout(() => {
-                banner.classList.remove('show');
-            }, CONFIG.callBannerDuration);
+            if (servingCounters.length > 0) {
+                // Show the most recent call
+                const latestCall = servingCounters[0];
+                showCallBanner(latestCall);
+            } else {
+                // No active calls
+                showCallBanner(null);
+            }
         }
         
         function playNotificationSound() {
