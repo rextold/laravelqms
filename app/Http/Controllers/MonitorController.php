@@ -43,6 +43,11 @@ class MonitorController extends Controller
             $counterQueues[$counter->id] = $counter->getCurrentQueue();
         }
 
+        // Check if refactored view exists, use it; otherwise fall back to original
+        if (view()->exists('monitor.refactored')) {
+            return view('monitor.refactored', compact('onlineCounters', 'videos', 'videoControl', 'marquee', 'counterQueues', 'settings', 'companyCode', 'organization'));
+        }
+        
         return view('monitor.index', compact('onlineCounters', 'videos', 'videoControl', 'marquee', 'counterQueues', 'settings', 'companyCode', 'organization'));
     }
 
