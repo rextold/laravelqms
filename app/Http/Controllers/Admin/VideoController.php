@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Video;
 use App\Models\VideoControl;
 use App\Models\PlaylistItem;
+use App\Models\DisplaySetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class VideoController extends Controller
 {
@@ -46,22 +48,23 @@ class VideoController extends Controller
             return round($bytes / (1024 * 1024)) . 'MB';
         }
         return max(1, round($bytes / 1024)) . 'KB';
-    }
-
-    public function index()
+    }    public function index()
     {
         $orgCode = request()->route('organization_code');
         $organization = \App\Models\Organization::where('organization_code', $orgCode)->firstOrFail();
         
         $videos = Video::where('organization_id', $organization->id)->orderBy('order')->get();
+        $playlists = \App\Models\Playlist::where('organization_id', $organization->id)->orderBy('name')->get();
         $control = VideoControl::getCurrent();
+        $displaySettings = DisplaySetting::getForOrganization($organization->id);
+        
         // Compute effective upload limit from php.ini settings
         $uploadBytes = $this->bytesFromIni(ini_get('upload_max_filesize') ?: '0');
         $postBytes = $this->bytesFromIni(ini_get('post_max_size') ?: '0');
         $effectiveBytes = ($uploadBytes && $postBytes) ? min($uploadBytes, $postBytes) : max($uploadBytes, $postBytes);
         $maxUploadLabel = $this->humanSize($effectiveBytes);
 
-        return view('admin.videos.index', compact('videos', 'control', 'maxUploadLabel'));
+        return view('admin.videos.index', compact('videos', 'playlists', 'control', 'displaySettings', 'maxUploadLabel', 'organization'));
     }
 
     public function store(Request $request)
@@ -74,14 +77,23 @@ class VideoController extends Controller
             $effectiveKB = max(1, (int) floor($effectiveBytes / 1024));
 
             $orgCode = $request->route('organization_code');
-            $organization = \App\Models\Organization::where('organization_code', $orgCode)->firstOrFail();
-
-            $validated = $request->validate([
+            $organization = \App\Models\Organization::where('organization_code', $orgCode)->firstOrFail();            $validated = $request->validate([
                 'title' => 'required|string|max:255',
+                'description' => 'nullable|string|max:1000',
                 'video_type' => 'required|in:file,youtube',
                 'video' => 'required_if:video_type,file|nullable|mimes:mp4,avi,mov,wmv|max:' . $effectiveKB,
                 'youtube_url' => 'required_if:video_type,youtube|nullable|url',
+                'playlist_id' => 'nullable|exists:playlists,id',
                 'order' => 'nullable|integer',
+                'start_date' => 'nullable|date',
+                'end_date' => 'nullable|date|after_or_equal:start_date',
+                'start_time' => 'nullable|date_format:H:i',
+                'end_time' => 'nullable|date_format:H:i',
+                'days_of_week' => 'nullable|array',
+                'days_of_week.*' => 'integer|between:1,7',
+                'volume' => 'nullable|integer|between:0,100',
+                'auto_advance' => 'nullable|boolean',
+                'priority' => 'nullable|integer|between:0,10',
             ]);
 
             $data = [
@@ -474,9 +486,7 @@ class VideoController extends Controller
             $control->is_sequence = $validated['is_sequence'];
         }
         
-        $control->save();
-
-        return response()->json([
+        $control->save();        return response()->json([
             'success' => true,
             'control' => [
                 'repeat_mode' => $control->repeat_mode,
@@ -484,5 +494,103 @@ class VideoController extends Controller
                 'is_sequence' => $control->is_sequence,
             ]
         ]);
+    }
+
+    /**
+     * Update display settings for the organization
+     */
+    public function updateDisplaySettings(Request $request)
+    {
+        $validated = $request->validate([
+            'display_mode' => 'nullable|in:fullscreen,windowed,split',
+            'video_fit' => 'nullable|in:cover,contain,fill,stretch',
+            'auto_advance_time' => 'nullable|integer|min:5|max:300',
+            'show_queue_info' => 'nullable|boolean',
+            'show_clock' => 'nullable|boolean',
+            'show_date' => 'nullable|boolean',
+            'show_weather' => 'nullable|boolean',
+            'background_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
+            'text_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
+            'accent_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
+            'font_size' => 'nullable|integer|min:10|max:72',
+            'transition_effect' => 'nullable|in:fade,slide,zoom,none',
+            'transition_duration' => 'nullable|integer|min:100|max:5000',
+            'screen_saver_enabled' => 'nullable|boolean',
+            'screen_saver_timeout' => 'nullable|integer|min:60|max:3600',
+            'brightness' => 'nullable|integer|min:10|max:100',
+            'contrast' => 'nullable|integer|min:10|max:100',
+            'volume_control' => 'nullable|boolean',
+            'mute_during_hours' => 'nullable|array',
+            'display_resolution' => 'nullable|string',
+            'refresh_rate' => 'nullable|integer|min:30|max:120',
+        ]);
+
+        $orgCode = $request->route('organization_code');
+        $organization = \App\Models\Organization::where('organization_code', $orgCode)->firstOrFail();
+        
+        $displaySettings = DisplaySetting::getForOrganization($organization->id);
+        $displaySettings->update(array_filter($validated));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Display settings updated successfully.',
+            'settings' => $displaySettings
+        ]);
+    }
+
+    /**
+     * Get display settings for the organization
+     */
+    public function getDisplaySettings(Request $request)
+    {
+        $orgCode = $request->route('organization_code');
+        $organization = \App\Models\Organization::where('organization_code', $orgCode)->firstOrFail();
+        
+        $displaySettings = DisplaySetting::getForOrganization($organization->id);
+
+        return response()->json([
+            'success' => true,
+            'settings' => $displaySettings
+        ]);
+    }
+
+    /**
+     * Reset display settings to default
+     */
+    public function resetDisplaySettings(Request $request)
+    {
+        $orgCode = $request->route('organization_code');
+        $organization = \App\Models\Organization::where('organization_code', $orgCode)->firstOrFail();
+        
+        // Delete existing settings
+        DisplaySetting::where('organization_id', $organization->id)->delete();
+        
+        // Create new default settings
+        $displaySettings = DisplaySetting::createDefault($organization->id);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Display settings reset to default.',
+            'settings' => $displaySettings
+        ]);
+    }
+
+    /**
+     * Preview display settings
+     */
+    public function previewDisplay(Request $request)
+    {
+        $orgCode = $request->route('organization_code');
+        $organization = \App\Models\Organization::where('organization_code', $orgCode)->firstOrFail();
+        
+        $videos = Video::where('organization_id', $organization->id)
+                      ->where('is_active', true)
+                      ->orderBy('order')
+                      ->get();
+        
+        $control = VideoControl::getCurrent();
+        $displaySettings = DisplaySetting::getForOrganization($organization->id);
+
+        return view('admin.videos.preview', compact('videos', 'control', 'displaySettings', 'organization'));
     }
 }

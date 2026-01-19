@@ -11,16 +11,38 @@ class Video extends Model
 
     protected $fillable = [
         'title',
+        'description',
         'video_type',
         'file_path',
         'youtube_url',
+        'duration',
+        'thumbnail_path',
         'order',
         'is_active',
         'organization_id',
+        'playlist_id',
+        'start_date',
+        'end_date',
+        'start_time',
+        'end_time',
+        'days_of_week',
+        'volume',
+        'auto_advance',
+        'priority',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'auto_advance' => 'boolean',
+        'days_of_week' => 'array',
+        'start_date' => 'date',
+        'end_date' => 'date',
+        'start_time' => 'datetime:H:i',
+        'end_time' => 'datetime:H:i',
+        'duration' => 'integer',
+        'volume' => 'integer',
+        'priority' => 'integer',
+        'order' => 'integer',
     ];
 
     public function scopeActive($query)
