@@ -414,12 +414,12 @@
         const sidebar = document.getElementById('sidebar');
         const sidebarToggle = document.getElementById('sidebarToggle');
         
-        // Load saved state from localStorage (desktop only)
+        // Ensure sidebar is always visible on desktop and hide the internal toggle button
         if (window.innerWidth > 768) {
-            const sidebarState = localStorage.getItem('sidebarHidden');
-            if (sidebarState === 'true') {
-                sidebar.classList.add('hidden');
-            }
+            // Force visible on desktop
+            sidebar.classList.remove('hidden');
+            // Hide the interior toggle control on desktop to avoid accidental hiding
+            if (sidebarToggle) sidebarToggle.classList.add('hidden');
         }
         
         // Toggle sidebar on button click (inside sidebar)
@@ -428,32 +428,30 @@
                 e.preventDefault();
                 e.stopPropagation();
                 
-                if (window.innerWidth > 768) {
-                    // Desktop: toggle hidden class
-                    sidebar.classList.toggle('hidden');
-                    const isHidden = sidebar.classList.contains('hidden');
-                    localStorage.setItem('sidebarHidden', isHidden);
-                } else {
+                // Only allow toggling on mobile - desktop sidebar stays visible
+                if (window.innerWidth <= 768) {
                     // Mobile: toggle mobile-open class
                     sidebar.classList.toggle('mobile-open');
                 }
             });
+
+            // Hide the internal toggle button on desktop to avoid accidental hiding
+            if (window.innerWidth > 768) {
+                sidebarToggle.classList.add('hidden');
+            }
         }
         
         // Handle window resize
         window.addEventListener('resize', function() {
             if (window.innerWidth > 768) {
-                // Desktop: remove mobile class, restore saved state
+                // Desktop: remove mobile class and ensure sidebar is visible
                 sidebar.classList.remove('mobile-open');
-                const sidebarState = localStorage.getItem('sidebarHidden');
-                if (sidebarState === 'true') {
-                    sidebar.classList.add('hidden');
-                } else {
-                    sidebar.classList.remove('hidden');
-                }
-            } else {
-                // Mobile: remove desktop hidden class
                 sidebar.classList.remove('hidden');
+                if (sidebarToggle) sidebarToggle.classList.add('hidden');
+            } else {
+                // Mobile: remove desktop hidden class and ensure internal toggle is visible
+                sidebar.classList.remove('hidden');
+                if (sidebarToggle) sidebarToggle.classList.remove('hidden');
             }
         });
 
