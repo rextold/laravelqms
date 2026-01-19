@@ -54,7 +54,8 @@ class EnsureOrganizationContext
         // Set organization context for all routes
         $this->setOrganizationContext($request, $organization);
 
-        // Public routes (kiosk, monitor) - allow access without any user checks
+        // CRITICAL: Public routes (kiosk, monitor) - allow access without ANY checks
+        // This must come before any authentication or authorization checks
         if ($this->isPublicRoute($request)) {
             return $next($request);
         }

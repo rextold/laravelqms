@@ -14,6 +14,8 @@ class Kernel extends HttpKernel
      * @var array
      */
     protected $middleware = [
+        // Handle Monitor/Kiosk public access FIRST - before any auth/CSRF checks
+        \App\Http\Middleware\HandleMonitorPublicAccess::class,
         // ...existing Laravel global middleware...
         // \Fruitcake\Cors\HandleCors::class,
         \App\Http\Middleware\VerifySessionPersistence::class,
