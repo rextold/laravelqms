@@ -1391,35 +1391,36 @@
             
             if (!audio) {
                 console.error('❌ Notification sound element not found');
-                // Fallback: just speak without bell
                 speakAnnouncement(queueNumber, counterNumber, alertType);
                 return;
             }
             
-            console.log('🚨 Announcement triggered:', {
-                queue: queueNumber,
-                counter: counterNumber,
-                type: alertType
-            });
+            console.log('🚨 Announcement triggered:', { queue: queueNumber, counter: counterNumber, type: alertType });
             
+            // Stop any currently playing audio to prevent interruption errors
+            if (!audio.paused) {
+                audio.pause();
+                audio.currentTime = 0;
+                console.log('🔇 Stopped previous audio playback.');
+            }
+            
+            // Cancel any ongoing speech synthesis
+            if (window.speechSynthesis && window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+                console.log('🗣️ Cancelled ongoing speech.');
+            }
+
             try {
-                // Force reload audio if not ready
-                if (audio.readyState === 0) {
+                if (audio.readyState < 2) { // HAVE_NOTHING or HAVE_METADATA
                     console.log('⚠️ Audio not ready, loading...');
                     audio.load();
                 }
                 
-                // Ensure audio is ready and unmuted
                 audio.muted = false;
                 audio.volume = 1.0;
                 audio.currentTime = 0;
                 
                 console.log('🔔 Playing notification bell...');
-                console.log('- Audio ready state:', audio.readyState);
-                console.log('- Audio paused:', audio.paused);
-                console.log('- Audio src:', audio.currentSrc?.substring(0, 100) + '...');
-                
-                // Play notification bell
                 const playPromise = audio.play();
                 
                 if (playPromise !== undefined) {
@@ -1428,7 +1429,6 @@
                             console.log('✅ Bell played successfully');
                             updateAudioStatus('playing');
                             
-                            // Wait for bell to finish (approximately 1.5 seconds) before speaking
                             setTimeout(() => {
                                 console.log('🎙️ Starting voice announcement...');
                                 speakAnnouncement(queueNumber, counterNumber, alertType);
@@ -1436,34 +1436,23 @@
                         })
                         .catch(error => {
                             console.error('❌ Bell play failed:', error);
-                            console.error('- Error name:', error.name);
-                            console.error('- Error message:', error.message);
                             updateAudioStatus('blocked');
                             
-                            // Try to unlock and play again
                             if (error.name === 'NotAllowedError') {
                                 console.log('🔓 Attempting to unlock audio...');
                                 unlockAudio();
                                 showAudioBlockedMessage();
                             }
                             
-                            // Still try to speak even if bell fails
                             setTimeout(() => {
                                 speakAnnouncement(queueNumber, counterNumber, alertType);
                             }, 500);
                         });
-                } else {
-                    console.warn('⚠️ No play promise returned');
-                    // Still try to speak
-                    setTimeout(() => {
-                        speakAnnouncement(queueNumber, counterNumber, alertType);
-                    }, 1500);
                 }
             } catch (error) {
                 console.error('❌ Error in announceQueueCall:', error);
                 updateAudioStatus('error');
                 
-                // Fallback: still try to speak
                 setTimeout(() => {
                     speakAnnouncement(queueNumber, counterNumber, alertType);
                 }, 500);
