@@ -109,21 +109,19 @@ class EnsureOrganizationContext
         
         // Also check path for public routes (fallback for AJAX and dynamic routes)
         $path = $request->getPathInfo();
-        $publicPathPatterns = [
-            '/monitor',
-            '/monitor/',
-            '/kiosk',
-            '/kiosk/',
-        ];
+        $uri = $request->getRequestUri();
         
-        foreach ($publicPathPatterns as $pattern) {
-            if (str_contains($path, $pattern)) {
-                return true;
-            }
+        // Multiple checks to ensure monitor/kiosk routes are always public
+        if (str_contains($path, '/monitor') || 
+            str_contains($uri, '/monitor') ||
+            str_contains($path, '/kiosk') ||
+            str_contains($uri, '/kiosk')) {
+            return true;
         }
         
-        // Check if request is for monitor or kiosk data endpoint
-        if (preg_match('#/[^/]+/(monitor|kiosk)(/|$)#', $path)) {
+        // Regex check for monitor or kiosk data endpoint
+        if (preg_match('#/(monitor|kiosk)(/|$)#', $path) || 
+            preg_match('#/(monitor|kiosk)(/|$)#', $uri)) {
             return true;
         }
         

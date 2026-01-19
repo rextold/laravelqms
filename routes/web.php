@@ -134,25 +134,33 @@ Route::prefix('{organization_code}')->group(function () {
     // - AJAX calls work WITHOUT CSRF tokens
     // - CORS headers automatically added for cross-origin requests
     // - NO 403 Forbidden errors - accessible to anyone
-    // - Handled by HandleMonitorPublicAccess global middleware
+    // - Supports both GET and POST methods for maximum compatibility
     // ============================================================================
     Route::prefix('monitor')
         ->name('monitor.')
         ->middleware(['organization.context', 'allow.public'])
         ->group(function () {
             Route::get('/', [MonitorController::class, 'index'])->name('index');
-            Route::get('/data', [MonitorController::class, 'getData'])->name('data');
-            Route::post('/data', [MonitorController::class, 'getData'])->name('data.post'); // Allow POST too
+            Route::match(['get', 'post'], '/data', [MonitorController::class, 'getData'])->name('data');
             
             // Support OPTIONS for CORS preflight requests
-            Route::options('/', function () {
-                return response('', 200);
+            Route::match(['options'], '/', function () {
+                return response('', 200)
+                    ->header('Access-Control-Allow-Origin', '*')
+                    ->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+                    ->header('Access-Control-Allow-Headers', 'Content-Type, Accept, X-Requested-With, Authorization');
             });
-            Route::options('/data', function () {
-                return response('', 200);
+            Route::match(['options'], '/data', function () {
+                return response('', 200)
+                    ->header('Access-Control-Allow-Origin', '*')
+                    ->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+                    ->header('Access-Control-Allow-Headers', 'Content-Type, Accept, X-Requested-With, Authorization');
             });
-            Route::options('/{any}', function () {
-                return response('', 200);
+            Route::match(['options'], '/{any}', function () {
+                return response('', 200)
+                    ->header('Access-Control-Allow-Origin', '*')
+                    ->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+                    ->header('Access-Control-Allow-Headers', 'Content-Type, Accept, X-Requested-With, Authorization');
             })->where('any', '.*');
         });
     

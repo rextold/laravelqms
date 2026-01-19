@@ -140,21 +140,21 @@
             font-weight: 500;
         }
         
-        /* Call Notification Banner - Upper Center with Bell Icon */
+        /* Call Notification Banner - Upper Center with Bell Icon (Hidden by Default) */
         .call-banner {
             position: fixed;
             left: 50%;
             top: 100px;
-            transform: translateX(-50%);
-            opacity: 1;
+            transform: translateX(-50%) translateY(-20px);
+            opacity: 0;
             pointer-events: none;
             z-index: 1000;
             transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
         
-        .call-banner.empty {
-            opacity: 0;
-            transform: translateX(-50%) translateY(-20px);
+        .call-banner.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
         }
         
         .call-banner-card {
@@ -823,7 +823,7 @@
             orgCode: '{{ $companyCode }}',
             refreshInterval: 1500, // 1.5 seconds
             reconnectDelay: 3000,
-            callBannerDuration: 5000,
+            callBannerDuration: 8000, // Show banner for 8 seconds
         };
         
         const STATE = {
@@ -934,11 +934,19 @@
             
             try {
                 const response = await fetch(`/${CONFIG.orgCode}/monitor/data`, {
+                    method: 'GET',
                     cache: 'no-store',
-                    headers: { 'Accept': 'application/json' }
+                    credentials: 'same-origin',
+                    headers: { 
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
                 });
                 
-                if (!response.ok) throw new Error('Network response was not ok');
+                if (!response.ok) {
+                    console.error(`Monitor data fetch failed: ${response.status} ${response.statusText}`);
+                    throw new Error(`Network response was not ok: ${response.status}`);
+                }
                 
                 const data = await response.json();
                 
@@ -952,6 +960,17 @@
                 console.error('Refresh failed:', error);
                 STATE.isConnected = false;
                 updateConnectionStatus(false);
+                
+                // If 403 error, try to reload the page to get new CSRF token
+                if (error.message.includes('403')) {
+                    console.log('403 Forbidden - Will retry in 5 seconds...');
+                    setTimeout(() => {
+                        if (!STATE.isConnected) {
+                            console.log('Still disconnected, attempting page reload...');
+                            location.reload();
+                        }
+                    }, 5000);
+                }
             } finally {
                 STATE.isFetching = false;
             }
@@ -982,9 +1001,6 @@
         function updateCountersDisplay(counters, waitingQueues) {
             updateServingCounters(counters);
             updateWaitingQueues(waitingQueues);
-            
-            // Always keep call banner updated with current state
-            updateCallBannerDisplay(counters);
         }
         
         function updateServingCounters(counters) {
@@ -1123,32 +1139,26 @@
             const number = document.getElementById('callBannerNumber');
             const counter = document.getElementById('callBannerCounter');
             
-            if (!banner) return;
+            if (!banner || !alertItem) return;
             
-            if (alertItem) {
-                // Update banner content with new call
-                number.textContent = alertItem.queue?.queue_number || '—';
-                counter.textContent = `Please proceed to Counter ${alertItem.counter?.counter_number || ''}`;
-                banner.classList.remove('empty');
-            } else {
-                // No active calls - show empty state
-                number.textContent = '—';
-                counter.textContent = 'No active calls';
-                banner.classList.add('empty');
-            }
+            // Update banner content with new call
+            number.textContent = alertItem.queue?.queue_number || '—';
+            counter.textContent = `Please proceed to Counter ${alertItem.counter?.counter_number || ''}`;
+            
+            // Show the banner
+            banner.classList.add('show');
+            
+            // Hide banner after duration
+            if (callBannerTimer) clearTimeout(callBannerTimer);
+            callBannerTimer = setTimeout(() => {
+                banner.classList.remove('show');
+            }, CONFIG.callBannerDuration);
         }
         
-        // Call this to update banner even when no new alerts
-        function updateCallBannerDisplay(counters) {
-            const servingCounters = counters.filter(item => item.queue);
-            
-            if (servingCounters.length > 0) {
-                // Show the most recent call
-                const latestCall = servingCounters[0];
-                showCallBanner(latestCall);
-            } else {
-                // No active calls
-                showCallBanner(null);
+        function hideCallBanner() {
+            const banner = document.getElementById('callBanner');
+            if (banner) {
+                banner.classList.remove('show');
             }
         }
         
