@@ -6,9 +6,14 @@
 <div class="container mx-auto px-4 py-8">
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold">Manage Organizations</h1>
-        <a href="{{ route('superadmin.organizations.create') }}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-            <i class="fas fa-plus mr-2"></i>Add Organization
-        </a>
+        <div class="flex items-center gap-3">
+            <button id="resetAllBtn" onclick="confirmResetAll()" class="bg-yellow-50 text-yellow-700 px-4 py-2 rounded hover:bg-yellow-100">
+                <i class="fas fa-redo mr-2"></i>Reset All Sequences
+            </button>
+            <a href="{{ route('superadmin.organizations.create') }}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                <i class="fas fa-plus mr-2"></i>Add Organization
+            </a>
+        </div>
     </div>
 
     @if(session('success'))
@@ -229,6 +234,37 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+function confirmResetAll() {
+    if (!confirm('Reset queue sequences for ALL organizations? This cannot be undone. Proceed?')) return;
+
+    const btn = document.getElementById('resetAllBtn');
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Resetting...';
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+    fetch('{{ route('superadmin.organizations.reset-sequences') }}', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': csrfToken,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({})
+    }).then(async (res) => {
+        if (!res.ok) throw new Error('Server error ' + res.status);
+        const data = await res.json();
+        alert(data.message || 'Reset completed');
+        window.location.reload();
+    }).catch(err => {
+        console.error('Reset all sequences failed', err);
+        alert('Failed to reset sequences: ' + err.message);
+    }).finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = orig;
+    });
+}
 </script>
 @endpush
 @endsection

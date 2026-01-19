@@ -91,6 +91,7 @@ Route::prefix('superadmin')
             Route::get('/', [OrganizationController::class, 'index'])->name('index');
             Route::get('/create', [OrganizationController::class, 'create'])->name('create');
             Route::post('/', [OrganizationController::class, 'store'])->name('store');
+            Route::post('/reset-sequences', [OrganizationController::class, 'resetAllSequences'])->name('reset-sequences');
             Route::get('/{organization}/edit', [OrganizationController::class, 'edit'])->name('edit');
             Route::put('/{organization}', [OrganizationController::class, 'update'])->name('update');
             Route::delete('/{organization}', [OrganizationController::class, 'destroy'])->name('destroy');

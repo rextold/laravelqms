@@ -139,4 +139,54 @@ class OrganizationController extends Controller
         return redirect()->route('superadmin.organizations.index')
             ->with('success', 'Organization deleted successfully.');
     }
+
+    /**
+     * Reset sequences for all organizations (superadmin)
+     */
+    public function resetAllSequences()
+    {
+        // Only SuperAdmin can access this
+        if (!auth()->user()->isSuperAdmin()) {
+            abort(403);
+        }
+
+        $organizations = Organization::with('setting')->get();
+        $userId = auth()->id();
+        $today = now()->toDateString();
+
+        foreach ($organizations as $org) {
+            $settings = $org->setting;
+            if (!$settings) {
+                $settings = OrganizationSetting::create([
+                    'organization_id' => $org->id,
+                    'code' => $org->organization_code,
+                    'queue_number_digits' => 4,
+                    'is_active' => true,
+                ]);
+            }
+
+            $previous = $settings->last_queue_sequence ?? 0;
+            $settings->last_queue_sequence = 0;
+            $settings->last_queue_sequence_date = $today;
+            $settings->save();
+
+            try {
+                \App\Models\QueueResetLog::create([
+                    'organization_id' => $org->id,
+                    'user_id' => $userId,
+                    'previous_sequence' => $previous,
+                    'reset_to' => 0,
+                    'note' => 'Bulk reset via superadmin',
+                ]);
+            } catch (\Throwable $e) {
+                \Log::warning('Failed to create queue reset audit log (bulk)', ['error' => $e->getMessage(), 'organization_id' => $org->id]);
+            }
+        }
+
+        if (request()->expectsJson()) {
+            return response()->json(['success' => true, 'message' => 'All organization queue sequences have been reset.']);
+        }
+
+        return redirect()->route('superadmin.organizations.index')->with('success', 'All organization queue sequences have been reset.');
+    }
 }
