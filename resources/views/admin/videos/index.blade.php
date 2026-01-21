@@ -1130,7 +1130,6 @@ function confirmDeleteVideo() {
     fetch(window.currentDeleteUrl, {
         method: 'DELETE',
         headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
-        credentials: 'same-origin',
     })
     .then(r => r.json())
     .then(d => {
