@@ -430,6 +430,7 @@
             justify-content: space-between;
             gap: 1rem;
             transition: all 0.3s ease;
+            flex-wrap: wrap;
         }
         
         .serving-row:last-child {
@@ -463,7 +464,7 @@
         }
         
         .serving-queue-number {
-            font-size: 2.5rem;
+            font-size: 3rem;
             font-weight: 900;
             color: var(--accent);
             text-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
@@ -505,7 +506,7 @@
         .waiting-queue-number {
             color: #fbbf24;
             font-weight: 700;
-            font-size: 0.85rem;
+            font-size: 1.5rem;
             white-space: nowrap;
         }
         
