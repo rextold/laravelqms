@@ -188,7 +188,7 @@ class VideoController extends Controller
         return response()->json(['success' => true, 'is_active' => $video->is_active]);
     }
 
-    public function destroy($videoId)
+    public function destroy($video)
     {
         try {
             $orgCode = request()->route('organization_code');
@@ -208,17 +208,17 @@ class VideoController extends Controller
             }
             
             $videoModel->delete();
-    
+
             // Return JSON for AJAX requests
             if (request()->expectsJson()) {
                 return response()->json(['success' => true, 'message' => 'Video deleted successfully.']);
             }
-    
+
             return redirect()->route('admin.videos.index', ['organization_code' => request()->route('organization_code')])
                 ->with('success', 'Video deleted successfully.');
         } catch (\Exception $e) {
             \Log::error('Video deletion error', [
-                'video_id' => $videoId,
+                'video_id' => $video,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -229,7 +229,7 @@ class VideoController extends Controller
             
             return redirect()->back()->with('error', 'Failed to delete video: ' . $e->getMessage());
         }
-    }
+    }    
     
     public function updateControl(Request $request)
     {
@@ -275,7 +275,7 @@ class VideoController extends Controller
             'video' => $video
         ]);
     }
-
+    
     public function update(Request $request, $videoId)
     {
         $validated = $request->validate([
