@@ -48,7 +48,7 @@
            ======================================== */
         .monitor-container {
             display: grid;
-            grid-template-columns: 1fr 420px;
+            grid-template-columns: 65fr 35fr;
             grid-template-rows: 80px 1fr 70px;
             height: 100vh;
             gap: 10px;
