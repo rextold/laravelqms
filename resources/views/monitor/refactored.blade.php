@@ -455,7 +455,7 @@
         }
         
         .serving-counter-label {
-            font-size: 0.95rem;
+            font-size: 1.5rem;
             font-weight: 700;
             color: #10b981;
             white-space: nowrap;
@@ -463,7 +463,7 @@
         }
         
         .serving-queue-number {
-            font-size: 1.4rem;
+            font-size: 2.5rem;
             font-weight: 900;
             color: var(--accent);
             text-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
@@ -479,7 +479,7 @@
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            font-size: 0.9rem;
+            font-size: 1.5rem;
         }
         
         .waiting-row:last-child {
