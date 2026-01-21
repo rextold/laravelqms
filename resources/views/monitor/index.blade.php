@@ -987,7 +987,7 @@
                 const src = video.youtube_embed_url + autoplayParams;
                 const existing = player.querySelector('iframe');
                 if (!existing || existing.src !== src) {
-                    player.innerHTML = `<iframe src="${src}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen style="position: absolute; top: 0; left: 0; width: 50%; height: 100%; border:0;"></iframe>`;
+                    player.innerHTML = `<iframe src="${src}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border:0;"></iframe>`;
                 }
             } else if (video.file_path) {
                 const existingVideo = player.querySelector('video');
