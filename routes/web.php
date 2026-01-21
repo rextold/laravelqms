@@ -210,10 +210,10 @@ Route::prefix('{organization_code}')->group(function () {
                 Route::prefix('videos')->name('videos.')->group(function () {
                     Route::get('/', [VideoController::class, 'index'])->name('index');
                     Route::post('/', [VideoController::class, 'store'])->name('store');
-                    Route::put('/{videoId}', [VideoController::class, 'update'])->name('update');
-                    Route::delete('/{videoId}', [VideoController::class, 'destroy'])->name('destroy');
+                    Route::put('/{video}', [VideoController::class, 'update'])->name('update');
+                    Route::delete('/{video}', [VideoController::class, 'destroy'])->name('destroy');
                     Route::post('/order', [VideoController::class, 'updateOrder'])->name('order');
-                    Route::post('/{videoId}/toggle', [VideoController::class, 'toggleActive'])->name('toggle');
+                    Route::post('/{video}/toggle', [VideoController::class, 'toggleActive'])->name('toggle');
                     Route::post('/control', [VideoController::class, 'updateControl'])->name('control');
                     Route::post('/upload-bell', [VideoController::class, 'uploadBellSound'])->name('upload-bell');
                     Route::post('/reset-bell', [VideoController::class, 'resetBellSound'])->name('reset-bell');

@@ -337,7 +337,7 @@
                                             title="Edit">
                                         <i class="fas fa-pen text-xs"></i>
                                     </button>
-                                    <button type="button" onclick="toggleActive({{ $video->id }}, '{{ URL::route('admin.videos.toggle', ['organization_code' => request()->route('organization_code'), 'videoId' => $video->id]) }}')" 
+                                    <button type="button" onclick="toggleActive({{ $video->id }}, '{{ URL::route('admin.videos.toggle', ['organization_code' => request()->route('organization_code'), 'video' => $video->id]) }}')" 
                                             class="w-8 h-8 bg-gray-600/50 hover:bg-yellow-500 text-gray-400 hover:text-white rounded-lg flex items-center justify-center transition" 
                                             title="Toggle Active">
                                         <i class="fas fa-toggle-{{ $video->is_active ? 'on text-green-400' : 'off' }} text-xs"></i>
