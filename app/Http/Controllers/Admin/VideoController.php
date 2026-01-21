@@ -174,10 +174,17 @@ class VideoController extends Controller
         return response()->json(['success' => true]);
     }
 
-    public function toggleActive(Video $video)
+    public function toggleActive($videoId)
     {
+        $orgCode = request()->route('organization_code');
+        $organization = \App\Models\Organization::where('organization_code', $orgCode)->firstOrFail();
+        
+        $video = Video::where('id', (int)$videoId)
+            ->where('organization_id', $organization->id)
+            ->firstOrFail();
+        
         $video->update(['is_active' => !$video->is_active]);
-
+    
         return response()->json(['success' => true, 'is_active' => $video->is_active]);
     }
 
@@ -188,7 +195,7 @@ class VideoController extends Controller
             $organization = \App\Models\Organization::where('organization_code', $orgCode)->firstOrFail();
             
             // Always treat as ID since we use whereNumber() in route
-            $videoModel = Video::where('id', (int)$video)
+            $videoModel = Video::where('id', (int)$videoId)
                 ->where('organization_id', $organization->id)
                 ->firstOrFail();
             
@@ -222,7 +229,9 @@ class VideoController extends Controller
             
             return redirect()->back()->with('error', 'Failed to delete video: ' . $e->getMessage());
         }
-    }    public function updateControl(Request $request)
+    }    
+    
+    public function updateControl(Request $request)
     {
         $validated = $request->validate([
             'is_playing' => 'required|boolean',
@@ -266,21 +275,29 @@ class VideoController extends Controller
             'video' => $video
         ]);
     }
-
-    public function update(Request $request, Video $video)
+    
+    public function update(Request $request, $videoId)
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
         ]);
-
+    
+        $orgCode = request()->route('organization_code');
+        $organization = \App\Models\Organization::where('organization_code', $orgCode)->firstOrFail();
+        
+        $video = Video::where('id', (int)$videoId)
+            ->where('organization_id', $organization->id)
+            ->firstOrFail();
+        
         $video->update(['title' => $validated['title']]);
-
+    
         if ($request->expectsJson()) {
             return response()->json(['success' => true, 'video' => $video]);
         }
-
+    
         return redirect()->back()->with('success', 'Video updated successfully.');
     }
+
     public function uploadBellSound(Request $request)
     {
         try {
