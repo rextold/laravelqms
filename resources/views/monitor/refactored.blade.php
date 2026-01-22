@@ -60,15 +60,15 @@
            ======================================== */
         .monitor-header {
             grid-column: 1 / -1;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            border-radius: 16px;
-            padding: 0 2.5rem;
+            grid-row: 1;
             display: flex;
-            align-items: center;
             justify-content: space-between;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
-            position: relative;
-            overflow: hidden;
+            align-items: center;
+            padding: 0 1.5rem;
+            background: var(--bg-header);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px var(--shadow);
+            z-index: 1;
         }
         
         .monitor-header::before {
@@ -105,6 +105,7 @@
             align-items: center;
             justify-content: center;
             margin: 0 2rem;
+            height: 100%;
         }
         
         .header-logo {
