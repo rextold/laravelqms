@@ -1399,9 +1399,6 @@
         function announceQueueCall(queueNumber, counterNumber, alertType = 'call') {
             const audio = document.getElementById('notificationSound');
             
-            // Mute the video when the announcement starts
-            muteVideo();
-            
             if (!audio) {
                 console.error('❌ Notification sound element not found');
                 speakAnnouncement(queueNumber, counterNumber, alertType);
@@ -1476,8 +1473,6 @@
         function speakAnnouncement(queueNumber, counterNumber, alertType = 'call') {
             if (!('speechSynthesis' in window)) {
                 console.warn('Text-to-speech not supported in this browser');
-                // Unmute video if speech is not supported
-                unmuteVideo();
                 return;
             }
             
@@ -1533,9 +1528,6 @@
                 
                 utterance.onend = () => {
                     console.log('✅ Voice announcement completed');
-                    // Unmute video after announcement
-                    unmuteVideo();
-                    
                     // Remove speaking class after speech ends
                     const banner = document.getElementById('callBanner');
                     if (banner) {
@@ -1547,8 +1539,6 @@
                 
                 utterance.onerror = (event) => {
                     console.error('❌ Voice announcement error:', event.error);
-                    // Unmute video on error
-                    unmuteVideo();
                 };
                 
                 // Speak the announcement
@@ -1556,15 +1546,22 @@
                 
             } catch (error) {
                 console.error('Error in voice announcement:', error);
-                // Unmute video on error
-                unmuteVideo();
             }
         }
         
         // Format queue number for better speech pronunciation
         function formatQueueNumberForSpeech(queueNumber) {
-            // Example: "007" -> "zero zero seven"
-            return String(queueNumber).split('').join(' ');
+            // Convert number to individual digits for clearer pronunciation
+            // Example: "0123" becomes "zero one two three"
+            const digitWords = {
+                '0': 'zero', '1': 'one', '2': 'two', '3': 'three', '4': 'four',
+                '5': 'five', '6': 'six', '7': 'seven', '8': 'eight', '9': 'nine'
+            };
+            
+            const digits = String(queueNumber).split('');
+            const spokenDigits = digits.map(d => digitWords[d] || d).join(' ');
+            
+            return spokenDigits;
         }
         
         // Load voices when available (some browsers load voices asynchronously)
@@ -1728,47 +1725,7 @@
         }
         
         // ========================================
-        // VIDEO PLAYER CONTROLS
-        // ========================================
-        
-        function muteVideo() {
-            const videoElement = document.querySelector('.video-player video');
-            const youtubePlayer = window.youtubePlayer;
-
-            if (videoElement) {
-                videoElement.muted = true;
-                console.log('🔇 Video muted');
-            }
-
-            if (youtubePlayer && typeof youtubePlayer.mute === 'function') {
-                youtubePlayer.mute();
-                console.log('🔇 YouTube video muted');
-            }
-        }
-
-        function unmuteVideo() {
-            const videoElement = document.querySelector('.video-player video');
-            const youtubePlayer = window.youtubePlayer;
-            const isSoundEnabled = STATE.videoControl ? STATE.videoControl.is_sound_enabled : true;
-
-            if (!isSoundEnabled) {
-                console.log('🔈 Video sound is disabled in settings, keeping it muted.');
-                return;
-            }
-
-            if (videoElement) {
-                videoElement.muted = false;
-                console.log('🔊 Video unmuted');
-            }
-
-            if (youtubePlayer && typeof youtubePlayer.unMute === 'function') {
-                youtubePlayer.unMute();
-                console.log('🔊 YouTube video unmuted');
-            }
-        }
-        
-        // ========================================
-        // VIDEO & MARQUEE DISPLAY
+        // VIDEO PLAYER UPDATE
         // ========================================
         
         function updateVideoPlayer(videoControl) {
