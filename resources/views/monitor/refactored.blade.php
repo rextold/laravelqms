@@ -49,7 +49,7 @@
         .monitor-container {
             display: grid;
             grid-template-columns: 65fr 35fr;
-            grid-template-rows: 80px 1fr 70px;
+            grid-template-rows: 80px 1fr auto 70px;
             height: 100vh;
             gap: 10px;
             padding: 10px;
@@ -348,6 +348,12 @@
             overflow: hidden;
         }
         
+        .waiting-queue-section {
+            grid-column: 1 / -1;
+            grid-row: 3;
+            overflow: hidden;
+        }
+        
         .queue-card {
             background: var(--bg-card);
             border-radius: 16px;
@@ -533,7 +539,7 @@
            ======================================== */
         .marquee-section {
             grid-column: 1 / -1;
-            grid-row: 3;
+            grid-row: 4;
             background: linear-gradient(90deg, var(--primary), var(--secondary));
             border-radius: 12px;
             overflow: hidden;
@@ -811,7 +817,9 @@
                     </div>
                 </div>
             </div>
-            
+        </div>
+        
+        <div class="waiting-queue-section">
             <!-- Waiting Queue -->
             <div class="queue-card" style="flex: 1;">
                 <div class="queue-card-header">
