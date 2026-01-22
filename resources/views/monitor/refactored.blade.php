@@ -49,7 +49,7 @@
         .monitor-container {
             display: grid;
             grid-template-columns: 65fr 35fr;
-            grid-template-rows: 80px 1fr auto 70px;
+            grid-template-rows: 80px 1fr auto;
             height: 100vh;
             gap: 10px;
             padding: 10px;
@@ -97,6 +97,16 @@
             z-index: 1;
         }
         
+        .header-marquee {
+            flex-grow: 1;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 2rem;
+        }
+        
         .header-logo {
             width: 48px;
             height: 48px;
@@ -138,6 +148,24 @@
             text-transform: uppercase;
             letter-spacing: 0.1em;
             font-weight: 500;
+        }
+        
+        .marquee-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            position: absolute;
+        }
+        
+        .marquee-text {
+            color: white;
+            font-size: 1.4rem;
+            font-weight: 700;
+            white-space: nowrap;
+            padding-left: 100%;
+            animation: marquee 35s linear infinite;
         }
         
         /* Call Notification Banner - Upper Center with Bell Icon (Hidden by Default) */
@@ -364,6 +392,17 @@
             overflow: hidden;
         }
         
+        @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-100%); }
+        }
+        
+        .marquee-icon {
+            display: inline-block;
+            margin: 0 1.5rem;
+            font-size: 1.2rem;
+        }
+        
         .queue-card-header {
             padding: 1rem 1.25rem;
             background: var(--bg-surface);
@@ -534,47 +573,7 @@
             font-weight: 600;
         }
         
-        /* ========================================
-           MARQUEE SECTION
-           ======================================== */
-        .marquee-section {
-            grid-column: 1 / -1;
-            grid-row: 4;
-            background: linear-gradient(90deg, var(--primary), var(--secondary));
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 8px 32px var(--shadow);
-            display: flex;
-            align-items: center;
-        }
-        
-        .marquee-content {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            overflow: hidden;
-        }
-        
-        .marquee-text {
-            color: white;
-            font-size: 1.4rem;
-            font-weight: 700;
-            white-space: nowrap;
-            padding-left: 100%;
-            animation: marquee 35s linear infinite;
-        }
-        
-        @keyframes marquee {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-100%); }
-        }
-        
-        .marquee-icon {
-            display: inline-block;
-            margin: 0 1.5rem;
-            font-size: 1.2rem;
-        }
+
         
         /* ========================================
            RESPONSIVE DESIGN
@@ -756,6 +755,12 @@
                     <p>Queue Management System</p>
                 </div>
             </div>
+
+            <div class="header-marquee" id="marqueeSection" style="display: none;">
+                <div class="marquee-content">
+                    <span class="marquee-text" id="marqueeText"></span>
+                </div>
+            </div>
             
             <!-- Call Banner (centered in header) -->
             <div id="callBanner" class="call-banner">
@@ -837,12 +842,7 @@
             </div>
         </div>
         
-        <!-- Marquee -->
-        <div class="marquee-section" id="marqueeSection" style="display: none;">
-            <div class="marquee-content">
-                <span class="marquee-text" id="marqueeText"></span>
-            </div>
-        </div>
+
     </div>
     
     <!-- Notification Sound - Uses uploaded custom bell or default -->
