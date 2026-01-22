@@ -452,11 +452,6 @@
             flex: 1;
             overflow-y: auto;
             min-height: 0;
-            padding: 0.5rem;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: repeat(2, auto);
-            gap: 0.5rem;
         }
         
         .queue-card-content::-webkit-scrollbar {
@@ -508,51 +503,61 @@
         
         .serving-counter-label {
             font-size: 1.5rem;
-            font-weight: 600;
-            color: rgba(255, 255, 255, 0.8);
+            font-weight: 700;
+            color: #10b981;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
         
         .serving-queue-number {
             font-size: 3rem;
             font-weight: 900;
-            color: #10b981;
-            letter-spacing: 0.02em;
-        }
-        
-        /* Waiting Queue Items - Compact Format */
-        .waiting-row {
-            font-size: 1.5rem;
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
-            background: rgba(245, 158, 11, 0.05);
-            border: 1px solid rgba(245, 158, 11, 0.1);
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-        
-        .waiting-counter-label {
-            font-size: 0.8rem;
-            font-weight: 700;
-            color: #f59e0b;
-            text-transform: uppercase;
+            color: var(--accent);
+            text-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+            white-space: nowrap;
+            flex-shrink: 0;
             letter-spacing: 0.05em;
         }
         
-        .waiting-queue-numbers {
+        /* Waiting Queue Rows - Compact Format */
+        .waiting-row {
+            padding: 0.75rem 1.25rem;
+            border-bottom: 1px solid rgba(245, 158, 11, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
             font-size: 1.5rem;
+        }
+        
+        .waiting-row:last-child {
+            border-bottom: none;
+        }
+        
+        .waiting-counter-label {
             font-weight: 700;
-            color: rgba(255, 255, 255, 0.9);
-            word-break: break-all;
-            line-height: 1.4;
+            color: #f59e0b;
+            white-space: nowrap;
+            min-width: fit-content;
+            flex-shrink: 0;
+        }
+        
+        .waiting-queue-numbers {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .waiting-queue-number {
+            color: #fbbf24;
+            font-weight: 700;
+            font-size: 1.5rem;
+            white-space: nowrap;
         }
         
         /* Empty States */
         .empty-state {
-            grid-column: 1 / -1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
             padding: 3rem 1.5rem;
             text-align: center;
             color: rgba(255, 255, 255, 0.3);
