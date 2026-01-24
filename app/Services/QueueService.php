@@ -15,8 +15,8 @@ class QueueService
 {
     private function shouldBroadcast(): bool
     {
-        $broadcastDriver = (string) config('broadcasting.default', '');
-        $queueDriver = (string) config('queue.default', '');
+        $broadcastDriver = (string) config('broadcasting.default');
+        $queueDriver = (string) config('queue.default');
 
         if ($broadcastDriver === '' || $broadcastDriver === 'null') {
             return false;
@@ -46,24 +46,9 @@ class QueueService
                 /** @var OrganizationSetting|null $settings */
                 $settings = $settingsQuery->lockForUpdate()->first();
 
-                if (!$settings && $organizationId) {
-                    $organization = \App\Models\Organization::find($organizationId);
-                    if ($organization) {
-                        $settings = OrganizationSetting::create([
-                            'organization_id' => $organization->id,
-                            'code' => $organization->organization_code,
-                            'primary_color' => '#3b82f6',
-                            'secondary_color' => '#8b5cf6',
-                            'accent_color' => '#10b981',
-                            'text_color' => '#ffffff',
-                            'queue_number_digits' => 4,
-                            'is_active' => true,
-                        ]);
-                    }
-                }
-
                 if (!$settings) {
-                    throw new \Exception("Could not find or create settings for organization ID: " . ($organizationId ?? 'null'));
+                    // Fallback to singleton getter (uses session), but prefer explicit org
+                    $settings = OrganizationSetting::getSettings();
                 }
 
                 $digits = (int) ($settings->queue_number_digits ?? 4);
@@ -87,17 +72,6 @@ class QueueService
                     }
                 }
 
-                // DAILY RESET: Check if last queue was created on a different day
-                $today = now()->startOfDay();
-                $lastQueue = Queue::where('organization_id', $organizationId)
-                    ->orderByDesc('id')
-                    ->first(['created_at']);
-                
-                if ($lastQueue && $lastQueue->created_at->startOfDay()->lt($today)) {
-                    // Last queue was created before today, reset sequence to 0
-                    $lastSeq = 0;
-                }
-
                 $nextSeq = $lastSeq + 1;
                 $settings->last_queue_sequence = $nextSeq;
                 $settings->save();
@@ -117,27 +91,8 @@ class QueueService
 
             // Attempt to get settings without locking
             $settings = OrganizationSetting::where('organization_id', $organizationId)->first();
-            if (!$settings && $organizationId) {
-                $organization = \App\Models\Organization::find($organizationId);
-                if ($organization) {
-                    $settings = OrganizationSetting::firstOrCreate(
-                        ['organization_id' => $organization->id],
-                        [
-                            'code' => $organization->organization_code,
-                            'primary_color' => '#3b82f6',
-                            'secondary_color' => '#8b5cf6',
-                            'accent_color' => '#10b981',
-                            'text_color' => '#ffffff',
-                            'queue_number_digits' => 4,
-                            'is_active' => true,
-                        ]
-                    );
-                }
-            }
-
             if (!$settings) {
-                // If we still don't have settings, we cannot proceed.
-                throw new \Exception("Fallback failed: Could not find or create settings for organization ID: " . ($organizationId ?? 'null'));
+                $settings = OrganizationSetting::getSettings();
             }
 
             $digits = (int) ($settings->queue_number_digits ?? 4);
@@ -152,17 +107,6 @@ class QueueService
                 $parts = explode('-', $latestQueueNumber);
                 $suffix = end($parts);
                 $lastSeq = (int) $suffix;
-            }
-
-            // DAILY RESET: Check if last queue was created on a different day
-            $today = now()->startOfDay();
-            $lastQueue = Queue::where('organization_id', $organizationId)
-                ->orderByDesc('id')
-                ->first(['created_at']);
-            
-            if ($lastQueue && $lastQueue->created_at->startOfDay()->lt($today)) {
-                // Last queue was created before today, reset sequence to 0
-                $lastSeq = 0;
             }
 
             $nextSeq = $lastSeq + 1;
