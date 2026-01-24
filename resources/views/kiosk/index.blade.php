@@ -106,10 +106,15 @@
             max-width: 1400px;
             margin: 0 auto;
         }
-
+        .counter-grid::after {
+            content: '';
+            display: table;
+            clear: both;
+        }
         .counter-btn {
-            width: 100%;
-            margin: 0.375rem 0;
+            float: left;
+            width: calc(50% - 0.75rem); /* 2 columns on mobile */
+            margin: 0.375rem;
             min-height: 96px;
             padding: 0.75rem;
             text-align: center;
@@ -120,6 +125,7 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
             word-wrap: break-word;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -148,8 +154,9 @@
             font-weight: 700;
             color: #0f172a;
             margin-bottom: 0.25rem;
-            overflow-wrap: break-word;
-            word-break: break-word;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
             max-width: 100%;
             padding: 0 4px;
         }
@@ -158,9 +165,12 @@
             color: rgba(15, 23, 42, 0.55);
             margin-bottom: 0.5rem;
             line-height: 1.2;
-            overflow-wrap: break-word;
-            word-break: break-word;
-            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            max-height: 2.4em;
             padding: 0 4px;
         }
         .counter-btn .counter-status {
@@ -169,6 +179,7 @@
             justify-content: center;
             gap: 4px;
             margin-top: 4px;
+            overflow: hidden;
             max-width: 100%;
         }
         .counter-btn .status-indicator {
@@ -182,16 +193,22 @@
             font-size: 0.7rem;
             font-weight: 600;
             color: #374151;
-            overflow-wrap: break-word;
-            word-break: break-word;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
             max-width: calc(100% - 12px);
         }
         
-        /* Responsive adjustments for card sizing */
+        /* Responsive breakpoints for float layout */
         @media (min-width: 640px) {
             .counter-btn {
-                min-height: 100px;
-                padding: 1rem;
+                width: calc(33.333% - 0.75rem); /* 3 columns on tablet */
+            }
+        }
+        @media (min-width: 1024px) {
+            .counter-btn {
+                width: calc(25% - 0.75rem); /* 4 columns on desktop */
+                min-height: 112px;
             }
             .counter-btn .counter-number {
                 width: 52px;
@@ -203,12 +220,13 @@
             }
             .counter-btn .counter-desc {
                 font-size: 0.8rem;
+                max-height: 2.6em;
             }
         }
-        @media (min-width: 1024px) {
+        @media (min-width: 1280px) {
             .counter-btn {
-                min-height: 112px;
-                padding: 1.25rem;
+                width: calc(20% - 0.75rem); /* 5 columns on large desktop */
+                min-height: 120px;
             }
             .counter-btn .counter-number {
                 width: 56px;
@@ -220,23 +238,7 @@
             }
             .counter-btn .counter-desc {
                 font-size: 0.85rem;
-            }
-        }
-        @media (min-width: 1280px) {
-            .counter-btn {
-                min-height: 120px;
-                padding: 1.5rem;
-            }
-            .counter-btn .counter-number {
-                width: 60px;
-                height: 60px;
-                font-size: 1.35rem;
-            }
-            .counter-btn .counter-title {
-                font-size: 1.1rem;
-            }
-            .counter-btn .counter-desc {
-                font-size: 0.9rem;
+                max-height: 2.8em;
             }
         }
         
