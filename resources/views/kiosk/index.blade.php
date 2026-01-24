@@ -103,7 +103,7 @@
         .counter-grid {
             padding: 0.75rem;
             overflow: hidden; /* Clearfix */
-            max-width: 1400px;
+            max-width: 100%;
             margin: 0 auto;
         }
         .counter-grid::after {
@@ -130,6 +130,7 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            flex-grow: 1;
         }
         .counter-btn:hover {
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
@@ -205,9 +206,14 @@
                 width: calc(33.333% - 0.75rem); /* 3 columns on tablet */
             }
         }
+        @media (min-width: 768px) {
+            .counter-btn {
+                width: calc(25% - 0.75rem); /* 4 columns on larger tablet */
+            }
+        }
         @media (min-width: 1024px) {
             .counter-btn {
-                width: calc(25% - 0.75rem); /* 4 columns on desktop */
+                width: calc(20% - 0.75rem); /* 5 columns on desktop */
                 min-height: 112px;
             }
             .counter-btn .counter-number {
@@ -225,7 +231,7 @@
         }
         @media (min-width: 1280px) {
             .counter-btn {
-                width: calc(50% - 0.75rem); /* 2 columns on large desktop */
+                width: calc(16.666% - 0.75rem); /* 6 columns on large desktop */
                 min-height: 120px;
             }
             .counter-btn .counter-number {
@@ -239,6 +245,24 @@
             .counter-btn .counter-desc {
                 font-size: 0.85rem;
                 max-height: 2.8em;
+            }
+        }
+        @media (min-width: 1536px) {
+            .counter-btn {
+                width: calc(14.285% - 0.75rem); /* 7 columns on extra large desktop */
+                min-height: 128px;
+            }
+            .counter-btn .counter-number {
+                width: 60px;
+                height: 60px;
+                font-size: 1.35rem;
+            }
+            .counter-btn .counter-title {
+                font-size: 1.1rem;
+            }
+            .counter-btn .counter-desc {
+                font-size: 0.9rem;
+                max-height: 3em;
             }
         }
         
@@ -256,13 +280,37 @@
     </button>
     
     <!-- Main Container -->
-    <div class="main-container relative z-10 p-2 sm:p-4">
+    <div class="main-container vertical-center relative z-10 p-2 sm:p-4">
+        
+        <!-- Step Indicator -->
+        <div class="step-header spacing-sm">
+            <div class="flex justify-center">
+                <div class="glass-card center padding-sm rounded-2xl shadow-xl step-indicators-container">
+                    <div class="flex items-center space-x-2 sm:space-x-4">
+                        <div id="step1Indicator" class="step-indicator step-active px-3 sm:px-6 py-2 sm:py-3 rounded-xl flex flex-col items-center min-w-[60px] sm:min-w-[80px]">
+                            <div class="step-indicator-number font-bold mb-0.5 sm:mb-1">1</div>
+                            <div class="step-indicator-text font-semibold">Select</div>
+                        </div>
+                        <i class="fas fa-arrow-right text-gray-400 text-lg sm:text-2xl"></i>
+                        <div id="step2Indicator" class="step-indicator bg-gray-100 text-gray-600 px-3 sm:px-6 py-2 sm:py-3 rounded-xl flex flex-col items-center min-w-[60px] sm:min-w-[80px]">
+                            <div class="step-indicator-number font-bold mb-0.5 sm:mb-1">2</div>
+                            <div class="step-indicator-text font-semibold">Process</div>
+                        </div>
+                        <i class="fas fa-arrow-right text-gray-400 text-lg sm:text-2xl"></i>
+                        <div id="step3Indicator" class="step-indicator bg-gray-100 text-gray-600 px-3 sm:px-6 py-2 sm:py-3 rounded-xl flex flex-col items-center min-w-[60px] sm:min-w-[80px]">
+                            <div class="step-indicator-number font-bold mb-0.5 sm:mb-1">3</div>
+                            <div class="step-indicator-text font-semibold">Done</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
         
         <!-- Step 1: Counter Selection -->
         <div id="step1" class="step-content animate-fadeInUp">
-            <div class="flex flex-col">
+            <div class="flex flex-col h-full">
                 <!-- Header -->
-                <div class="text-center flex-shrink-0 mb-4">
+                <div class="text-center flex-shrink-0 mb-2">
                     <div class="flex items-center justify-center gap-2 sm:gap-3 mb-2">
                          @if(isset($settings) && $settings->logo_url)    
                             <img src="{{ $settings->logo_url }}" alt="Organization Logo" class="h-10 w-auto rounded-lg shadow-sm">
@@ -292,15 +340,15 @@
                 </div>
                 
                 <!-- Counters Grid -->
-                <div class="flex flex-col mt-4">
-                    <div class="glass-card rounded-2xl sm:rounded-3xl shadow-2xl padding-md flex flex-col">
+                <div class="flex-1 min-h-0 flex flex-col">
+                    <div class="glass-card rounded-2xl sm:rounded-3xl shadow-2xl padding-md flex-1 min-h-0 flex flex-col">
                         <h2 class="section-title font-bold spacing-sm text-center flex-shrink-0" style="color: var(--primary-color);">
                             <i class="fas fa-desktop mr-2"></i>
                             <span class="hidden sm:inline">Available Service Counters</span>
                             <span class="sm:hidden">Select Counter</span>
                         </h2>
                         
-                        <div class="overflow-y-auto custom-scrollbar pr-1">
+                        <div class="counter-grid-height overflow-y-auto custom-scrollbar pr-1 flex-1 min-h-0">
                             <div id="countersGrid" class="counter-grid">
                                 <!-- Counters will be injected here -->
                             </div>
@@ -323,7 +371,7 @@
         
         <!-- Step 2: Generating -->
         <div id="step2" class="hidden step-content animate-fadeInUp">
-            <div>
+            <div class="flex items-center justify-center h-full">
                 <div class="glass-card center rounded-2xl sm:rounded-3xl shadow-2xl padding-md text-center max-w-2xl w-full">
                     <div class="spacing-md">
                         <div class="inline-block p-6 sm:p-8 rounded-full spacing-sm shadow-2xl" style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));">
@@ -344,7 +392,7 @@
         
         <!-- Step 3: Queue Display -->
         <div id="step3" class="hidden step-content animate-fadeInUp">
-            <div class="overflow-y-auto custom-scrollbar">
+            <div class="flex items-center justify-center h-full overflow-y-auto custom-scrollbar">
                 <div class="glass-card center rounded-xl sm:rounded-2xl shadow-lg padding-sm sm:padding-md text-center max-w-lg sm:max-w-xl w-full" id="queueContent">
                     <div class="spacing-sm sm:spacing-md">
                         <div class="inline-block p-2.5 sm:p-3 rounded-full spacing-sm shadow-lg" style="background: linear-gradient(135deg, var(--accent-color), var(--primary-color));">
