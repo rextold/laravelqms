@@ -46,9 +46,24 @@ class QueueService
                 /** @var OrganizationSetting|null $settings */
                 $settings = $settingsQuery->lockForUpdate()->first();
 
+                if (!$settings && $organizationId) {
+                    $organization = \App\Models\Organization::find($organizationId);
+                    if ($organization) {
+                        $settings = OrganizationSetting::create([
+                            'organization_id' => $organization->id,
+                            'code' => $organization->organization_code,
+                            'primary_color' => '#3b82f6',
+                            'secondary_color' => '#8b5cf6',
+                            'accent_color' => '#10b981',
+                            'text_color' => '#ffffff',
+                            'queue_number_digits' => 4,
+                            'is_active' => true,
+                        ]);
+                    }
+                }
+
                 if (!$settings) {
-                    // Fallback to singleton getter (uses session), but prefer explicit org
-                    $settings = OrganizationSetting::getSettings();
+                    throw new \Exception("Could not find or create settings for organization ID: " . ($organizationId ?? 'null'));
                 }
 
                 $digits = (int) ($settings->queue_number_digits ?? 4);
@@ -91,8 +106,27 @@ class QueueService
 
             // Attempt to get settings without locking
             $settings = OrganizationSetting::where('organization_id', $organizationId)->first();
+            if (!$settings && $organizationId) {
+                $organization = \App\Models\Organization::find($organizationId);
+                if ($organization) {
+                    $settings = OrganizationSetting::firstOrCreate(
+                        ['organization_id' => $organization->id],
+                        [
+                            'code' => $organization->organization_code,
+                            'primary_color' => '#3b82f6',
+                            'secondary_color' => '#8b5cf6',
+                            'accent_color' => '#10b981',
+                            'text_color' => '#ffffff',
+                            'queue_number_digits' => 4,
+                            'is_active' => true,
+                        ]
+                    );
+                }
+            }
+
             if (!$settings) {
-                $settings = OrganizationSetting::getSettings();
+                // If we still don't have settings, we cannot proceed.
+                throw new \Exception("Fallback failed: Could not find or create settings for organization ID: " . ($organizationId ?? 'null'));
             }
 
             $digits = (int) ($settings->queue_number_digits ?? 4);
