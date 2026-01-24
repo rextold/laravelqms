@@ -10,7 +10,6 @@ use App\Events\QueueCalled;
 use App\Events\QueueTransferred;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Database\QueryException;
 
 class QueueService
 {
@@ -57,23 +56,29 @@ class QueueService
                     $digits = 4;
                 }
 
-                // Always calculate the next sequence from the latest queue
+                // Check if we need to reset sequence for new day
                 $today = Carbon::today();
                 $latestQueue = Queue::where('organization_id', $organizationId)
                     ->orderByDesc('id')
                     ->first();
 
-                $lastSeq = 0;
-                if ($latestQueue && $latestQueue->created_at->isSameDay($today)) {
-                    // Parse the queue number to get the sequence
-                    $parts = explode('-', $latestQueue->queue_number);
-                    $suffix = end($parts);
-                    $lastSeq = (int) $suffix;
+                $lastSeq = (int) ($settings->last_queue_sequence ?? 0);
+                if ($latestQueue && !$latestQueue->created_at->isSameDay($today)) {
+                    // Reset sequence if last queue was not created today
+                    $lastSeq = 0;
+                } elseif ($organizationId && $lastSeq <= 0) {
+                    // Initialize sequence from existing queues if needed
+                    $latestQueueNumber = (string) ($latestQueue->queue_number ?? '');
+                    if ($latestQueueNumber !== '') {
+                        $parts = explode('-', $latestQueueNumber);
+                        $suffix = end($parts);
+                        $lastSeq = max($lastSeq, (int) $suffix);
+                    }
                 }
-                // If no latest queue or from previous day, lastSeq = 0
 
                 $nextSeq = $lastSeq + 1;
-                $queueNumber = str_pad((string) $nextSeq, $digits, '0', STR_PAD_LEFT);
+                $settings->last_queue_sequence = $nextSeq;
+                $settings->save();
 
                 $queueNumber = str_pad((string) $nextSeq, $digits, '0', STR_PAD_LEFT);
 
@@ -97,18 +102,24 @@ class QueueService
             $digits = (int) ($settings->queue_number_digits ?? 4);
             if ($digits <= 0) $digits = 4;
 
-            // Always calculate the next sequence from the latest queue
+            // Check if we need to reset sequence for new day
             $today = Carbon::today();
             $latestQueue = Queue::where('organization_id', $organizationId)
                 ->orderByDesc('id')
                 ->first();
 
+            // Determine last sequence by inspecting the most recent queue number
             $lastSeq = 0;
-            if ($latestQueue && $latestQueue->created_at->isSameDay($today)) {
-                // Parse the queue number to get the sequence
-                $parts = explode('-', $latestQueue->queue_number);
-                $suffix = end($parts);
-                $lastSeq = (int) $suffix;
+            if ($latestQueue) {
+                if (!$latestQueue->created_at->isSameDay($today)) {
+                    // Reset sequence if last queue was not created today
+                    $lastSeq = 0;
+                } else {
+                    $latestQueueNumber = (string) $latestQueue->queue_number;
+                    $parts = explode('-', $latestQueueNumber);
+                    $suffix = end($parts);
+                    $lastSeq = (int) $suffix;
+                }
             }
 
             $nextSeq = $lastSeq + 1;
