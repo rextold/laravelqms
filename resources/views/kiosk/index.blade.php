@@ -225,7 +225,7 @@
         }
         @media (min-width: 1280px) {
             .counter-btn {
-                width: calc(20% - 0.75rem); /* 5 columns on large desktop */
+                width: calc(50% - 0.75rem); /* 2 columns on large desktop */
                 min-height: 120px;
             }
             .counter-btn .counter-number {
