@@ -103,43 +103,11 @@
         .counter-grid {
             padding: 0.75rem;
             overflow: hidden; /* Clearfix */
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
         }
         .counter-grid::after {
             content: '';
             display: table;
             clear: both;
-        }
-        
-        /* Desktop-specific optimizations */
-        @media (min-width: 1024px) {
-            .counter-grid {
-                padding: 1rem;
-                justify-content: flex-start;
-            }
-            .counter-grid-height {
-                max-height: 70vh;
-            }
-        }
-        
-        @media (min-width: 1280px) {
-            .counter-grid {
-                padding: 1.25rem;
-            }
-            .counter-grid-height {
-                max-height: 75vh;
-            }
-        }
-        
-        @media (min-width: 1536px) {
-            .counter-grid {
-                padding: 1.5rem;
-            }
-            .counter-grid-height {
-                max-height: 80vh;
-            }
         }
         .counter-btn {
             float: left;
@@ -154,18 +122,6 @@
             border-radius: 0.75rem;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
-            flex-shrink: 0;
-        }
-        
-        /* Better flexbox support for desktop */
-        @media (min-width: 640px) {
-            .counter-btn {
-                float: none;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                align-items: center;
-            }
         }
         .counter-btn:hover {
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
@@ -202,73 +158,16 @@
         @media (min-width: 640px) {
             .counter-btn {
                 width: calc(33.333% - 0.75rem); /* 3 columns on tablet */
-                min-height: 110px;
-                padding: 1rem;
-            }
-            .counter-btn .counter-number {
-                width: 56px;
-                height: 56px;
-                font-size: 1.25rem;
-            }
-            .counter-btn .counter-title {
-                font-size: 1.1rem;
-            }
-            .counter-btn .counter-desc {
-                font-size: 0.85rem;
             }
         }
         @media (min-width: 1024px) {
             .counter-btn {
                 width: calc(25% - 0.75rem); /* 4 columns on desktop */
-                min-height: 120px;
-                padding: 1.25rem;
-            }
-            .counter-btn .counter-number {
-                width: 64px;
-                height: 64px;
-                font-size: 1.5rem;
-            }
-            .counter-btn .counter-title {
-                font-size: 1.2rem;
-            }
-            .counter-btn .counter-desc {
-                font-size: 0.9rem;
             }
         }
         @media (min-width: 1280px) {
             .counter-btn {
                 width: calc(20% - 0.75rem); /* 5 columns on large desktop */
-                min-height: 130px;
-                padding: 1.5rem;
-            }
-            .counter-btn .counter-number {
-                width: 72px;
-                height: 72px;
-                font-size: 1.75rem;
-            }
-            .counter-btn .counter-title {
-                font-size: 1.3rem;
-            }
-            .counter-btn .counter-desc {
-                font-size: 0.95rem;
-            }
-        }
-        @media (min-width: 1536px) {
-            .counter-btn {
-                width: calc(16.666% - 0.75rem); /* 6 columns on extra large desktop */
-                min-height: 140px;
-                padding: 1.75rem;
-            }
-            .counter-btn .counter-number {
-                width: 80px;
-                height: 80px;
-                font-size: 2rem;
-            }
-            .counter-btn .counter-title {
-                font-size: 1.4rem;
-            }
-            .counter-btn .counter-desc {
-                font-size: 1rem;
             }
         }
         
