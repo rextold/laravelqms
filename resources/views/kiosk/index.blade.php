@@ -103,7 +103,7 @@
         .counter-grid {
             padding: 0.75rem;
             overflow: hidden; /* Clearfix */
-            max-width: 100%;
+            max-width: 1400px;
             margin: 0 auto;
         }
         .counter-grid::after {
@@ -130,7 +130,6 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            flex-grow: 1;
         }
         .counter-btn:hover {
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
@@ -206,14 +205,9 @@
                 width: calc(33.333% - 0.75rem); /* 3 columns on tablet */
             }
         }
-        @media (min-width: 768px) {
-            .counter-btn {
-                width: calc(25% - 0.75rem); /* 4 columns on larger tablet */
-            }
-        }
         @media (min-width: 1024px) {
             .counter-btn {
-                width: calc(20% - 0.75rem); /* 5 columns on desktop */
+                width: calc(25% - 0.75rem); /* 4 columns on desktop */
                 min-height: 112px;
             }
             .counter-btn .counter-number {
@@ -231,7 +225,7 @@
         }
         @media (min-width: 1280px) {
             .counter-btn {
-                width: calc(16.666% - 0.75rem); /* 6 columns on large desktop */
+                width: calc(50% - 0.75rem); /* 2 columns on large desktop */
                 min-height: 120px;
             }
             .counter-btn .counter-number {
@@ -245,24 +239,6 @@
             .counter-btn .counter-desc {
                 font-size: 0.85rem;
                 max-height: 2.8em;
-            }
-        }
-        @media (min-width: 1536px) {
-            .counter-btn {
-                width: calc(14.285% - 0.75rem); /* 7 columns on extra large desktop */
-                min-height: 128px;
-            }
-            .counter-btn .counter-number {
-                width: 60px;
-                height: 60px;
-                font-size: 1.35rem;
-            }
-            .counter-btn .counter-title {
-                font-size: 1.1rem;
-            }
-            .counter-btn .counter-desc {
-                font-size: 0.9rem;
-                max-height: 3em;
             }
         }
         
