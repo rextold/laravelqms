@@ -103,6 +103,8 @@
         .counter-grid {
             padding: 0.75rem;
             overflow: hidden; /* Clearfix */
+            max-width: 1400px;
+            margin: 0 auto;
         }
         .counter-grid::after {
             content: '';
@@ -122,6 +124,12 @@
             border-radius: 0.75rem;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
+            word-wrap: break-word;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
         .counter-btn:hover {
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
@@ -146,12 +154,49 @@
             font-weight: 700;
             color: #0f172a;
             margin-bottom: 0.25rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 100%;
+            padding: 0 4px;
         }
         .counter-btn .counter-desc {
             font-size: 0.75rem;
             color: rgba(15, 23, 42, 0.55);
             margin-bottom: 0.5rem;
             line-height: 1.2;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            max-height: 2.4em;
+            padding: 0 4px;
+        }
+        .counter-btn .counter-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            margin-top: 4px;
+            overflow: hidden;
+            max-width: 100%;
+        }
+        .counter-btn .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #10b981;
+            flex-shrink: 0;
+        }
+        .counter-btn .status-text {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #374151;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: calc(100% - 12px);
         }
         
         /* Responsive breakpoints for float layout */
@@ -163,11 +208,37 @@
         @media (min-width: 1024px) {
             .counter-btn {
                 width: calc(25% - 0.75rem); /* 4 columns on desktop */
+                min-height: 112px;
+            }
+            .counter-btn .counter-number {
+                width: 52px;
+                height: 52px;
+                font-size: 1.15rem;
+            }
+            .counter-btn .counter-title {
+                font-size: 1rem;
+            }
+            .counter-btn .counter-desc {
+                font-size: 0.8rem;
+                max-height: 2.6em;
             }
         }
         @media (min-width: 1280px) {
             .counter-btn {
                 width: calc(20% - 0.75rem); /* 5 columns on large desktop */
+                min-height: 120px;
+            }
+            .counter-btn .counter-number {
+                width: 56px;
+                height: 56px;
+                font-size: 1.25rem;
+            }
+            .counter-btn .counter-title {
+                font-size: 1.05rem;
+            }
+            .counter-btn .counter-desc {
+                font-size: 0.85rem;
+                max-height: 2.8em;
             }
         }
         
