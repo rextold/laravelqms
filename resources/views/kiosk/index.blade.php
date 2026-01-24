@@ -92,40 +92,85 @@
         .touch-target { min-height: 44px; min-width: 44px; }
 
         @media (max-width: 768px) {
-            .counter-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
             .queue-number { font-size: 4rem; }
         }
 
         @media (min-width: 769px) {
-            .counter-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; }
             .queue-number { font-size: 6rem; }
         }
 
-        /* Small centered counter cards */
-        .counter-grid-cols { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); justify-items: center; padding: 0.75rem; }
-        .counter-btn { width: 160px; min-height: 96px; padding: 0.75rem; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; justify-self: center; align-self: center; }
-
-        /* Horizontal responsive counter row with touch scroll and snap */
+        /* Float-based responsive counter grid */
         .counter-grid {
-            display: flex;
-            flex-direction: row;
-            flex-wrap: nowrap;
-            gap: 1rem;
             padding: 0.75rem;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            scroll-snap-type: x mandatory;
+            overflow: hidden; /* Clearfix */
         }
-        .counter-grid::-webkit-scrollbar { height: 8px; }
-        .counter-grid::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 4px; }
-        .counter-grid .counter-btn { flex: 0 0 auto; scroll-snap-align: center; }
-        @media (min-width: 900px) {
-            .counter-grid { gap: 1.25rem; padding: 1rem 1.5rem; }
-            .counter-grid .counter-btn { min-width: 160px; }
+        .counter-grid::after {
+            content: '';
+            display: table;
+            clear: both;
         }
-        .counter-btn .counter-number { width:48px; height:48px; font-size:1.05rem; }
-        .counter-btn .counter-title { font-size:0.98rem; font-weight:700; color: #0f172a; }
-        .counter-btn .counter-desc { font-size:0.75rem; color: rgba(15,23,42,0.55); }
+        .counter-btn {
+            float: left;
+            width: calc(50% - 0.75rem); /* 2 columns on mobile */
+            margin: 0.375rem;
+            min-height: 96px;
+            padding: 0.75rem;
+            text-align: center;
+            box-sizing: border-box;
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        .counter-btn:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+        }
+        .counter-btn .counter-number {
+            width: 48px;
+            height: 48px;
+            font-size: 1.05rem;
+            margin: 0 auto 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.5rem;
+            background: linear-gradient(135deg, var(--accent-color), var(--primary-color));
+            color: white;
+            font-weight: 900;
+        }
+        .counter-btn .counter-title {
+            font-size: 0.98rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 0.25rem;
+        }
+        .counter-btn .counter-desc {
+            font-size: 0.75rem;
+            color: rgba(15, 23, 42, 0.55);
+            margin-bottom: 0.5rem;
+            line-height: 1.2;
+        }
+        
+        /* Responsive breakpoints for float layout */
+        @media (min-width: 640px) {
+            .counter-btn {
+                width: calc(33.333% - 0.75rem); /* 3 columns on tablet */
+            }
+        }
+        @media (min-width: 1024px) {
+            .counter-btn {
+                width: calc(25% - 0.75rem); /* 4 columns on desktop */
+            }
+        }
+        @media (min-width: 1280px) {
+            .counter-btn {
+                width: calc(20% - 0.75rem); /* 5 columns on large desktop */
+            }
+        }
+        
         /* vertical center helper */
         .vertical-center { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1rem; min-height: calc(100dvh - 2rem); }
     </style>
@@ -454,25 +499,15 @@
         counters.forEach(counter => {
             const button = document.createElement('button');
             button.type = 'button';
-            button.className = 'counter-btn relative bg-white border-2 border-gray-200 rounded-xl sm:rounded-2xl text-center shadow-lg hover:shadow-xl transition-all';
+            button.className = 'counter-btn';
             button.onclick = () => selectCounter(counter.id, counter.counter_number, counter.display_name);
             button.innerHTML = `
-                <div class="flex flex-col items-center justify-center space-y-2 p-1">
-                    <div class="counter-number w-10 h-10 sm:w-11 sm:h-11 rounded-lg flex items-center justify-center text-base sm:text-lg font-black text-white shadow-lg" style="background: linear-gradient(135deg, var(--accent-color), var(--primary-color));">
-                        ${counter.counter_number}
-                    </div>
-                    <div class="counter-title text-sm sm:text-base font-bold">${counter.display_name}</div>
-                    <div class="counter-desc hidden sm:block text-xs text-gray-500 line-clamp-1">${counter.short_description || 'Ready to serve'}</div>
-                    <div class="mt-1 relative inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700">
-                        <span class="absolute -top-1 -right-1 w-2 h-2 sm:w-2 sm:h-2 bg-green-500 rounded-full animate-ping-small"></span>
-                        <span class="relative hidden sm:inline">Available</span>
-                        <span class="relative sm:hidden">●</span>
-                    </div>
-                </div>
-                <div class="mt-1 text-blue-600 font-semibold text-xs sm:text-sm">
-                    <i class="fas fa-hand-pointer mr-1"></i>
-                    <span class="hidden sm:inline">Tap to select</span>
-                    <span class="sm:hidden">Tap here</span>
+                <div class="counter-number">${counter.counter_number}</div>
+                <div class="counter-title">${counter.display_name}</div>
+                <div class="counter-desc">${counter.short_description || 'Ready to serve'}</div>
+                <div class="counter-status">
+                    <span class="status-indicator"></span>
+                    <span class="status-text">Available</span>
                 </div>
             `;
             countersGrid.appendChild(button);
