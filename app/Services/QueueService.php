@@ -56,19 +56,19 @@ class QueueService
                     $digits = 4;
                 }
 
-                // Get the last queue entry for the organization
-                $lastQueue = Queue::where('organization_id', $organizationId)
-                    ->orderByDesc('id')
-                    ->first();
+                // Initialize sequence from existing queues if needed
+                $lastSeq = (int) ($settings->last_queue_sequence ?? 0);
+                if ($organizationId && $lastSeq <= 0) {
+                    // Fast path: queue numbers are now digits-only; use most recent row and parse suffix.
+                    // This avoids full-table scans on large queue history.
+                    $latestQueueNumber = (string) (Queue::where('organization_id', $organizationId)
+                        ->orderByDesc('id')
+                        ->value('queue_number') ?? '');
 
-                $lastSeq = 0;
-                if ($lastQueue) {
-                    // Check if the last queue was created today
-                    if (Carbon::parse($lastQueue->created_at)->isToday()) {
-                        $latestQueueNumber = (string) $lastQueue->queue_number;
+                    if ($latestQueueNumber !== '') {
                         $parts = explode('-', $latestQueueNumber);
                         $suffix = end($parts);
-                        $lastSeq = (int) $suffix;
+                        $lastSeq = max($lastSeq, (int) $suffix);
                     }
                 }
 
@@ -99,19 +99,14 @@ class QueueService
             if ($digits <= 0) $digits = 4;
 
             // Determine last sequence by inspecting the most recent queue number
-            $lastQueue = Queue::where('organization_id', $organizationId)
+            $latestQueueNumber = (string) (Queue::where('organization_id', $organizationId)
                 ->orderByDesc('id')
-                ->first();
-
+                ->value('queue_number') ?? '');
             $lastSeq = 0;
-            if ($lastQueue) {
-                // Check if the last queue was created today
-                if (Carbon::parse($lastQueue->created_at)->isToday()) {
-                    $latestQueueNumber = (string) $lastQueue->queue_number;
-                    $parts = explode('-', $latestQueueNumber);
-                    $suffix = end($parts);
-                    $lastSeq = (int) $suffix;
-                }
+            if ($latestQueueNumber !== '') {
+                $parts = explode('-', $latestQueueNumber);
+                $suffix = end($parts);
+                $lastSeq = (int) $suffix;
             }
 
             $nextSeq = $lastSeq + 1;
