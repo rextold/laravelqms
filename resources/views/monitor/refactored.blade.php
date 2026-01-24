@@ -1407,17 +1407,8 @@
             
             console.log('🚨 Announcement triggered:', { queue: queueNumber, counter: counterNumber, type: alertType });
             
-            // Prevent overlapping announcements
-            if (window._announcementInProgress) {
-                console.log('⚠️ Announcement already in progress, skipping');
-                return;
-            }
-            
-            window._announcementInProgress = true;
-            
             // Stop any currently playing audio to prevent interruption errors
-            // But only if it's been playing for a while (not just started)
-            if (!audio.paused && audio.currentTime > 0.1) {
+            if (!audio.paused) {
                 audio.pause();
                 audio.currentTime = 0;
                 console.log('🔇 Stopped previous audio playback.');
@@ -1451,10 +1442,6 @@
                             setTimeout(() => {
                                 console.log('🎙️ Starting voice announcement...');
                                 speakAnnouncement(queueNumber, counterNumber, alertType);
-                                // Reset announcement flag after speech completes
-                                setTimeout(() => {
-                                    window._announcementInProgress = false;
-                                }, 3000);
                             }, 1500);
                         })
                         .catch(error => {
@@ -1469,10 +1456,6 @@
                             
                             setTimeout(() => {
                                 speakAnnouncement(queueNumber, counterNumber, alertType);
-                                // Reset announcement flag after speech completes
-                                setTimeout(() => {
-                                    window._announcementInProgress = false;
-                                }, 3000);
                             }, 500);
                         });
                 }
@@ -1482,10 +1465,6 @@
                 
                 setTimeout(() => {
                     speakAnnouncement(queueNumber, counterNumber, alertType);
-                    // Reset announcement flag after speech completes
-                    setTimeout(() => {
-                        window._announcementInProgress = false;
-                    }, 3000);
                 }, 500);
             }
         }
@@ -1743,44 +1722,6 @@
                     message.remove();
                 }
             }, 5000);
-        }
-        
-        // Unlock audio by playing a silent sound on user interaction
-        function unlockAudio() {
-            const audio = document.getElementById('notificationSound');
-            if (!audio) {
-                console.error('❌ Notification sound element not found for unlocking');
-                return;
-            }
-            
-            try {
-                // Create a silent audio context to unlock autoplay
-                audio.muted = true;
-                audio.volume = 0;
-                audio.currentTime = 0;
-                
-                const playPromise = audio.play();
-                
-                if (playPromise !== undefined) {
-                    playPromise
-                        .then(() => {
-                            console.log('✅ Audio unlocked successfully');
-                            // Immediately pause and reset
-                            audio.pause();
-                            audio.currentTime = 0;
-                            audio.muted = false;
-                            audio.volume = 1.0;
-                            updateAudioStatus('ready');
-                        })
-                        .catch(error => {
-                            console.error('❌ Failed to unlock audio:', error);
-                            updateAudioStatus('blocked');
-                        });
-                }
-            } catch (error) {
-                console.error('❌ Error unlocking audio:', error);
-                updateAudioStatus('error');
-            }
         }
         
         // ========================================
