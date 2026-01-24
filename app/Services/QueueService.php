@@ -56,19 +56,15 @@ class QueueService
                     $digits = 4;
                 }
 
-                // Check if we need to reset sequence for new day
-                $today = Carbon::today();
-                $latestQueue = Queue::where('organization_id', $organizationId)
-                    ->orderByDesc('id')
-                    ->first();
-
+                // Initialize sequence from existing queues if needed
                 $lastSeq = (int) ($settings->last_queue_sequence ?? 0);
-                if ($latestQueue && !$latestQueue->created_at->isSameDay($today)) {
-                    // Reset sequence if last queue was not created today
-                    $lastSeq = 0;
-                } elseif ($organizationId && $lastSeq <= 0) {
-                    // Initialize sequence from existing queues if needed
-                    $latestQueueNumber = (string) ($latestQueue->queue_number ?? '');
+                if ($organizationId && $lastSeq <= 0) {
+                    // Fast path: queue numbers are now digits-only; use most recent row and parse suffix.
+                    // This avoids full-table scans on large queue history.
+                    $latestQueueNumber = (string) (Queue::where('organization_id', $organizationId)
+                        ->orderByDesc('id')
+                        ->value('queue_number') ?? '');
+
                     if ($latestQueueNumber !== '') {
                         $parts = explode('-', $latestQueueNumber);
                         $suffix = end($parts);
@@ -102,24 +98,15 @@ class QueueService
             $digits = (int) ($settings->queue_number_digits ?? 4);
             if ($digits <= 0) $digits = 4;
 
-            // Check if we need to reset sequence for new day
-            $today = Carbon::today();
-            $latestQueue = Queue::where('organization_id', $organizationId)
-                ->orderByDesc('id')
-                ->first();
-
             // Determine last sequence by inspecting the most recent queue number
+            $latestQueueNumber = (string) (Queue::where('organization_id', $organizationId)
+                ->orderByDesc('id')
+                ->value('queue_number') ?? '');
             $lastSeq = 0;
-            if ($latestQueue) {
-                if (!$latestQueue->created_at->isSameDay($today)) {
-                    // Reset sequence if last queue was not created today
-                    $lastSeq = 0;
-                } else {
-                    $latestQueueNumber = (string) $latestQueue->queue_number;
-                    $parts = explode('-', $latestQueueNumber);
-                    $suffix = end($parts);
-                    $lastSeq = (int) $suffix;
-                }
+            if ($latestQueueNumber !== '') {
+                $parts = explode('-', $latestQueueNumber);
+                $suffix = end($parts);
+                $lastSeq = (int) $suffix;
             }
 
             $nextSeq = $lastSeq + 1;
