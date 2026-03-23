@@ -159,6 +159,7 @@ class MonitorController extends Controller
                 'marquee'        => null,
                 'waiting_queues' => [],
                 'videos'         => [],
+                'playlist'       => null,
             ], 200)  // 200 so the JS poll loop continues normally
                 ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
                 ->header('Pragma', 'no-cache')
@@ -260,12 +261,34 @@ class MonitorController extends Controller
                 ];
             });
 
+        // Include the admin's playlist queue (sequence_order) so the monitor
+        // cycles videos in the same order the admin has curated, not DB insertion order.
+        $playlist = \App\Models\PlaylistItem::with(['video:id,title,video_type,file_path,youtube_url,youtube_embed_url'])
+            ->where('organization_id', $organization->id)
+            ->orderBy('sequence_order')
+            ->get()
+            ->filter(fn($item) => $item->video && $item->video->is_active)
+            ->map(fn($item) => [
+                'id'                => $item->video->id,
+                'title'             => $item->video->title,
+                'video_type'        => $item->video->video_type,
+                'file_path'         => $item->video->file_path,
+                'youtube_url'       => $item->video->youtube_url,
+                'youtube_embed_url' => $item->video->youtube_embed_url,
+                'is_youtube'        => $item->video->isYoutube(),
+                'is_file'           => $item->video->isFile(),
+                'is_active'         => true,
+                'order'             => $item->sequence_order,
+            ])
+            ->values();
+
         return response()->json([
             'counters'       => $counterQueues,
             'video_control'  => $videoControl,
             'marquee'        => $marquee,
             'waiting_queues' => $waitingQueues,
             'videos'         => $videos,
+            'playlist'       => $playlist->isNotEmpty() ? $playlist : null,
         ])
             ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
             ->header('Pragma', 'no-cache')

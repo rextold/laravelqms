@@ -787,19 +787,30 @@ function togglePlay() {
 }
 
 function playNow(videoId) {
+    const id = parseInt(videoId, 10);  // capture before any async — immune to race condition
     isPlaying = true;
     updatePlayButton();
     // Optimistic display — get video_type from the library row data attribute
-    const libRow = document.querySelector(`[data-video-row][data-video-id="${parseInt(videoId, 10)}"]`);
+    const libRow = document.querySelector(`[data-video-row][data-video-id="${id}"]`);
     nowPlaying = {
-        id:         parseInt(videoId, 10),
+        id,
         title:      libRow?.dataset.videoTitle ?? '',
         video_type: libRow?.dataset.videoType  ?? 'file',
     };
     renderNowPlaying(nowPlaying);
 
-    apiPost('/admin/playlist/now-playing', { video_id: videoId })
-        .then(() => { pushControl(); syncState(); })
+    // setNowPlaying already writes current_video_id + is_playing:true to DB.
+    // Do NOT call pushControl() here — it would race with the syncState interval
+    // and corrupt current_video_id with a stale nowPlaying value.
+    apiPost('/admin/playlist/now-playing', { video_id: id })
+        .then(d => {
+            // Use server-confirmed data when available
+            if (d && d.video) {
+                nowPlaying = { id: d.video.id, title: d.video.title, video_type: d.video.video_type };
+                renderNowPlaying(nowPlaying);
+            }
+            syncState();
+        })
         .catch(() => {});
 }
 
@@ -814,45 +825,51 @@ function stopPlayback() {
     nowPlaying = null;
     updatePlayButton();
     renderNowPlaying(null);
-    // Use inline fetch to explicitly clear current_video_id
-    fetch(`/${ORGCODE}/admin/videos/control`, {
-        method: 'POST',
-        headers: jsonHeaders(),
-        body: JSON.stringify({
-            is_playing:       false,
-            volume:           parseInt($el('volumeSlider').value, 10),
-            bell_volume:      parseInt($el('bellVolumeSlider').value, 10),
-            current_video_id: null,
-        })
-    }).catch(() => {});
+    apiPost('/admin/videos/control', {
+        is_playing:       false,
+        volume:           parseInt($el('volumeSlider').value, 10),
+        bell_volume:      parseInt($el('bellVolumeSlider').value, 10),
+        current_video_id: null,
+    }).then(() => syncState()).catch(() => {});
 }
 
 function prevVideo() {
+    if (!currentList.length) return;
     const idx = currentList.findIndex(v => nowPlaying && v.video_id === nowPlaying.id);
-    if (idx > 0) {
+    if (idx === -1) {
+        // Playing from Library or unknown — jump to last in queue
+        playNow(currentList[currentList.length - 1].video_id);
+    } else if (idx > 0) {
         playNow(currentList[idx - 1].video_id);
-    } else if (repeatMode === 'all' && currentList.length > 0) {
+    } else if (repeatMode === 'all') {
         playNow(currentList[currentList.length - 1].video_id);
     }
 }
 
 function nextVideo() {
+    if (!currentList.length) return;
     const idx = currentList.findIndex(v => nowPlaying && v.video_id === nowPlaying.id);
-    if (idx !== -1 && idx < currentList.length - 1) {
+    if (idx === -1) {
+        // Playing from Library or unknown — jump to first in queue
+        playNow(currentList[0].video_id);
+    } else if (idx < currentList.length - 1) {
         playNow(currentList[idx + 1].video_id);
-    } else if (repeatMode === 'all' && currentList.length > 0) {
+    } else if (repeatMode === 'all') {
         playNow(currentList[0].video_id);
     }
 }
 
 // ── Push control state to server ─────────────────────────────────────────────
 function pushControl() {
-    apiPost('/admin/videos/control', {
-        is_playing:       isPlaying,
-        volume:           parseInt($el('volumeSlider').value, 10),
-        bell_volume:      parseInt($el('bellVolumeSlider').value, 10),
-        current_video_id: nowPlaying ? nowPlaying.id : null,
-    }).catch(() => {});
+    const body = {
+        is_playing:  isPlaying,
+        volume:      parseInt($el('volumeSlider').value, 10),
+        bell_volume: parseInt($el('bellVolumeSlider').value, 10),
+    };
+    // Only send current_video_id when we have one — never overwrite with null on
+    // volume-slider events (that would stall the monitor mid-playback).
+    if (nowPlaying) body.current_video_id = nowPlaying.id;
+    apiPost('/admin/videos/control', body).catch(() => {});
 }
 
 // ── Volume controls ───────────────────────────────────────────────────────────

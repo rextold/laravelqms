@@ -1029,6 +1029,7 @@
             // Playlist rotation state
             playlistRotationIndex: 0,  // current position in STATE.videos array
             lastServerVideoId: null,   // last current_video_id received from server (detect changes)
+            lastControlUpdatedAt: null, // updated_at of last processed video_control (detect re-play of same video)
             playlistTimer: null,       // setTimeout handle for YouTube rotation
             // YouTube IFrame API state
             ytPlayer: null,            // YT.Player instance — persistent, never destroyed
@@ -1367,9 +1368,13 @@
                 
                 const data = await response.json();
 
-                // Refresh the local video list so add/remove/change in admin is
-                // reflected instantly without a monitor page reload.
-                if (Array.isArray(data.videos)) {
+                // Update the video source for advancePlaylist():
+                // Prefer the admin's curated playlist queue (sequence_order) so
+                // auto-advance cycles in the same order the admin sees.
+                // Fall back to the full library when no playlist is configured.
+                if (Array.isArray(data.playlist) && data.playlist.length > 0) {
+                    STATE.videos = data.playlist;
+                } else if (Array.isArray(data.videos)) {
                     STATE.videos = data.videos;
                 }
                 // Keep STATE.videoControl current so advancePlaylist() can reference it.
@@ -2162,9 +2167,16 @@
             }
 
             // ── Snap rotation index when admin explicitly picks a video ──────────
-            const serverVideoId = videoControl.current_video_id ? parseInt(videoControl.current_video_id) : null;
-            if (serverVideoId !== STATE.lastServerVideoId) {
-                STATE.lastServerVideoId = serverVideoId;
+            const serverVideoId   = videoControl.current_video_id ? parseInt(videoControl.current_video_id) : null;
+            const controlUpdatedAt = videoControl.updated_at ?? null;
+            // Detect a new play command: either a different video OR admin re-played
+            // the same video (updated_at changed but video_id stayed the same).
+            const videoChanged   = serverVideoId !== STATE.lastServerVideoId;
+            const replayDetected = !videoChanged && serverVideoId &&
+                                   controlUpdatedAt && controlUpdatedAt !== STATE.lastControlUpdatedAt;
+            if (videoChanged || replayDetected) {
+                STATE.lastServerVideoId    = serverVideoId;
+                STATE.lastControlUpdatedAt = controlUpdatedAt;
                 if (serverVideoId) {
                     const idx = STATE.videos.findIndex(v => parseInt(v.id) === serverVideoId);
                     if (idx !== -1) STATE.playlistRotationIndex = idx;

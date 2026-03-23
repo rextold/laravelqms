@@ -267,8 +267,10 @@ class VideoController extends Controller
         $control = VideoControl::getCurrent($organization->id);
         $control->update([
             'current_video_id' => $video->id,
-            'is_playing' => true, // Auto-start when manually selected
+            'is_playing'       => true,
         ]);
+        // Always touch updated_at so the monitor can detect a re-play of the same video.
+        $control->touch();
 
         return response()->json([
             'success' => true, 
