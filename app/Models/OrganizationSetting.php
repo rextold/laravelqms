@@ -14,7 +14,6 @@ class OrganizationSetting extends Model
     protected $fillable = [
         'organization_id',
         'code',
-        'organization_name',
         'organization_logo',
         'company_logo',
         'logo_path',
@@ -34,11 +33,24 @@ class OrganizationSetting extends Model
         'queue_number_digits',
         'last_queue_sequence',
         'last_queue_date',
+        'notify_title',
+        'notify_message',
+        'serve_title',
+        'serve_message',
         'is_active',
     ];
 
+    protected $attributes = [
+        'primary_color'       => '#3b82f6',
+        'secondary_color'     => '#8b5cf6',
+        'accent_color'        => '#10b981',
+        'text_color'          => '#ffffff',
+        'queue_number_digits' => 4,
+    ];
+
     protected $casts = [
-        'last_queue_date' => 'date',
+        'last_queue_date'     => 'date',
+        'queue_number_digits' => 'integer',
     ];
 
     public function organization()

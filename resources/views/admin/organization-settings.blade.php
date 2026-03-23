@@ -27,6 +27,12 @@
         </div>
     @endif
 
+    @if(session('error'))
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded fixed top-4 right-4 z-50 max-w-md shadow-lg" id="sessionErrorMsg">
+            {{ session('error') }}
+        </div>
+    @endif
+
     @if($errors->any())
         <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded fixed top-4 right-4 z-50 max-w-md shadow-lg" id="sessionError">
             <ul class="list-disc list-inside">
@@ -41,7 +47,9 @@
     <div id="ajaxMessage"></div>
 
     <!-- Main Form -->
-    <form id="organizationSettingsForm" method="POST">
+    <form id="organizationSettingsForm" method="POST"
+          action="{{ route('admin.organization-settings.update', ['organization_code' => request()->route('organization_code')]) }}"
+          enctype="multipart/form-data">
         @csrf
         @method('PUT')
 
@@ -111,12 +119,13 @@
                         name="queue_number_digits" 
                         id="queueDigits"
                         class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
-                        <option value="3" {{ $settings->queue_number_digits == 3 ? 'selected' : '' }}>3 digits (001)</option>
-                        <option value="4" {{ $settings->queue_number_digits == 4 ? 'selected' : '' }}>4 digits (0001)</option>
-                        <option value="5" {{ $settings->queue_number_digits == 5 ? 'selected' : '' }}>5 digits (00001)</option>
-                        <option value="6" {{ $settings->queue_number_digits == 6 ? 'selected' : '' }}>6 digits (000001)</option>
+                        @php $curDigits = $settings->queue_number_digits ?? 4; @endphp
+                        <option value="3" {{ $curDigits == 3 ? 'selected' : '' }}>3 digits (001)</option>
+                        <option value="4" {{ $curDigits == 4 ? 'selected' : '' }}>4 digits (0001)</option>
+                        <option value="5" {{ $curDigits == 5 ? 'selected' : '' }}>5 digits (00001)</option>
+                        <option value="6" {{ $curDigits == 6 ? 'selected' : '' }}>6 digits (000001)</option>
                     </select>
-                    <p class="text-sm text-gray-500 mt-2">Example: YYYYMMDD-CC-<code id="queueExample" class="bg-gray-100 px-2 py-1 rounded">{{ str_repeat('0', $settings->queue_number_digits) }}</code></p>
+                    <p class="text-sm text-gray-500 mt-2">Example: YYYYMMDD-CC-<code id="queueExample" class="bg-gray-100 px-2 py-1 rounded">{{ str_repeat('0', $settings->queue_number_digits ?? 4) }}</code></p>
                 </div>
             </div>
         </div>
@@ -136,9 +145,21 @@
                     <label class="block text-gray-700 font-semibold mb-3">Current Logo</label>
                     <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50 text-center">
                         <img src="{{ asset('storage/' . $settings->organization_logo) }}" alt="Organization Logo" class="max-h-32 mx-auto mb-4 object-contain">
+                        <button type="button" onclick="confirmRemoveLogo()"
+                                class="inline-flex items-center px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg transition text-sm font-medium">
+                            <i class="fas fa-trash-alt mr-2"></i>Remove Logo
+                        </button>
                     </div>
                 </div>
                 @endif
+
+                <!-- Hidden Remove Logo form -->
+                <form id="removeLogoForm"
+                      action="{{ route('admin.organization-settings.remove-logo', ['organization_code' => request()->route('organization_code')]) }}"
+                      method="POST" class="hidden">
+                    @csrf
+                    @method('DELETE')
+                </form>
 
                 <div>
                     <label class="block text-gray-700 font-semibold mb-3">Upload Logo</label>
@@ -184,13 +205,13 @@
                     <label class="block text-gray-800 font-semibold">Primary</label>
                     <p class="text-xs text-gray-500 mt-1">Main buttons, headers</p>
 
-                    <input type="hidden" name="primary_color" id="primaryColorValue" value="{{ old('primary_color', $settings->primary_color) }}">
+                    <input type="hidden" name="primary_color" id="primaryColorValue" value="{{ old('primary_color', $settings->primary_color ?? '#3b82f6') }}">
 
                     <div class="mt-4 flex items-center gap-3">
-                        <input type="color" id="primaryColor" value="{{ old('primary_color', $settings->primary_color) }}" class="h-10 w-12 p-0 border border-gray-300 rounded-lg bg-white cursor-pointer">
-                        <input type="text" id="primaryColorHex" value="{{ old('primary_color', $settings->primary_color) }}" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-white font-mono text-sm" placeholder="#1D4ED8" inputmode="text" autocomplete="off">
+                        <input type="color" id="primaryColor" value="{{ old('primary_color', $settings->primary_color ?? '#3b82f6') }}" class="h-10 w-12 p-0 border border-gray-300 rounded-lg bg-white cursor-pointer">
+                        <input type="text" id="primaryColorHex" value="{{ old('primary_color', $settings->primary_color ?? '#3b82f6') }}" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-white font-mono text-sm" placeholder="#1D4ED8" inputmode="text" autocomplete="off">
                     </div>
-                    <div class="mt-3 h-10 rounded-lg border border-gray-300" id="primarySwatch" style="background: {{ old('primary_color', $settings->primary_color) }}"></div>
+                    <div class="mt-3 h-10 rounded-lg border border-gray-300" id="primarySwatch" style="background: {{ old('primary_color', $settings->primary_color ?? '#3b82f6') }}"></div>
                 </div>
 
                 <!-- Secondary Color -->
@@ -198,13 +219,13 @@
                     <label class="block text-gray-800 font-semibold">Secondary</label>
                     <p class="text-xs text-gray-500 mt-1">Gradients, accents</p>
 
-                    <input type="hidden" name="secondary_color" id="secondaryColorValue" value="{{ old('secondary_color', $settings->secondary_color) }}">
+                    <input type="hidden" name="secondary_color" id="secondaryColorValue" value="{{ old('secondary_color', $settings->secondary_color ?? '#8b5cf6') }}">
 
                     <div class="mt-4 flex items-center gap-3">
-                        <input type="color" id="secondaryColor" value="{{ old('secondary_color', $settings->secondary_color) }}" class="h-10 w-12 p-0 border border-gray-300 rounded-lg bg-white cursor-pointer">
-                        <input type="text" id="secondaryColorHex" value="{{ old('secondary_color', $settings->secondary_color) }}" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-white font-mono text-sm" placeholder="#7C3AED" inputmode="text" autocomplete="off">
+                        <input type="color" id="secondaryColor" value="{{ old('secondary_color', $settings->secondary_color ?? '#8b5cf6') }}" class="h-10 w-12 p-0 border border-gray-300 rounded-lg bg-white cursor-pointer">
+                        <input type="text" id="secondaryColorHex" value="{{ old('secondary_color', $settings->secondary_color ?? '#8b5cf6') }}" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-white font-mono text-sm" placeholder="#7C3AED" inputmode="text" autocomplete="off">
                     </div>
-                    <div class="mt-3 h-10 rounded-lg border border-gray-300" id="secondarySwatch" style="background: {{ old('secondary_color', $settings->secondary_color) }}"></div>
+                    <div class="mt-3 h-10 rounded-lg border border-gray-300" id="secondarySwatch" style="background: {{ old('secondary_color', $settings->secondary_color ?? '#8b5cf6') }}"></div>
                 </div>
 
                 <!-- Accent Color -->
@@ -212,13 +233,13 @@
                     <label class="block text-gray-800 font-semibold">Accent</label>
                     <p class="text-xs text-gray-500 mt-1">Highlights, badges</p>
 
-                    <input type="hidden" name="accent_color" id="accentColorValue" value="{{ old('accent_color', $settings->accent_color) }}">
+                    <input type="hidden" name="accent_color" id="accentColorValue" value="{{ old('accent_color', $settings->accent_color ?? '#10b981') }}">
 
                     <div class="mt-4 flex items-center gap-3">
-                        <input type="color" id="accentColor" value="{{ old('accent_color', $settings->accent_color) }}" class="h-10 w-12 p-0 border border-gray-300 rounded-lg bg-white cursor-pointer">
-                        <input type="text" id="accentColorHex" value="{{ old('accent_color', $settings->accent_color) }}" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-white font-mono text-sm" placeholder="#10B981" inputmode="text" autocomplete="off">
+                        <input type="color" id="accentColor" value="{{ old('accent_color', $settings->accent_color ?? '#10b981') }}" class="h-10 w-12 p-0 border border-gray-300 rounded-lg bg-white cursor-pointer">
+                        <input type="text" id="accentColorHex" value="{{ old('accent_color', $settings->accent_color ?? '#10b981') }}" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-white font-mono text-sm" placeholder="#10B981" inputmode="text" autocomplete="off">
                     </div>
-                    <div class="mt-3 h-10 rounded-lg border border-gray-300" id="accentSwatch" style="background: {{ old('accent_color', $settings->accent_color) }}"></div>
+                    <div class="mt-3 h-10 rounded-lg border border-gray-300" id="accentSwatch" style="background: {{ old('accent_color', $settings->accent_color ?? '#10b981') }}"></div>
                 </div>
 
                 <!-- Text Color -->
@@ -226,25 +247,31 @@
                     <label class="block text-gray-800 font-semibold">Text</label>
                     <p class="text-xs text-gray-500 mt-1">On colored backgrounds</p>
 
-                    <input type="hidden" name="text_color" id="textColorValue" value="{{ old('text_color', $settings->text_color) }}">
+                    <input type="hidden" name="text_color" id="textColorValue" value="{{ old('text_color', $settings->text_color ?? '#ffffff') }}">
 
                     <div class="mt-4 flex items-center gap-3">
-                        <input type="color" id="textColor" value="{{ old('text_color', $settings->text_color) }}" class="h-10 w-12 p-0 border border-gray-300 rounded-lg bg-white cursor-pointer">
-                        <input type="text" id="textColorHex" value="{{ old('text_color', $settings->text_color) }}" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-white font-mono text-sm" placeholder="#FFFFFF" inputmode="text" autocomplete="off">
+                        <input type="color" id="textColor" value="{{ old('text_color', $settings->text_color ?? '#ffffff') }}" class="h-10 w-12 p-0 border border-gray-300 rounded-lg bg-white cursor-pointer">
+                        <input type="text" id="textColorHex" value="{{ old('text_color', $settings->text_color ?? '#ffffff') }}" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-white font-mono text-sm" placeholder="#FFFFFF" inputmode="text" autocomplete="off">
                     </div>
-                    <div class="mt-3 h-10 rounded-lg border border-gray-300" id="textSwatch" style="background: {{ old('text_color', $settings->text_color) }}"></div>
+                    <div class="mt-3 h-10 rounded-lg border border-gray-300" id="textSwatch" style="background: {{ old('text_color', $settings->text_color ?? '#ffffff') }}"></div>
                 </div>
             </div>
 
             <!-- Live Preview -->
             <div class="border-2 border-gray-200 rounded-lg p-6 bg-gray-50">
                 <h3 class="text-lg font-bold text-gray-800 mb-4">Live Preview</h3>
-                <div id="brandPreview" class="rounded-lg p-8 shadow-lg" style="background: linear-gradient(135deg, {{ $settings->primary_color }}, {{ $settings->secondary_color }});">
-                    <h3 id="previewTitle" class="text-3xl font-bold mb-3" style="color: {{ $settings->text_color }}">{{ $organization->organization_name }}</h3>
-                    <p id="previewText" class="text-lg mb-4" style="color: {{ $settings->text_color }}; opacity: 0.9;">This is how your brand colors will appear</p>
+@php
+    $c_primary   = $settings->primary_color   ?? '#3b82f6';
+    $c_secondary = $settings->secondary_color ?? '#8b5cf6';
+    $c_accent    = $settings->accent_color    ?? '#10b981';
+    $c_text      = $settings->text_color      ?? '#ffffff';
+@endphp
+                <div id="brandPreview" class="rounded-lg p-8 shadow-lg" style="background: linear-gradient(135deg, {{ $c_primary }}, {{ $c_secondary }});">
+                    <h3 id="previewTitle" class="text-3xl font-bold mb-3" style="color: {{ $c_text }}">{{ $organization->organization_name }}</h3>
+                    <p id="previewText" class="text-lg mb-4" style="color: {{ $c_text }}; opacity: 0.9;">This is how your brand colors will appear</p>
                     <div class="flex gap-3">
-                        <button id="previewButton" type="button" class="px-6 py-3 rounded-lg font-semibold" style="background: {{ $settings->accent_color }}; color: white;">Sample Button</button>
-                        <div id="previewCard" class="px-6 py-3 rounded-lg font-semibold bg-white bg-opacity-20" style="color: {{ $settings->text_color }}">Info Card</div>
+                        <button id="previewButton" type="button" class="px-6 py-3 rounded-lg font-semibold" style="background: {{ $c_accent }}; color: white;">Sample Button</button>
+                        <div id="previewCard" class="px-6 py-3 rounded-lg font-semibold bg-white bg-opacity-20" style="color: {{ $c_text }}">Info Card</div>
                     </div>
                 </div>
             </div>
@@ -356,7 +383,7 @@ function updatePreview() {
 document.getElementById('organizationSettingsForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     
-    const orgCode = '{{ request()->route("organization_code") }}';
+    const orgCode = @json(request()->route('organization_code'));
     const orgName = document.getElementById('organizationName').value.trim();
     
     // Validate organization name
@@ -434,26 +461,47 @@ document.getElementById('organizationSettingsForm').addEventListener('submit', a
 function showAjaxMessage(type, message) {
     const container = document.getElementById('ajaxMessage');
     const bgColor = type === 'success' ? 'bg-green-100 border-green-400 text-green-700' : 'bg-red-100 border-red-400 text-red-700';
-    
-    container.innerHTML = `
-        <div class="${bgColor} border px-4 py-3 rounded fixed top-4 right-4 z-50 max-w-md shadow-lg">
-            ${message}
-        </div>
-    `;
-    
+
+    const div = document.createElement('div');
+    div.className = bgColor + ' border px-4 py-3 rounded fixed top-4 right-4 z-50 max-w-md shadow-lg';
+    div.textContent = message;
+    container.innerHTML = '';
+    container.appendChild(div);
+
     setTimeout(() => {
-        const alert = container.querySelector('div');
-        if (alert) {
-            alert.style.transition = 'opacity 0.5s';
-            alert.style.opacity = '0';
-            setTimeout(() => { alert.remove(); }, 500);
-        }
+        div.style.transition = 'opacity 0.5s';
+        div.style.opacity = '0';
+        setTimeout(() => { div.remove(); }, 500);
     }, 4000);
+}
+
+function confirmRemoveLogo() {
+    if (!confirm('Are you sure you want to remove the logo?')) return;
+    const form = document.getElementById('removeLogoForm');
+    if (!form) return;
+    fetch(form.action, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') }
+    }).then(r => r.json()).then(data => {
+        if (data.success) {
+            showAjaxMessage('success', data.message || 'Logo removed.');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showAjaxMessage('error', data.message || 'Failed to remove logo.');
+        }
+    }).catch(() => showAjaxMessage('error', 'Network error while removing logo.'));
 }
 
 // Organization name live preview
 document.getElementById('organizationName').addEventListener('input', function() {
-    document.getElementById('previewTitle').textContent = this.value || '{{ $organization->organization_name }}';
+    document.getElementById('previewTitle').textContent = this.value || @json($organization->organization_name);
+});
+
+// Queue digits live update
+document.getElementById('queueDigits').addEventListener('change', function() {
+    const digits = parseInt(this.value, 10) || 4;
+    document.getElementById('queueExample').textContent = '0'.repeat(digits);
 });
 </script>
 @endsection

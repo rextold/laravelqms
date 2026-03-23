@@ -80,7 +80,9 @@ class OrganizationSettingsController extends Controller
             $file = $request->file('logo');
             
             $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-            $ext = $file->getClientOriginalExtension();
+            // Derive extension from MIME type to prevent spoofing
+            $mimeToExt = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/gif' => 'gif', 'image/webp' => 'webp'];
+            $ext = $mimeToExt[$file->getMimeType()] ?? 'jpg';
             $newName = uniqid() . '_' . $originalName . '.' . $ext;
             
             \Log::info('Logo upload started', [
@@ -178,19 +180,20 @@ class OrganizationSettingsController extends Controller
         $settings = OrganizationSetting::where('organization_id', $organization->id)->first();
         
         if ($settings && $settings->organization_logo) {
-            // Delete the file from storage
             \Storage::disk('public')->delete($settings->organization_logo);
-            
-            // Clear the logo path in database
             $settings->organization_logo = null;
             $settings->save();
-            
-            return redirect()->back()
-                ->with('success', 'Logo removed successfully.');
+
+            if (request()->expectsJson()) {
+                return response()->json(['success' => true, 'message' => 'Logo removed successfully.']);
+            }
+            return redirect()->back()->with('success', 'Logo removed successfully.');
         }
 
-        return redirect()->back()
-            ->with('error', 'No logo to remove.');
+        if (request()->expectsJson()) {
+            return response()->json(['success' => false, 'message' => 'No logo to remove.'], 404);
+        }
+        return redirect()->back()->with('error', 'No logo to remove.');
     }
 
     /**
