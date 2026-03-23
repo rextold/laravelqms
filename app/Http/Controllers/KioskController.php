@@ -64,36 +64,35 @@ class KioskController extends Controller
         
         // Get counter_id from query string (GET parameter)
         $counterId = $request->query('counter_id');
-        
-        if (!$counterId) {
+
+        // Use strict empty check — PHP treats "0" as falsy, so !$counterId would
+        // incorrectly block a counter whose DB id happens to be 0 (shouldn't happen
+        // with auto-increment, but defensive check is cleaner).
+        if ($counterId === null || $counterId === '') {
             return response()->json([
                 'success' => false,
-                'message' => 'The counter id field is required.'
+                'message' => 'Please select a counter first.'
             ], 422);
         }
 
-        // Verify counter exists
-        $counter = User::where('id', $counterId)->first();
+        // Verify counter exists and belongs to this organization
+        $counter = User::where('id', $counterId)
+            ->where('organization_id', $organization->id)
+            ->where('role', 'counter')
+            ->first();
+
         if (!$counter) {
             return response()->json([
                 'success' => false,
-                'message' => 'Counter not found'
+                'message' => 'Counter not found.'
             ], 404);
         }
 
-        // Verify counter belongs to organization
-        if ((int) $counter->organization_id !== (int) $organization->id) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid counter for this organization'
-            ], 422);
-        }
-
-        // Verify counter is online
+        // Verify counter is online (logged in for the day)
         if (!$counter->is_online) {
             return response()->json([
                 'success' => false,
-                'message' => 'Counter is currently offline'
+                'message' => 'This counter is not available right now. Please choose another counter or wait for staff to open it.'
             ], 422);
         }
         try {
