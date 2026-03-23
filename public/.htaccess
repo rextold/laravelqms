@@ -1,15 +1,3 @@
-# Disable ModSecurity for kiosk, monitor, and counter action endpoints.
-# - kiosk/monitor: public polling routes hit every 1-5s by browser clients
-# - counter/: authenticated action routes (call-next, notify, skip, recall, etc.)
-#   ModSecurity can return 403/405 for POST to paths containing keywords
-#   like "notify", "skip", "recall", "transfer" that trigger anti-spam rules.
-#   Laravel auth + role middleware provide the real security for counter routes.
-<IfModule mod_security2.c>
-    <LocationMatch "/(kiosk|monitor|counter)(/|$)">
-        SecRuleEngine Off
-    </LocationMatch>
-</IfModule>
-
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes
