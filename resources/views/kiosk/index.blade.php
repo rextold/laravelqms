@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -9,1265 +9,806 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --primary: {{ $settings->primary_color ?? '#3b82f6' }};
+            --primary:   {{ $settings->primary_color   ?? '#3b82f6' }};
             --secondary: {{ $settings->secondary_color ?? '#8b5cf6' }};
-            --accent: {{ $settings->accent_color ?? '#10b981' }};
-            --text-color: {{ $settings->text_color ?? '#ffffff' }};
-            /* legacy variable names used elsewhere in templates */
-            --primary-color: {{ $settings->primary_color ?? '#3b82f6' }};
+            --accent:    {{ $settings->accent_color    ?? '#10b981' }};
+            --text-color:{{ $settings->text_color      ?? '#ffffff' }};
+            --primary-color:   {{ $settings->primary_color   ?? '#3b82f6' }};
             --secondary-color: {{ $settings->secondary_color ?? '#8b5cf6' }};
-            --accent-color: {{ $settings->accent_color ?? '#10b981' }};
+            --accent-color:    {{ $settings->accent_color    ?? '#10b981' }};
         }
-
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; border: none; }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         html, body {
             height: 100%;
-            min-height: 100dvh;
             overflow: hidden;
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-        }
-        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 50%, var(--accent) 100%);
             background-attachment: fixed;
         }
 
-        .glass-card {
-            background: rgba(255,255,255,0.95);
-            backdrop-filter: blur(20px);
-            border-radius: 1.5rem;
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
-            border: 1px solid rgba(255,255,255,0.2);
-        }
-
-        /* helper: center contents inside a glass card when applied */
-        .glass-card.center {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 10px;
-        }
-        .counter-card {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: pointer;
-            transform: translateZ(0);
-        }
-        .counter-card:hover {
-            transform: translateY(-8px) scale(1.02);
-            box-shadow: 0 32px 64px rgba(0,0,0,0.2);
-        }
-        .counter-card:active { transform: translateY(-4px) scale(0.98); }
-
-        .counter-card.selected {
-            ring: 4px solid var(--accent);
-            ring-offset: 4px;
-            ring-offset-white;
-        }
-
-        @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); } 50% { box-shadow: 0 0 40px rgba(59, 130, 246, 0.8); } }
-        .pulse-glow { animation: pulse-glow 2s infinite; }
-
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fadeInUp { animation: fadeInUp 0.6s ease-out; }
-
-        @keyframes fadeInScale { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
-        .animate-fadeInScale { animation: fadeInScale 0.5s ease-out; }
-
-        @keyframes slideInRight { from { opacity: 0; transform: translateX(50px); } to { opacity: 1; transform: translateX(0); } }
-        .animate-slideInRight { animation: slideInRight 0.5s ease-out; }
-
-        @keyframes progress { 0% { width: 0%; } 100% { width: 100%; } }
-        .progress-bar { animation: progress 2s ease-in-out; }
-
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); border-radius: 3px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.3); border-radius: 3px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.5); }
-
-        .touch-target { min-height: 44px; min-width: 44px; }
-
-        @media (max-width: 768px) {
-            .queue-number { font-size: 4rem; }
-        }
-
-        @media (min-width: 769px) {
-            .queue-number { font-size: 6rem; }
-        }
-
-        /* Float-based responsive counter grid */
-        .counter-grid {
-            padding: 0.75rem;
-            overflow: hidden; /* Clearfix */
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-        .counter-grid::after {
-            content: '';
-            display: table;
-            clear: both;
-        }
-        .counter-btn {
-            float: left;
-            width: calc(50% - 0.75rem); /* 2 columns on mobile */
-            margin: 0.375rem;
-            min-height: 96px;
-            padding: 0.75rem;
-            text-align: center;
-            box-sizing: border-box;
-            background: white;
-            border: 2px solid #e5e7eb;
-            border-radius: 0.75rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
-            word-wrap: break-word;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-        .counter-btn:hover {
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            border-color: var(--primary-color);
-            transform: translateY(-2px);
-        }
-        .counter-btn .counter-number {
-            width: 48px;
-            height: 48px;
-            font-size: 1.05rem;
-            margin: 0 auto 0.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 0.5rem;
-            background: linear-gradient(135deg, var(--accent-color), var(--primary-color));
-            color: white;
-            font-weight: 900;
-        }
-        .counter-btn .counter-title {
-            font-size: 0.98rem;
-            font-weight: 700;
-            color: #0f172a;
-            margin-bottom: 0.25rem;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            max-width: 100%;
-            padding: 0 4px;
-        }
-        .counter-btn .counter-desc {
-            font-size: 0.75rem;
-            color: rgba(15, 23, 42, 0.55);
-            margin-bottom: 0.5rem;
-            line-height: 1.2;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            max-height: 2.4em;
-            padding: 0 4px;
-        }
-        .counter-btn .counter-status {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-            margin-top: 4px;
-            overflow: hidden;
-            max-width: 100%;
-        }
-        .counter-btn .status-indicator {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background-color: #10b981;
-            flex-shrink: 0;
-        }
-        .counter-btn .status-text {
-            font-size: 0.7rem;
-            font-weight: 600;
-            color: #374151;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            max-width: calc(100% - 12px);
-        }
-        
-        /* Responsive breakpoints for float layout */
-        @media (min-width: 640px) {
-            .counter-btn {
-                width: calc(33.333% - 0.75rem); /* 3 columns on tablet */
-            }
-        }
-        @media (min-width: 1024px) {
-            .counter-btn {
-                width: calc(25% - 0.75rem); /* 4 columns on desktop */
-                min-height: 112px;
-            }
-            .counter-btn .counter-number {
-                width: 52px;
-                height: 52px;
-                font-size: 1.15rem;
-            }
-            .counter-btn .counter-title {
-                font-size: 1rem;
-            }
-            .counter-btn .counter-desc {
-                font-size: 0.8rem;
-                max-height: 2.6em;
-            }
-        }
-        @media (min-width: 1280px) {
-            .counter-btn {
-                width: calc(50% - 0.75rem); /* 2 columns on large desktop */
-                min-height: 120px;
-            }
-            .counter-btn .counter-number {
-                width: 56px;
-                height: 56px;
-                font-size: 1.25rem;
-            }
-            .counter-btn .counter-title {
-                font-size: 1.05rem;
-            }
-            .counter-btn .counter-desc {
-                font-size: 0.85rem;
-                max-height: 2.8em;
-            }
-        }
-        
-        /* vertical center helper */
-        .vertical-center { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:.75rem; min-height: calc(100dvh - 2rem); }
-
-        /* ── Spacing & sizing helpers (previously undefined) ─────────────────── */
-        .padding-sm  { padding: .85rem 1rem; }
-        .padding-md  { padding: 1.25rem 1.5rem; }
-        .spacing-sm  { margin-bottom: .75rem; }
-        .spacing-md  { margin-bottom: 1.25rem; }
-
-        .section-title      { font-size: 1.05rem; font-weight: 800; color: #1e293b; }
-        .title-size         { font-size: clamp(1.1rem, 4vw, 1.6rem); }
-        .logo-size          { width: 48px; height: 48px; }
-        .btn-text           { font-size: .9rem; }
-        .queue-number-size  { font-size: clamp(3.5rem, 14vw, 6rem); line-height: 1; }
-        .counter-grid-height{ min-height: 0; }
-        .main-container     { width: 100%; max-width: 960px; padding: 0 .5rem; }
-        .step-content       { width: 100%; max-width: 900px; }
-        .step-header        { width: 100%; }
-
-        /* ── Step indicators ─────────────────────────────────────────────────── */
-        .step-indicator {
+        /* ─── Layout ────────────────────────────────────────────────────── */
+        #app {
+            position: fixed; inset: 0;
             display: flex; flex-direction: column; align-items: center;
-            padding: .45rem 1rem; border-radius: .75rem;
-            font-size: .75rem; font-weight: 700; min-width: 60px;
-            transition: all .2s;
+            overflow-y: auto; overflow-x: hidden;
+            padding: 1rem .75rem 1.5rem;
+            gap: .75rem;
         }
-        .step-indicator-number { font-size: .95rem; font-weight: 900; margin-bottom: 1px; }
-        .step-indicator-text   { font-size: .7rem; }
-        .step-active    { background: var(--primary-color); color: #fff; }
-        .step-completed { background: var(--accent-color);  color: #fff; }
-        .step-indicators-container { padding: .45rem .75rem; }
 
-        /* ── Input resets (inputs need their own border) ─────────────────────── */
+        /* ─── Cards ─────────────────────────────────────────────────────── */
+        .card {
+            background: rgba(255,255,255,0.97);
+            backdrop-filter: blur(20px);
+            border-radius: 1.25rem;
+            box-shadow: 0 20px 40px -8px rgba(0,0,0,.22), 0 0 0 1px rgba(255,255,255,.25);
+        }
+
+        /* ─── Step wizard bar ───────────────────────────────────────────── */
+        .wizard-bar {
+            display: flex; align-items: center; gap: .5rem;
+            padding: .5rem 1rem;
+        }
+        .step-pill {
+            display: flex; flex-direction: column; align-items: center;
+            padding: .35rem .9rem; border-radius: .65rem;
+            font-weight: 700; min-width: 56px;
+            transition: background .25s, color .25s;
+            background: #f1f5f9; color: #64748b;
+        }
+        .step-pill .num  { font-size: .95rem; line-height: 1; }
+        .step-pill .lbl  { font-size: .65rem; margin-top: 1px; }
+        .step-pill.active   { background: var(--primary-color);   color: #fff; }
+        .step-pill.done     { background: var(--accent-color);    color: #fff; }
+        .step-sep { color: #cbd5e1; font-size: .9rem; }
+
+        /* ─── Step content panel ────────────────────────────────────────── */
+        .step-panel {
+            width: 100%; max-width: 860px;
+            flex: 1; min-height: 0;
+            display: flex; flex-direction: column;
+        }
+        .step-panel.hidden { display: none; }
+
+        /* ─── Counter grid ──────────────────────────────────────────────── */
+        .counters-scroll {
+            overflow-y: auto;
+            flex: 1; min-height: 120px;
+            padding: .25rem;
+        }
+        .counters-scroll::-webkit-scrollbar { width: 5px; }
+        .counters-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
+        .counters-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .grid-counters {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: .6rem;
+        }
+        @media (min-width: 480px)  { .grid-counters { grid-template-columns: repeat(3, 1fr); } }
+        @media (min-width: 768px)  { .grid-counters { grid-template-columns: repeat(4, 1fr); } }
+
+        .counter-btn {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: .35rem; padding: .8rem .5rem;
+            background: #fff;
+            border: 2px solid #e2e8f0;
+            border-radius: .85rem;
+            cursor: pointer;
+            transition: all .22s cubic-bezier(.4,0,.2,1);
+            min-height: 100px;
+            text-align: center;
+        }
+        .counter-btn:hover  { border-color: var(--primary-color); transform: translateY(-3px); box-shadow: 0 8px 18px rgba(0,0,0,.12); }
+        .counter-btn:active { transform: scale(.97); }
+        .counter-btn:disabled { opacity: .45; pointer-events: none; }
+        .counter-badge {
+            width: 42px; height: 42px; border-radius: .5rem; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 900; font-size: .95rem; color: #fff;
+            background: linear-gradient(135deg, var(--accent-color), var(--primary-color));
+        }
+        .counter-name  { font-size: .85rem; font-weight: 700; color: #0f172a; line-height: 1.2; word-break: break-word; }
+        .counter-desc  { font-size: .7rem;  color: #64748b; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+        .counter-avail { display: flex; align-items: center; gap: 4px; }
+        .dot-green     { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; flex-shrink: 0; }
+        .avail-text    { font-size: .65rem; font-weight: 600; color: #374151; }
+
+        /* ─── Animations ────────────────────────────────────────────────── */
+        @keyframes fadeUp   { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes scalePop { from { opacity: 0; transform: scale(.88);       } to { opacity: 1; transform: scale(1);     } }
+        @keyframes spin     { to   { transform: rotate(360deg); } }
+        @keyframes pulse-num {
+            0%, 100% { text-shadow: 0 0 0 rgba(0,0,0,0); }
+            50%       { text-shadow: 0 0 28px rgba(255,255,255,.45); }
+        }
+        .anim-fade-up   { animation: fadeUp   .45s ease-out both; }
+        .anim-scale-pop { animation: scalePop .4s  ease-out both; }
+        .spin-icon      { animation: spin 1.2s linear infinite; display: inline-block; }
+        .pulse-num      { animation: pulse-num 2.2s ease-in-out infinite; }
+
+        /* ─── Progress bar ──────────────────────────────────────────────── */
+        @keyframes progress-fill { from { width: 0; } to { width: 100%; } }
+        .progress-track { background: #e2e8f0; border-radius: 9999px; overflow: hidden; height: 6px; }
+        .progress-fill  {
+            height: 100%; border-radius: 9999px; width: 0;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            animation: progress-fill 2.2s ease-in-out forwards;
+        }
+
+        /* ─── Queue number card ─────────────────────────────────────────── */
+        .queue-num-card {
+            border-radius: 1rem; overflow: hidden; position: relative;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            padding: 1.5rem 1rem 1.25rem;
+        }
+        .queue-num-card .dots-bg {
+            position: absolute; inset: 0; opacity: .08;
+            background-image: radial-gradient(circle, rgba(255,255,255,.5) 1.5px, transparent 1.5px);
+            background-size: 24px 24px;
+        }
+        .queue-num-card > * { position: relative; z-index: 1; }
+        .queue-number {
+            font-size: clamp(4rem, 16vw, 7rem);
+            font-weight: 900; line-height: 1;
+            color: #fff; letter-spacing: .04em;
+        }
+
+        /* ─── Inputs inside modal ───────────────────────────────────────── */
         input[type="text"], input[type="number"], input[type="email"], select, textarea {
-            border: 1.5px solid #d1d5db !important;
+            border: 1.5px solid #d1d5db;
             border-radius: .5rem;
             padding: .5rem .75rem;
             outline: none;
             font-size: .9rem;
             transition: border-color .2s;
+            width: 100%;
+            background: #fff;
         }
-        input:focus, select:focus, textarea:focus { border-color: var(--primary-color) !important; }
+        input:focus, select:focus, textarea:focus { border-color: var(--primary-color); }
+        input[type="radio"] { width: auto; }
+
+        /* ─── Settings gear ─────────────────────────────────────────────── */
+        #settingsBtn {
+            position: fixed; top: 14px; right: 14px; z-index: 60;
+            width: 44px; height: 44px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(255,255,255,.18);
+            border: 1px solid rgba(255,255,255,.3);
+            color: #fff; font-size: 1.1rem;
+            cursor: pointer; transition: background .2s;
+            backdrop-filter: blur(8px);
+        }
+        #settingsBtn:hover { background: rgba(255,255,255,.3); }
+
+        /* ─── Modal backdrop ────────────────────────────────────────────── */
+        .modal-backdrop {
+            position: fixed; inset: 0; z-index: 70;
+            background: rgba(0,0,0,.55); backdrop-filter: blur(4px);
+            display: flex; align-items: center; justify-content: center;
+            padding: 1rem;
+        }
+        .modal-backdrop.hidden { display: none; }
+        .modal-box {
+            background: #fff; border-radius: 1.25rem;
+            box-shadow: 0 32px 64px rgba(0,0,0,.3);
+            width: 100%; max-width: 480px;
+            max-height: 90vh; overflow-y: auto;
+        }
     </style>
 </head>
 <body>
-    <!-- Background particles removed for cleaner kiosk look -->
-    
-    <!-- Settings Button -->
-    <button onclick="showSettings()"
-            class="fixed top-6 right-6 z-50 glass-card px-4 py-3 rounded-2xl shadow-2xl hover:shadow-3xl transition-all transform hover:scale-105 text-white font-semibold text-sm touch-target">
-        <i class="fas fa-cog text-xl"></i>
-    </button>
-    
-    <!-- Main Container -->
-    <div class="main-container vertical-center relative z-10 p-2 sm:p-4">
-        
-        <!-- Step Indicator -->
-        <div class="step-header spacing-sm">
-            <div class="flex justify-center">
-                <div class="glass-card center padding-sm rounded-2xl shadow-xl step-indicators-container">
-                    <div class="flex items-center space-x-2 sm:space-x-4">
-                        <div id="step1Indicator" class="step-indicator step-active px-3 sm:px-6 py-2 sm:py-3 rounded-xl flex flex-col items-center min-w-[60px] sm:min-w-[80px]">
-                            <div class="step-indicator-number font-bold mb-0.5 sm:mb-1">1</div>
-                            <div class="step-indicator-text font-semibold">Select</div>
-                        </div>
-                        <i class="fas fa-arrow-right text-gray-400 text-lg sm:text-2xl"></i>
-                        <div id="step2Indicator" class="step-indicator bg-gray-100 text-gray-600 px-3 sm:px-6 py-2 sm:py-3 rounded-xl flex flex-col items-center min-w-[60px] sm:min-w-[80px]">
-                            <div class="step-indicator-number font-bold mb-0.5 sm:mb-1">2</div>
-                            <div class="step-indicator-text font-semibold">Process</div>
-                        </div>
-                        <i class="fas fa-arrow-right text-gray-400 text-lg sm:text-2xl"></i>
-                        <div id="step3Indicator" class="step-indicator bg-gray-100 text-gray-600 px-3 sm:px-6 py-2 sm:py-3 rounded-xl flex flex-col items-center min-w-[60px] sm:min-w-[80px]">
-                            <div class="step-indicator-number font-bold mb-0.5 sm:mb-1">3</div>
-                            <div class="step-indicator-text font-semibold">Done</div>
-                        </div>
+
+<!-- Settings Button -->
+<button id="settingsBtn" onclick="showSettings()" aria-label="Settings">
+    <i class="fas fa-cog"></i>
+</button>
+
+<!-- ═══ Main App ═══════════════════════════════════════════════════════════ -->
+<div id="app">
+
+    <!-- ── Wizard Stepper ──────────────────────────────────────────────── -->
+    <div class="card" style="flex-shrink:0;">
+        <div class="wizard-bar">
+            <div id="pill1" class="step-pill active"><span class="num">1</span><span class="lbl">Select</span></div>
+            <i class="fas fa-chevron-right step-sep"></i>
+            <div id="pill2" class="step-pill"><span class="num">2</span><span class="lbl">Process</span></div>
+            <i class="fas fa-chevron-right step-sep"></i>
+            <div id="pill3" class="step-pill"><span class="num">3</span><span class="lbl">Done</span></div>
+        </div>
+    </div>
+
+    <!-- ══ STEP 1 — Select Counter ════════════════════════════════════════ -->
+    <div id="step1" class="step-panel anim-fade-up">
+
+        <!-- Org Header Card -->
+        <div class="card" style="flex-shrink:0; padding: .85rem 1.25rem; margin-bottom:.65rem;">
+            <div style="display:flex; align-items:center; gap:.75rem;">
+                @if(!empty($settings->logo_url))
+                    <img src="{{ $settings->logo_url }}" alt="Logo"
+                         style="height:44px; width:auto; border-radius:.5rem; object-fit:contain; flex-shrink:0;">
+                @else
+                    <div style="width:44px; height:44px; border-radius:.5rem; flex-shrink:0;
+                                background:linear-gradient(135deg,var(--primary-color),var(--secondary-color));
+                                display:flex; align-items:center; justify-content:center;">
+                        <i class="fas fa-building" style="color:#fff; font-size:1.2rem;"></i>
+                    </div>
+                @endif
+                <div style="flex:1; min-width:0;">
+                    <div style="font-size:clamp(.95rem,3.5vw,1.35rem); font-weight:900; color:#0f172a; line-height:1.15;
+                                overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" data-org-name>
+                        {{ $organization->organization_name }}
+                    </div>
+                    <div style="font-size:.8rem; color:#64748b; font-weight:600; margin-top:1px;">
+                        <i class="fas fa-hand-pointer" style="color:var(--primary-color); margin-right:.3rem;"></i>
+                        Tap a counter to get your queue number
                     </div>
                 </div>
             </div>
         </div>
-        
-        <!-- Step 1: Counter Selection -->
-        <div id="step1" class="step-content animate-fadeInUp">
-            <div class="flex flex-col h-full">
-                <!-- Header -->
-                <div class="text-center flex-shrink-0 mb-2">
-                    <div class="flex items-center justify-center gap-2 sm:gap-3 mb-2">
-                         @if(isset($settings) && $settings->logo_url)    
-                            <img src="{{ $settings->logo_url }}" alt="Organization Logo" class="h-10 w-auto rounded-lg shadow-sm">
-                        @else
-                            <div class="logo-size flex items-center justify-center rounded-lg" style="background: rgba(255,255,255,0.2); max-height: 50px;">
-                                <i class="fas fa-building text-white text-2xl"></i>
-                            </div>
-                        @endif
-                        <div>
-                            <h1 class="title-size font-black drop-shadow-lg animate-fadeInScale leading-tight" 
-                                style="color: #ffffff;" data-org-name>
-                                {{ $organization->organization_name }}
-                            </h1>
-                            <p class="text-xs sm:text-sm font-bold drop-shadow-md" 
-                               style="color: var(--text-color); opacity: 0.85;">
-                                Queue Kiosk
-                            </p>
-                        </div>
-                    </div>
-                    <div class="inline-block glass-card px-3 sm:px-6 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm">
-                        <p class="font-semibold flex items-center justify-center gap-1.5" style="color: var(--text-color); opacity: 0.9;">
-                            <i class="fas fa-hand-pointer"></i>
-                            <span class="hidden sm:inline">Select a counter to get your queue number</span>
-                            <span class="sm:hidden">Tap to select</span>
-                        </p>
-                    </div>
-                </div>
-                
-                <!-- Counters Grid -->
-                <div class="flex-1 min-h-0 flex flex-col">
-                    <div class="glass-card rounded-2xl sm:rounded-3xl shadow-2xl padding-md flex-1 min-h-0 flex flex-col">
-                        <h2 class="section-title font-bold spacing-sm text-center flex-shrink-0" style="color: var(--primary-color);">
-                            <i class="fas fa-desktop mr-2"></i>
-                            <span class="hidden sm:inline">Available Service Counters</span>
-                            <span class="sm:hidden">Select Counter</span>
-                        </h2>
-                        
-                        <div class="counter-grid-height overflow-y-auto custom-scrollbar pr-1 flex-1 min-h-0">
-                            <div id="countersGrid" class="counter-grid">
-                                <!-- Counters will be injected here -->
-                            </div>
-                            <div id="noCounters" class="hidden text-center py-8 sm:py-16">
-                                <div class="inline-block p-4 sm:p-6 bg-gray-100 rounded-full spacing-sm">
-                                    <i class="fas fa-clock text-gray-400 text-4xl sm:text-6xl"></i>
-                                </div>
-                                <h3 class="section-title font-bold text-gray-700 spacing-sm">No Counters Available</h3>
-                                <p class="text-gray-500 btn-text spacing-sm">All service counters are currently offline</p>
-                                <div class="flex items-center justify-center space-x-2">
-                                    <i class="fas fa-spinner fa-spin text-blue-600 text-xl sm:text-3xl"></i>
-                                    <span class="text-gray-600 font-medium text-sm sm:text-base">Checking...</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+
+        <!-- Counters Card -->
+        <div class="card" style="flex:1; min-height:0; display:flex; flex-direction:column; padding:1rem;">
+            <div style="font-size:.9rem; font-weight:800; color:#1e293b; margin-bottom:.65rem; flex-shrink:0;">
+                <i class="fas fa-desktop" style="color:var(--primary-color); margin-right:.4rem;"></i>
+                Available Service Counters
             </div>
-        </div>
-        
-        <!-- Step 2: Generating -->
-        <div id="step2" class="hidden step-content animate-fadeInUp">
-            <div class="flex items-center justify-center h-full">
-                <div class="glass-card center rounded-2xl sm:rounded-3xl shadow-2xl padding-md text-center max-w-2xl w-full">
-                    <div class="spacing-md">
-                        <div class="inline-block p-6 sm:p-8 rounded-full spacing-sm shadow-2xl" style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));">
-                            <i class="fas fa-spinner fa-spin text-white text-5xl sm:text-7xl"></i>
-                        </div>
-                        <h2 class="section-title sm:text-4xl font-bold spacing-sm" style="color: var(--primary-color);">
-                            Processing Your Request
-                        </h2>
-                        <p class="btn-text text-gray-600 font-medium">Generating your queue number...</p>
-                    </div>
-                    
-                    <div class="relative bg-gray-200 h-3 sm:h-4 rounded-full overflow-hidden">
-                        <div class="absolute h-full w-1/3 bg-gradient-to-r from-blue-500 via-purple-600 to-blue-500 progress-bar"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Step 3: Queue Display -->
-        <div id="step3" class="hidden step-content animate-fadeInUp">
-            <div class="flex items-center justify-center h-full overflow-y-auto custom-scrollbar">
-                <div class="glass-card center rounded-xl sm:rounded-2xl shadow-lg padding-sm sm:padding-md text-center max-w-lg sm:max-w-xl w-full" id="queueContent">
-                    <div class="spacing-sm sm:spacing-md">
-                        <div class="inline-block p-2.5 sm:p-3 rounded-full spacing-sm shadow-lg" style="background: linear-gradient(135deg, var(--accent-color), var(--primary-color));">
-                            <i class="fas fa-check-circle text-white text-2xl sm:text-4xl"></i>
-                        </div>
-                        <h2 class="section-title sm:text-3xl font-black spacing-sm" style="color: var(--accent-color);">
-                            Success!
-                        </h2>
-                        <p class="btn-text font-semibold" style="color: var(--primary-color); opacity: 0.9;">Your queue number is ready</p>
-                    </div>
-                    
-                    <!-- Queue Number Card -->
-                    <div class="relative overflow-hidden rounded-xl sm:rounded-2xl spacing-sm sm:spacing-md shadow-lg" 
-                         style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));">
-                        <div class="absolute inset-0 opacity-10" 
-                             style="background-image: radial-gradient(circle, rgba(255,255,255,0.4) 2px, transparent 2px); background-size: 30px 30px;"></div>
-                        <div class="relative z-10 p-4 sm:p-6">
-                            <p class="text-[10px] sm:text-xs font-bold mb-2 tracking-widest opacity-90" 
-                               style="color: var(--text-color);">
-                                YOUR QUEUE NUMBER
-                            </p>
-                            <div class="queue-number-size font-black spacing-sm tracking-wider pulse-animation" 
-                                 id="queueNumber" 
-                                 style="color: var(--text-color); text-shadow: 0 6px 12px rgba(0,0,0,0.15);"></div>
-                            <div class="btn-text font-bold mb-1" id="counterInfo" style="color: var(--text-color);"></div>
-                            <div class="text-xs sm:text-sm opacity-90" id="queueTime" style="color: var(--text-color);"></div>
-                            <div id="ticketSignature" class="text-xs sm:text-sm opacity-80 mt-1" style="color: var(--text-color);">Sig: N/A</div>
-                            <div class="mt-2 inline-flex items-center justify-center space-x-2 glass-card px-3 py-1 rounded-full" style="background: rgba(255,255,255,0.06);">
-                                <i class="fas fa-qrcode text-white text-sm"></i>
-                                <span class="text-xs text-white font-semibold">Verifiable — Scan QR or visit verify link</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Important Notice -->
-                    <div class="glass-card border-l-4 rounded-lg sm:rounded-xl padding-sm spacing-sm sm:spacing-md text-left shadow-sm" style="border-left-color: var(--accent-color);">
-                        <p class="text-gray-800 font-medium flex items-start text-xs sm:text-sm">
-                            <i class="fas fa-info-circle text-base mr-2 mt-0.5 flex-shrink-0" style="color: var(--accent-color);"></i>
-                            <span>
-                                <strong class="block mb-1 text-xs sm:text-sm" style="color: var(--primary-color);">Important:</strong>
-                                <span class="text-xs sm:text-sm">Please wait for your number to be called on the display monitor.</span>
-                            </span>
-                        </p>
-                    </div>
-                    
-                    <!-- Action Buttons -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 spacing-sm">
-                        <button onclick="printQueue()" 
-                                class="m-1 sm:m-1 px-4 sm:px-5 py-2 sm:py-2.5 rounded-md sm:rounded-lg font-bold shadow-md transform hover:scale-[1.01] hover:shadow-lg transition-all text-white btn-text text-sm"
-                                style="background: linear-gradient(135deg, var(--accent-color), var(--primary-color));">
-                            <i class="fas fa-print mr-2 text-sm"></i>
-                            <span class="hidden sm:inline">Print Number</span>
-                            <span class="sm:hidden">Print</span>
-                        </button>
-                        <button onclick="capturePhoto()" 
-                                class="m-1 sm:m-1 px-4 sm:px-5 py-2 sm:py-2.5 rounded-md sm:rounded-lg font-bold shadow-md transform hover:scale-[1.01] hover:shadow-lg transition-all btn-text text-sm"
-                                style="background: linear-gradient(135deg, var(--secondary-color), var(--accent-color)); color: var(--text-color);">
-                            <i class="fas fa-camera mr-2 text-sm"></i>
-                            <span class="hidden sm:inline">Save to Gallery</span>
-                            <span class="sm:hidden">Save</span>
-                        </button>
-                    </div>
 
-                    <button onclick="finishAndReset()" 
-                            class="m-1 sm:m-1 w-full px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-bold shadow-md transform hover:scale-[1.01] hover:shadow-lg transition-all text-white btn-text text-sm"
-                            style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: var(--text-color);">
-                        <i class="fas fa-redo mr-2 text-sm"></i>Get Another Number
-                    </button>
-
-
+            <div class="counters-scroll">
+                <div id="countersGrid" class="grid-counters"></div>
+                <div id="noCounters" class="hidden" style="text-align:center; padding:3rem 1rem;">
+                    <i class="fas fa-clock" style="font-size:3rem; color:#cbd5e1; display:block; margin-bottom:.75rem;"></i>
+                    <div style="font-weight:700; color:#475569; margin-bottom:.35rem;">No Counters Available</div>
+                    <div style="font-size:.85rem; color:#94a3b8; margin-bottom:1rem;">All service counters are currently offline</div>
+                    <i class="fas fa-spinner spin-icon" style="color:var(--primary-color); font-size:1.5rem;"></i>
                 </div>
             </div>
         </div>
     </div>
-    
-    <!-- Settings Modal -->
-    <div id="settingsModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 backdrop-blur-sm p-2 sm:p-4">
-        <div class="bg-white rounded-xl sm:rounded-2xl shadow-2xl max-w-lg w-full transform transition-all animate-fadeInScale mx-2 max-h-[95vh] overflow-y-auto">
-            <!-- Header -->
-            <div class="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-4 sm:px-6 py-3 sm:py-5 rounded-t-xl sm:rounded-t-2xl sticky top-0 z-10">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-2 sm:space-x-3">
-                        <div class="w-10 h-10 sm:w-12 sm:h-12 bg-white bg-opacity-20 rounded-lg sm:rounded-xl flex items-center justify-center">
-                            <i class="fas fa-cog text-white text-lg sm:text-2xl"></i>
-                        </div>
-                        <h2 class="text-lg sm:text-2xl font-bold text-white">Printer Settings</h2>
-                    </div>
-                    <button onclick="closeSettings()" 
-                            class="text-white hover:bg-white hover:bg-opacity-10 rounded-lg p-1.5 sm:p-2 transition min-w-[40px] min-h-[40px] flex items-center justify-center">
-                        <i class="fas fa-times text-xl sm:text-2xl"></i>
-                    </button>
+
+    <!-- ══ STEP 2 — Processing ════════════════════════════════════════════ -->
+    <div id="step2" class="step-panel hidden">
+        <div style="flex:1; display:flex; align-items:center; justify-content:center;">
+            <div class="card anim-scale-pop" style="width:100%; max-width:420px; padding:2.5rem 2rem; text-align:center;">
+                <div style="width:80px; height:80px; border-radius:50%; margin:0 auto 1.25rem;
+                            background:linear-gradient(135deg,var(--primary-color),var(--secondary-color));
+                            display:flex; align-items:center; justify-content:center;">
+                    <i class="fas fa-spinner spin-icon" style="color:#fff; font-size:2rem;"></i>
                 </div>
-            </div>
-            
-            <!-- Body -->
-            <div class="p-4 sm:p-6 space-y-3 sm:space-y-4">
-                <!-- Printer Selection -->
-                <div class="bg-gray-50 rounded-lg sm:rounded-xl p-3 sm:p-4">
-                    <label class="block text-sm sm:text-base font-bold text-gray-700 mb-2 sm:mb-3 flex items-center">
-                        <i class="fas fa-print text-blue-600 mr-2"></i>Printer Type
-                    </label>
-                    <div class="space-y-2 sm:space-y-3">
-                        <label class="flex items-center p-3 sm:p-4 bg-white rounded-lg sm:rounded-xl border-2 cursor-pointer hover:border-blue-400 transition-all group min-h-[56px]">
-                            <input type="radio" name="printerType" value="thermal" checked 
-                                   onchange="updatePrinterSettings()" 
-                                   class="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 flex-shrink-0">
-                            <div class="ml-2 sm:ml-3 flex-1">
-                                <div class="font-bold text-sm sm:text-base text-gray-800 group-hover:text-blue-600 transition">USB Thermal Printer (80mm)</div>
-                                <div class="text-xs sm:text-sm text-gray-500">Direct thermal printing via USB</div>
-                            </div>
-                            <i class="fas fa-receipt text-blue-600 text-xl sm:text-2xl opacity-30 group-hover:opacity-100 transition"></i>
-                        </label>
-                        
-                        <label class="flex items-center p-3 sm:p-4 bg-white rounded-lg sm:rounded-xl border-2 cursor-pointer hover:border-blue-400 transition-all group min-h-[56px]">
-                            <input type="radio" name="printerType" value="browser" 
-                                   onchange="updatePrinterSettings()" 
-                                   class="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 flex-shrink-0">
-                            <div class="ml-2 sm:ml-3 flex-1">
-                                <div class="font-bold text-sm sm:text-base text-gray-800 group-hover:text-blue-600 transition">Browser Print</div>
-                                <div class="text-xs sm:text-sm text-gray-500">Standard browser print dialog</div>
-                            </div>
-                            <i class="fas fa-print text-blue-600 text-xl sm:text-2xl opacity-30 group-hover:opacity-100 transition"></i>
-                        </label>
-                        
-                        <label class="flex items-center p-3 sm:p-4 bg-white rounded-lg sm:rounded-xl border-2 cursor-pointer hover:border-blue-400 transition-all group min-h-[56px]">
-                            <input type="radio" name="printerType" value="none" 
-                                   onchange="updatePrinterSettings()" 
-                                   class="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 flex-shrink-0">
-                            <div class="ml-2 sm:ml-3 flex-1">
-                                <div class="font-bold text-sm sm:text-base text-gray-800 group-hover:text-blue-600 transition">Screenshot Only</div>
-                                <div class="text-xs sm:text-sm text-gray-500">Save as image file</div>
-                            </div>
-                            <i class="fas fa-camera text-blue-600 text-xl sm:text-2xl opacity-30 group-hover:opacity-100 transition"></i>
-                        </label>
-                    </div>
+                <div style="font-size:1.3rem; font-weight:800; color:#0f172a; margin-bottom:.4rem;">
+                    Processing Your Request
                 </div>
-                
-                <!-- Thermal Printer Settings -->
-                <div id="thermalSettings" class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg sm:rounded-xl p-3 sm:p-4">
-                    <label class="block text-xs sm:text-sm font-bold text-gray-700 mb-2 flex items-center">
-                        <i class="fas fa-usb text-blue-600 mr-2"></i>Vendor ID (Optional)
-                    </label>
-                    <input type="text" id="vendorId" placeholder="0x0fe6" 
-                           class="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-300 rounded-lg sm:rounded-xl focus:border-blue-500 focus:outline-none transition text-sm sm:text-base min-h-[44px]">
-                    <p class="text-xs text-gray-500 mt-2">
-                        <i class="fas fa-info-circle mr-1"></i>
-                        Leave empty for default (0x0fe6 - Bixolon)
-                    </p>
+                <div style="font-size:.9rem; color:#64748b; margin-bottom:1.5rem;">
+                    Generating your queue number…
                 </div>
-            </div>
-            
-            <!-- Footer -->
-            <div class="bg-gray-50 px-4 sm:px-6 py-3 sm:py-4 rounded-b-xl sm:rounded-b-2xl flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 sticky bottom-0">
-                <button onclick="testPrint()" 
-                        class="flex-1 px-4 sm:px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg sm:rounded-xl font-bold shadow-lg hover:shadow-xl transition-all hover:scale-105 text-sm sm:text-base min-h-[48px]">
-                    <i class="fas fa-print mr-2"></i>Test Print
-                </button>
-                <button onclick="saveSettings()" 
-                        class="flex-1 px-4 sm:px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg sm:rounded-xl font-bold shadow-lg hover:shadow-xl transition-all hover:scale-105 text-sm sm:text-base min-h-[48px]">
-                    <i class="fas fa-save mr-2"></i>Save Settings
-                </button>
+                <div class="progress-track"><div class="progress-fill"></div></div>
             </div>
         </div>
     </div>
 
-    <script>
-    let currentQueue = null;
-    let connectedPrinter = null;
-    let printerSettings = {
-        type: 'thermal',
-        vendorId: '0x0fe6'
-    };
-    const countersEndpoint = '{{ route('kiosk.counters', ['organization_code' => $companyCode]) }}';
-    const initialCounters = @json($onlineCounters);
+    <!-- ══ STEP 3 — Queue Number ══════════════════════════════════════════ -->
+    <div id="step3" class="step-panel hidden">
+        <div style="flex:1; display:flex; align-items:flex-start; justify-content:center; overflow-y:auto; padding:.25rem 0;">
+            <div class="card anim-scale-pop" id="queueContent"
+                 style="width:100%; max-width:440px; padding:1.5rem 1.25rem; text-align:center;">
 
-    // Load settings from localStorage
-    function loadSettings() {
-        const saved = localStorage.getItem('kioskPrinterSettings');
-        if (saved) {
-            printerSettings = JSON.parse(saved);
+                <!-- Success icon -->
+                <div style="width:58px; height:58px; border-radius:50%; margin:0 auto .75rem;
+                            background:linear-gradient(135deg,var(--accent-color),var(--primary-color));
+                            display:flex; align-items:center; justify-content:center;">
+                    <i class="fas fa-check" style="color:#fff; font-size:1.5rem;"></i>
+                </div>
+                <div style="font-size:1.4rem; font-weight:900; color:var(--accent-color); margin-bottom:.2rem;">Success!</div>
+                <div style="font-size:.875rem; color:#64748b; margin-bottom:1rem;">Your queue number is ready</div>
+
+                <!-- Queue Number Banner -->
+                <div class="queue-num-card" style="margin-bottom:1rem; text-align:center;">
+                    <div class="dots-bg"></div>
+                    <div style="font-size:.65rem; letter-spacing:.15em; font-weight:700; color:rgba(255,255,255,.75); margin-bottom:.35rem; text-transform:uppercase;">
+                        Your Queue Number
+                    </div>
+                    <div class="queue-number pulse-num" id="queueNumber">—</div>
+                    <div style="font-size:.9rem; font-weight:700; color:rgba(255,255,255,.9); margin-top:.5rem;" id="counterInfo"></div>
+                    <div style="font-size:.78rem; color:rgba(255,255,255,.7); margin-top:.2rem;" id="queueTime"></div>
+                    <div style="font-size:.72rem; color:rgba(255,255,255,.6); margin-top:.2rem; font-family:monospace;" id="ticketSignature">Sig: N/A</div>
+                </div>
+
+                <!-- Notice -->
+                <div style="border-left:3px solid var(--accent-color); background:#f0fdf4; border-radius:.5rem;
+                            padding:.7rem .9rem; text-align:left; margin-bottom:1rem;">
+                    <div style="font-size:.8rem; color:#166534; display:flex; gap:.5rem; align-items:flex-start;">
+                        <i class="fas fa-info-circle" style="color:var(--accent-color); margin-top:2px; flex-shrink:0;"></i>
+                        <span><strong>Important:</strong> Please wait for your number to be called on the display monitor.</span>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:.6rem; margin-bottom:.6rem;">
+                    <button onclick="printQueue()"
+                            style="padding:.7rem; border-radius:.65rem; font-weight:700; font-size:.85rem; cursor:pointer;
+                                   border:none; color:#fff;
+                                   background:linear-gradient(135deg,var(--accent-color),var(--primary-color));
+                                   transition:opacity .2s;"
+                            onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+                        <i class="fas fa-print" style="margin-right:.4rem;"></i>Print
+                    </button>
+                    <button onclick="capturePhoto()"
+                            style="padding:.7rem; border-radius:.65rem; font-weight:700; font-size:.85rem; cursor:pointer;
+                                   border:none; color:#fff;
+                                   background:linear-gradient(135deg,var(--secondary-color),var(--accent-color));
+                                   transition:opacity .2s;"
+                            onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+                        <i class="fas fa-camera" style="margin-right:.4rem;"></i>Save
+                    </button>
+                </div>
+                <button onclick="finishAndReset()"
+                        style="width:100%; padding:.75rem; border-radius:.75rem; font-weight:700; font-size:.9rem;
+                               cursor:pointer; border:none; color:#fff;
+                               background:linear-gradient(135deg,var(--primary-color),var(--secondary-color));
+                               transition:opacity .2s;"
+                        onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+                    <i class="fas fa-redo" style="margin-right:.4rem;"></i>Get Another Number
+                </button>
+
+            </div>
+        </div>
+    </div>
+
+</div><!-- #app -->
+
+<!-- ═══ Settings Modal ════════════════════════════════════════════════════ -->
+<div id="settingsModal" class="modal-backdrop hidden">
+    <div class="modal-box">
+        <!-- Header -->
+        <div style="background:linear-gradient(135deg,var(--primary-color),var(--secondary-color));
+                    padding:1rem 1.25rem; border-radius:1.25rem 1.25rem 0 0;
+                    display:flex; align-items:center; justify-content:space-between;">
+            <div style="display:flex; align-items:center; gap:.65rem;">
+                <div style="width:38px; height:38px; border-radius:.5rem; background:rgba(255,255,255,.18);
+                            display:flex; align-items:center; justify-content:center;">
+                    <i class="fas fa-cog" style="color:#fff; font-size:1.1rem;"></i>
+                </div>
+                <span style="font-size:1.1rem; font-weight:700; color:#fff;">Printer Settings</span>
+            </div>
+            <button onclick="closeSettings()"
+                    style="width:36px; height:36px; border-radius:.5rem; background:rgba(255,255,255,.15);
+                           border:none; color:#fff; cursor:pointer; font-size:1rem; display:flex; align-items:center; justify-content:center;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Body -->
+        <div style="padding:1.25rem; display:flex; flex-direction:column; gap:1rem;">
+
+            <!-- Printer Type -->
+            <div style="background:#f8fafc; border-radius:.75rem; padding:1rem;">
+                <div style="font-size:.85rem; font-weight:700; color:#374151; margin-bottom:.65rem; display:flex; align-items:center; gap:.4rem;">
+                    <i class="fas fa-print" style="color:var(--primary-color);"></i> Printer Type
+                </div>
+                <div style="display:flex; flex-direction:column; gap:.45rem;">
+                    <label style="display:flex; align-items:center; gap:.65rem; padding:.75rem 1rem;
+                                  background:#fff; border-radius:.6rem; border:2px solid #e2e8f0;
+                                  cursor:pointer; min-height:52px; transition:border-color .2s;"
+                           onmouseover="this.style.borderColor='var(--primary-color)'" onmouseout="this.style.borderColor='#e2e8f0'">
+                        <input type="radio" name="printerType" value="thermal" checked onchange="updatePrinterSettings()">
+                        <div style="flex:1;">
+                            <div style="font-weight:700; font-size:.875rem; color:#0f172a;">USB Thermal Printer (80mm)</div>
+                            <div style="font-size:.75rem; color:#94a3b8;">Direct thermal printing via USB</div>
+                        </div>
+                        <i class="fas fa-receipt" style="color:#cbd5e1;"></i>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:.65rem; padding:.75rem 1rem;
+                                  background:#fff; border-radius:.6rem; border:2px solid #e2e8f0;
+                                  cursor:pointer; min-height:52px; transition:border-color .2s;"
+                           onmouseover="this.style.borderColor='var(--primary-color)'" onmouseout="this.style.borderColor='#e2e8f0'">
+                        <input type="radio" name="printerType" value="browser" onchange="updatePrinterSettings()">
+                        <div style="flex:1;">
+                            <div style="font-weight:700; font-size:.875rem; color:#0f172a;">Browser Print</div>
+                            <div style="font-size:.75rem; color:#94a3b8;">Standard browser print dialog</div>
+                        </div>
+                        <i class="fas fa-print" style="color:#cbd5e1;"></i>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:.65rem; padding:.75rem 1rem;
+                                  background:#fff; border-radius:.6rem; border:2px solid #e2e8f0;
+                                  cursor:pointer; min-height:52px; transition:border-color .2s;"
+                           onmouseover="this.style.borderColor='var(--primary-color)'" onmouseout="this.style.borderColor='#e2e8f0'">
+                        <input type="radio" name="printerType" value="none" onchange="updatePrinterSettings()">
+                        <div style="flex:1;">
+                            <div style="font-weight:700; font-size:.875rem; color:#0f172a;">Screenshot Only</div>
+                            <div style="font-size:.75rem; color:#94a3b8;">Save as image file</div>
+                        </div>
+                        <i class="fas fa-camera" style="color:#cbd5e1;"></i>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Vendor ID -->
+            <div id="thermalSettings" style="background:#eff6ff; border-radius:.75rem; padding:1rem;">
+                <label style="display:block; font-size:.8rem; font-weight:700; color:#374151; margin-bottom:.45rem;">
+                    <i class="fas fa-usb" style="color:var(--primary-color); margin-right:.3rem;"></i> Vendor ID (Optional)
+                </label>
+                <input type="text" id="vendorId" placeholder="0x0fe6">
+                <div style="font-size:.72rem; color:#64748b; margin-top:.35rem;">
+                    <i class="fas fa-info-circle" style="margin-right:.25rem;"></i>
+                    Leave empty for default (0x0fe6 — Bixolon)
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="background:#f8fafc; padding:.85rem 1.25rem; border-radius:0 0 1.25rem 1.25rem;
+                    display:flex; gap:.65rem; border-top:1px solid #e2e8f0;">
+            <button onclick="testPrint()"
+                    style="flex:1; padding:.7rem; border-radius:.65rem; font-weight:700; font-size:.875rem;
+                           border:none; cursor:pointer; color:#fff;
+                           background:linear-gradient(135deg,var(--primary-color),#6366f1);">
+                <i class="fas fa-print" style="margin-right:.35rem;"></i>Test Print
+            </button>
+            <button onclick="saveSettings()"
+                    style="flex:1; padding:.7rem; border-radius:.65rem; font-weight:700; font-size:.875rem;
+                           border:none; cursor:pointer; color:#fff;
+                           background:linear-gradient(135deg,#16a34a,#059669);">
+                <i class="fas fa-save" style="margin-right:.35rem;"></i>Save
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentQueue  = null;
+let connectedPrinter = null;
+let isGenerating  = false;
+let printerSettings = { type: 'thermal', vendorId: '0x0fe6' };
+
+const countersEndpoint = '{{ route('kiosk.counters', ['organization_code' => $companyCode]) }}';
+const initialCounters  = @json($onlineCounters);
+
+/* ── settings ─────────────────────────────────────────────── */
+function loadSettings() {
+    try {
+        const s = localStorage.getItem('kioskPrinterSettings');
+        if (s) printerSettings = JSON.parse(s);
+    } catch(e) {}
+}
+function saveSettings() {
+    printerSettings.type     = document.querySelector('input[name="printerType"]:checked').value;
+    printerSettings.vendorId = document.getElementById('vendorId').value || '0x0fe6';
+    localStorage.setItem('kioskPrinterSettings', JSON.stringify(printerSettings));
+    alert('Settings saved!');
+    closeSettings();
+}
+function showSettings() {
+    document.getElementById('settingsModal').classList.remove('hidden');
+    document.querySelectorAll('input[name="printerType"]').forEach(r => r.checked = (r.value === printerSettings.type));
+    document.getElementById('vendorId').value = printerSettings.vendorId || '';
+    updatePrinterSettings();
+}
+function closeSettings() { document.getElementById('settingsModal').classList.add('hidden'); }
+function updatePrinterSettings() {
+    const v = document.querySelector('input[name="printerType"]:checked').value;
+    document.getElementById('thermalSettings').style.display = (v === 'thermal') ? '' : 'none';
+}
+
+/* ── counter rendering ────────────────────────────────────── */
+function renderCounters(counters) {
+    const grid = document.getElementById('countersGrid');
+    const empty = document.getElementById('noCounters');
+    grid.innerHTML = '';
+    if (!counters || counters.length === 0) { empty.classList.remove('hidden'); return; }
+    empty.classList.add('hidden');
+    counters.forEach(c => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'counter-btn';
+        btn.onclick = () => selectCounter(c.id, c.counter_number, c.display_name);
+
+        const badge = document.createElement('div');
+        badge.className = 'counter-badge';
+        badge.textContent = c.counter_number;
+
+        const name = document.createElement('div');
+        name.className = 'counter-name';
+        name.textContent = c.display_name;
+
+        const desc = document.createElement('div');
+        desc.className = 'counter-desc';
+        desc.textContent = c.short_description || 'Ready to serve';
+
+        const avail = document.createElement('div');
+        avail.className = 'counter-avail';
+        const dot = document.createElement('span');
+        dot.className = 'dot-green';
+        const txt = document.createElement('span');
+        txt.className = 'avail-text';
+        txt.textContent = 'Available';
+        avail.appendChild(dot); avail.appendChild(txt);
+
+        btn.appendChild(badge); btn.appendChild(name); btn.appendChild(desc); btn.appendChild(avail);
+        grid.appendChild(btn);
+    });
+}
+
+/* ── counter polling ──────────────────────────────────────── */
+let refreshInFlight = false;
+let refreshController = null;
+function refreshCounters() {
+    if (refreshInFlight) return;
+    refreshInFlight = true;
+    if (refreshController) try { refreshController.abort(); } catch(e) {}
+    refreshController = new AbortController();
+    fetch(countersEndpoint, {
+        credentials: 'same-origin', cache: 'no-store',
+        headers: { 'Accept': 'application/json' },
+        signal: refreshController.signal,
+    })
+    .then(r => r.ok ? r.json() : Promise.reject(r))
+    .then(data => {
+        initialCounters.splice(0, initialCounters.length, ...(data.counters || []));
+        if (!document.getElementById('step1').classList.contains('hidden')) {
+            renderCounters(data.counters || []);
         }
-    }
+    })
+    .catch(e => { if (e && e.name !== 'AbortError') console.warn('Counter refresh failed', e); })
+    .finally(() => { refreshInFlight = false; });
+}
 
-    function renderCounters(counters) {
-        const countersGrid = document.getElementById('countersGrid');
-        const noCounters = document.getElementById('noCounters');
-        countersGrid.innerHTML = '';
+/* ── wizard step management ───────────────────────────────── */
+function moveToStep(n) {
+    ['step1','step2','step3'].forEach((id, i) => {
+        document.getElementById(id).classList.toggle('hidden', i + 1 !== n);
+    });
+    ['pill1','pill2','pill3'].forEach((id, i) => {
+        const el = document.getElementById(id);
+        el.classList.remove('active','done');
+        if      (i + 1 <  n) el.classList.add('done');
+        else if (i + 1 === n) el.classList.add('active');
+    });
+}
 
-        if (!counters || counters.length === 0) {
-            noCounters.classList.remove('hidden');
-            return;
-        }
+/* ── counter selection / queue generation ─────────────────── */
+function selectCounter(counterId, counterNumber, counterName) {
+    if (isGenerating) return;
+    if (!counterId) { showError('Invalid counter selection. Please try again.'); return; }
+    isGenerating = true;
+    moveToStep(2);
+    document.querySelectorAll('.counter-btn').forEach(b => b.disabled = true);
 
-        noCounters.classList.add('hidden');
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), 15000);
+    const url = `{{ route('kiosk.generate', ['organization_code' => $companyCode]) }}?counter_id=${encodeURIComponent(counterId)}`;
 
-        counters.forEach(counter => {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'counter-btn';
-            button.onclick = () => selectCounter(counter.id, counter.counter_number, counter.display_name);
-
-            // Number badge
-            const badge = document.createElement('div');
-            badge.className = 'counter-number';
-            badge.textContent = counter.counter_number;
-
-            // Title
-            const titleEl = document.createElement('div');
-            titleEl.className = 'counter-title';
-            titleEl.textContent = counter.display_name;
-
-            // Description
-            const descEl = document.createElement('div');
-            descEl.className = 'counter-desc';
-            descEl.textContent = counter.short_description || 'Ready to serve';
-
-            // Status row
-            const dot = document.createElement('span');
-            dot.className = 'status-indicator';
-
-            const statusTxt = document.createElement('span');
-            statusTxt.className = 'status-text';
-            statusTxt.textContent = 'Available';
-
-            const statusRow = document.createElement('div');
-            statusRow.className = 'counter-status';
-            statusRow.appendChild(dot);
-            statusRow.appendChild(statusTxt);
-
-            button.appendChild(badge);
-            button.appendChild(titleEl);
-            button.appendChild(descEl);
-            button.appendChild(statusRow);
-            countersGrid.appendChild(button);
-        });
-    }
-
-    function refreshCounters() {
-        if (refreshCounters.inFlight) return;
-        refreshCounters.inFlight = true;
-
-        try {
-            if (refreshCounters.controller) {
-                refreshCounters.controller.abort();
-            }
-            refreshCounters.controller = new AbortController();
-        } catch (e) {
-            refreshCounters.controller = null;
-        }
-
-        fetch(countersEndpoint, {
-            credentials: 'same-origin',
-            cache: 'no-store',
-            headers: { 'Accept': 'application/json' },
-            signal: refreshCounters.controller ? refreshCounters.controller.signal : undefined,
-        })
-            .then(response => response.ok ? response.json() : Promise.reject(response))
-            .then(data => {
-                // Update the initial counters data
-                initialCounters.splice(0, initialCounters.length, ...(data.counters || []));
-
-                // Only re-render if on step 1
-                if (!document.getElementById('step1').classList.contains('hidden')) {
-                    renderCounters(data.counters || []);
-                }
-            })
-            .catch(error => {
-                if (error && error.name === 'AbortError') return;
-                console.error('Refresh failed:', error);
-            })
-            .finally(() => {
-                refreshCounters.inFlight = false;
-            });
-    }
-
-    refreshCounters.inFlight = false;
-    refreshCounters.controller = null;
-
-    // function refreshColorSettings() {
-    //     const orgCode = '{{ $companyCode }}';
-    //     fetch(`/${orgCode}/api/settings`)
-    //         .then(response => response.json())
-    //         .then(data => {
-    //             const root = document.documentElement;
-    //             if (data.primary_color) root.style.setProperty('--primary-color', data.primary_color);
-    //             if (data.secondary_color) root.style.setProperty('--secondary-color', data.secondary_color);
-    //             if (data.accent_color) root.style.setProperty('--accent-color', data.accent_color);
-    //             if (data.text_color) root.style.setProperty('--text-color', data.text_color);
-    //         })
-    //         .catch(error => console.error('Color settings refresh failed:', error));
-    // }
-
-    loadSettings();
-    renderCounters(initialCounters);
-    setInterval(refreshCounters, 5000);
-    // setInterval(refreshColorSettings, 5000);
-
-    // Queue generation optimizations
-    let isGenerating = false;    function selectCounter(counterId, counterNumber, counterName) {
-        if (isGenerating) return;
-        
-        // Validate counter_id before proceeding
-        if (!counterId || counterId === undefined || counterId === null) {
-            console.error('Invalid counter_id:', counterId);
-            showError('Invalid counter selection. Please try again.');
-            return;
-        }
-        
-        isGenerating = true;
-        moveToStep(2);
-        document.querySelectorAll('.counter-btn').forEach(btn => btn.disabled = true);
-
-        const attemptGenerate = async (didRetry = false) => {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-            try {
-                console.log('Sending counter_id:', counterId);
-                const url = `{{ route('kiosk.generate', ['organization_code' => $companyCode]) }}?counter_id=${encodeURIComponent(counterId)}`;
-                console.log('Request URL:', url);
-                const response = await fetch(url, {
-                    method: 'GET',
-                    credentials: 'same-origin',
-                    signal: controller.signal,
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                });
-
-                const status = response.status;
-                let data;
-                try {
-                    data = await response.json();
-                } catch (e) {
-                    data = { success: false, message: `Server error (status ${status})` };
-                }
-
-
-
-                if (!response.ok) {
-                    throw new Error(data.message || `Request failed with status ${status}`);
-                }
-
-                if (data.success && data.queue) {
-                    console.log('Generated queue response:', data.queue);
-                    currentQueue = data.queue;
-                    showQueueDisplay(data.queue);
-                } else {
-                    throw new Error(data.message || 'Failed to generate queue number');
-                }
-            } catch (error) {
-                console.error('Generate failed:', error);
-                const msg = (error && error.name === 'AbortError')
-                    ? 'Request timed out. Please try again.'
-                    : (error.message || 'Error generating queue number. Please try again.');
-                showError(msg);
-            } finally {
-                clearTimeout(timeoutId);
-            }
-        };
-
-        attemptGenerate();
-    }
-
-    function moveToStep(stepNumber) {
-        ['step1', 'step2', 'step3'].forEach(id => {
-            document.getElementById(id).classList.add('hidden');
-        });
-
-        ['step1Indicator', 'step2Indicator', 'step3Indicator'].forEach((id, index) => {
-            const elem = document.getElementById(id);
-            elem.classList.remove('step-active', 'step-completed', 'bg-gray-100', 'text-gray-600');
-            
-            if (index + 1 < stepNumber) {
-                elem.classList.add('step-completed');
-            } else if (index + 1 === stepNumber) {
-                elem.classList.add('step-active');
-            } else {
-                elem.classList.add('bg-gray-100', 'text-gray-600');
-            }
-        });
-
-        document.getElementById('step' + stepNumber).classList.remove('hidden');
-    }
-
-    function showQueueDisplay(queue) {
-        const now = new Date();
-        const timeString = now.toLocaleTimeString('en-US', { 
-            hour: '2-digit', 
-            minute: '2-digit',
-            hour12: true 
-        });
-        
-        const queueParts = String(queue.queue_number).split('-');
-        const displayNumber = queueParts[queueParts.length - 1];
-        
-        console.log('showQueueDisplay queue:', queue);
-        document.getElementById('queueNumber').textContent = displayNumber;
-        document.getElementById('counterInfo').textContent = 
-            `Counter ${queue.counter.counter_number} - ${queue.counter.display_name}`;
-        document.getElementById('queueTime').textContent = `Generated at ${timeString}`;
-        const sigEl = document.getElementById('ticketSignature');
-        if (sigEl) {
-            sigEl.textContent = 'Sig: ' + (queue.signature ? String(queue.signature).slice(0, 10) : 'N/A');
-        }
-        
-        moveToStep(3);
-        isGenerating = false;
-    }
-
-    function showError(message) {
-        alert(message);
-        document.querySelectorAll('.counter-btn').forEach(btn => btn.disabled = false);
-        moveToStep(1);
-        isGenerating = false;
-    }
-
-    function finishAndReset() {
-        currentQueue = null;
-        moveToStep(1);
-        document.querySelectorAll('.counter-btn').forEach(btn => btn.disabled = false);
-        isGenerating = false;
-    }
-
-    function showSettings() {
-        document.getElementById('settingsModal').classList.remove('hidden');
-        document.querySelectorAll('input[name="printerType"]').forEach(input => {
-            input.checked = input.value === printerSettings.type;
-        });
-        document.getElementById('vendorId').value = printerSettings.vendorId || '';
-        updatePrinterSettings();
-    }
-
-    function closeSettings() {
-        document.getElementById('settingsModal').classList.add('hidden');
-    }
-
-    function updatePrinterSettings() {
-        const selected = document.querySelector('input[name="printerType"]:checked').value;
-        const thermalSettings = document.getElementById('thermalSettings');
-        
-        if (selected === 'thermal') {
-            thermalSettings.classList.remove('hidden');
+    fetch(url, {
+        method: 'GET', credentials: 'same-origin',
+        signal: controller.signal,
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json().then(d => ({ ok: r.ok, data: d })))
+    .then(({ ok, data }) => {
+        if (!ok) throw new Error(data.message || 'Request failed');
+        if (data.success && data.queue) {
+            currentQueue = data.queue;
+            showQueueDisplay(data.queue);
         } else {
-            thermalSettings.classList.add('hidden');
+            throw new Error(data.message || 'Failed to generate queue number');
         }
+    })
+    .catch(e => {
+        const msg = (e && e.name === 'AbortError') ? 'Request timed out. Please try again.' : (e.message || 'Error generating queue number.');
+        showError(msg);
+    })
+    .finally(() => clearTimeout(tid));
+}
+
+function showQueueDisplay(queue) {
+    const now = new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', hour12:true });
+    const parts = String(queue.queue_number).split('-');
+    const display = parts[parts.length - 1];
+
+    document.getElementById('queueNumber').textContent = display;
+    document.getElementById('counterInfo').textContent = `Counter ${queue.counter.counter_number} – ${queue.counter.display_name}`;
+    document.getElementById('queueTime').textContent   = `Generated at ${now}`;
+    const sigEl = document.getElementById('ticketSignature');
+    if (sigEl) sigEl.textContent = 'Sig: ' + (queue.signature ? String(queue.signature).slice(0,10) : 'N/A');
+
+    moveToStep(3);
+    isGenerating = false;
+}
+
+function showError(msg) {
+    alert(msg);
+    document.querySelectorAll('.counter-btn').forEach(b => b.disabled = false);
+    moveToStep(1);
+    isGenerating = false;
+}
+
+function finishAndReset() {
+    currentQueue = null;
+    moveToStep(1);
+    document.querySelectorAll('.counter-btn').forEach(b => b.disabled = false);
+    isGenerating = false;
+}
+
+/* ── printing ─────────────────────────────────────────────── */
+function printQueue() {
+    if (!currentQueue) { alert('No queue number to print'); return; }
+    switch (printerSettings.type) {
+        case 'thermal': printToThermalPrinter(); break;
+        case 'browser': printToBrowser(); break;
+        default: capturePhoto(); break;
     }
+}
 
-    function saveSettings() {
-        printerSettings.type = document.querySelector('input[name="printerType"]:checked').value;
-        printerSettings.vendorId = document.getElementById('vendorId').value || '0x0fe6';
-        
-        localStorage.setItem('kioskPrinterSettings', JSON.stringify(printerSettings));
-        
-        alert('Settings saved successfully!');
-        closeSettings();
+function printToThermalPrinter() {
+    if (!navigator.usb) { alert('USB not supported. Using browser print.'); printToBrowser(); return; }
+    if (connectedPrinter) { sendToPrinter(connectedPrinter); return; }
+    let vendorId = parseInt(printerSettings.vendorId);
+    if (isNaN(vendorId)) vendorId = 0x0fe6;
+    navigator.usb.requestDevice({ filters: [{ vendorId }] })
+        .then(d => { connectedPrinter = d; return d.open(); })
+        .then(() => sendToPrinter(connectedPrinter))
+        .catch(e => { console.warn('Thermal error', e); connectedPrinter = null; printToBrowser(); });
+}
+
+async function sendToPrinter(device) {
+    try {
+        if (!device.opened) await device.open();
+        if (device.configuration === null) await device.selectConfiguration(1);
+        await device.claimInterface(0);
+        const enc = new TextEncoder();
+        const now = new Date().toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:true });
+        const cmds = [
+            '\x1B\x40','\x1B\x61\x01','\x1B\x45\x01','\x1D\x21\x11',
+            '{{ $organization->organization_name }}\n',
+            '\x1B\x45\x00','\x1D\x21\x00','\n',
+            'QUEUE MANAGEMENT SYSTEM\n','================================\n','\n',
+            '\x1B\x45\x01','\x1D\x21\x11','Priority Number\n',
+            '\x1D\x21\x22', currentQueue.queue_number.split('-').pop()+'\n',
+            '\x1D\x21\x00','\x1B\x45\x00','\n',
+            '================================\n',
+            '\x1B\x45\x01','Counter '+currentQueue.counter.counter_number+'\n',
+            '\x1B\x45\x00', currentQueue.counter.display_name+'\n','\n',
+            '================================\n',
+            'INSTRUCTIONS:\n',
+            '1. Watch the monitor display\n',
+            '2. Listen for your number\n',
+            '3. Proceed to Counter '+currentQueue.counter.counter_number+'\n',
+            '================================\n','\n',
+            'Generated: '+now+'\n',
+            '\x1B\x61\x01','Thank you!\n','\n\n\n','\x1D\x56\x00',
+        ];
+        await device.transferOut(1, enc.encode(cmds.join('')));
+    } catch(e) {
+        console.error('Print error', e);
+        alert('Failed to print: '+(e.message||e));
+        connectedPrinter = null;
     }
+}
 
-    function testPrint() {
-        if (!currentQueue) {
-            currentQueue = {
-                queue_number: 'TEST-0001',
-                counter: {
-                    counter_number: '1',
-                    display_name: 'Test Counter'
-                }
-            };
-        }
-        printQueue();
-    }
+function printToBrowser() {
+    if (!currentQueue) return;
+    const win = window.open('','_blank','width=380,height=560');
+    const now = new Date().toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true});
+    const num = currentQueue.queue_number.split('-').pop();
+    win.document.write(`<!DOCTYPE html><html><head><title>Queue ${num}</title>
+    <style>
+        @media print { @page { margin:0; size:80mm auto; } body { margin:0; padding:8mm; } }
+        body { font-family:Arial,sans-serif; text-align:center; padding:20px; max-width:300px; margin:0 auto; }
+        .org  { font-size:18px; font-weight:bold; margin-bottom:8px; }
+        .hdr  { font-size:16px; font-weight:bold; padding-bottom:12px; border-bottom:2px double #000; margin-bottom:12px; }
+        .lbl  { font-size:14px; text-transform:uppercase; margin-bottom:6px; }
+        .num  { font-size:80px; font-weight:900; border:4px solid #000; padding:18px; letter-spacing:4px; margin:16px 0; }
+        .ctr  { font-size:20px; font-weight:bold; margin:10px 0 4px; }
+        .cname{ font-size:16px; color:#333; margin-bottom:16px; }
+        .inst { font-size:13px; border-top:2px double #000; border-bottom:2px double #000; padding:12px; text-align:left; line-height:1.7; margin-bottom:12px; }
+        .foot { font-size:12px; color:#555; border-top:1px dashed #999; padding-top:10px; }
+    </style></head><body>
+        <div class="org" data-org-name>{{ $organization->organization_name }}</div>
+        <div class="hdr">QUEUE MANAGEMENT SYSTEM</div>
+        <div class="lbl">Priority Number</div>
+        <div class="num">${num}</div>
+        <div class="ctr">Counter ${currentQueue.counter.counter_number}</div>
+        <div class="cname">${currentQueue.counter.display_name}</div>
+        <div class="inst"><strong style="display:block;text-align:center;margin-bottom:6px;">📋 INSTRUCTIONS</strong>
+            1. Watch the monitor display<br>2. Listen for your number<br>
+            3. Proceed to Counter ${currentQueue.counter.counter_number}<br>4. Keep this ticket visible</div>
+        <div class="foot">Generated: ${now}<br><strong>Thank you for your patience!</strong></div>
+    </body></html>`);
+    win.document.close();
+    win.onload = () => { setTimeout(() => { win.print(); setTimeout(() => win.close(), 500); }, 250); };
+}
 
-    function printQueue() {
-        if (!currentQueue) {
-            alert('No queue number to print');
-            return;
-        }
-        
-        switch(printerSettings.type) {
-            case 'thermal':
-                printToThermalPrinter();
-                break;
-            case 'browser':
-                printToBrowser();
-                break;
-            case 'none':
-                capturePhoto();
-                break;
-            default:
-                printToBrowser();
-        }
-    }
+/* ── photo capture ────────────────────────────────────────── */
+function capturePhoto() {
+    if (!currentQueue) { alert('No queue number to capture'); return; }
+    generateTicketImage(currentQueue)
+        .then(() => alert('Queue ticket saved.'))
+        .catch(e => { console.error(e); alert('Could not save ticket image. Please try printing instead.'); });
+}
 
-    function printToThermalPrinter() {
-        if (!navigator.usb) {
-            alert('USB printing not supported in this browser. Using browser print instead.');
-            printToBrowser();
-            return;
-        }
-
-        if (connectedPrinter) {
-            sendToPrinter(connectedPrinter);
-            return;
-        }
-
-        let vendorId = parseInt(printerSettings.vendorId);
-        if (isNaN(vendorId)) vendorId = 0x0fe6;
-
-        navigator.usb.requestDevice({ filters: [{ vendorId: vendorId }] })
-            .then(device => {
-                connectedPrinter = device;
-                return device.open();
-            })
-            .then(() => sendToPrinter(connectedPrinter))
-            .catch(error => {
-                console.log('Thermal printer error:', error);
-                alert('Could not connect to thermal printer. Using browser print instead.');
-                connectedPrinter = null;
-                printToBrowser();
-            });
-    }
-
-    async function sendToPrinter(device) {
+async function generateTicketImage(queue) {
+    return new Promise((resolve, reject) => {
         try {
-            if (!device.opened) await device.open();
-            if (device.configuration === null) await device.selectConfiguration(1);
-            await device.claimInterface(0);
+            const orgName = `{{ $organization->organization_name }}` || 'Queue System';
+            const nowStr  = new Date().toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true});
+            const display = String(queue.queue_number).split('-').pop();
+            const S=2, W=600, H=1100;
+            const canvas = document.createElement('canvas');
+            canvas.width = W*S; canvas.height = H*S;
+            const ctx = canvas.getContext('2d');
+            ctx.scale(S,S);
+            ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
 
-            const encoder = new TextEncoder();
-            const now = new Date().toLocaleString('en-US', { 
-                month: 'short', day: 'numeric', year: 'numeric',
-                hour: '2-digit', minute: '2-digit', hour12: true 
-            });
-            
-            const commands = [
-                '\x1B\x40', '\x1B\x61\x01', '\x1B\x45\x01', '\x1D\x21\x11',
-                '{{ $organization->organization_name }}\n',
-                '\x1B\x45\x00', '\x1D\x21\x00', '\n',
-                'QUEUE MANAGEMENT SYSTEM\n',
-                '================================\n', '\n',
-                '\x1B\x45\x01', '\x1D\x21\x11', 'Priority Number\n',
-                '\x1D\x21\x22', currentQueue.queue_number.split('-').pop() + '\n',
-                '\x1D\x21\x00', '\x1B\x45\x00', '\n',
-                '================================\n',
-                '\x1B\x45\x01', 'Counter ' + currentQueue.counter.counter_number + '\n',
-                '\x1B\x45\x00', currentQueue.counter.display_name + '\n', '\n',
-                '================================\n',
-                'INSTRUCTIONS:\n',
-                '1. Watch the monitor display\n',
-                '2. Listen for your number\n',
-                '3. Proceed to Counter ' + currentQueue.counter.counter_number + '\n',
-                '================================\n', '\n',
-                'Generated: ' + now + '\n',
-                '\x1B\x61\x01', 'Thank you!\n', '\n\n\n', '\x1D\x56\x00',
-            ];
-
-            await device.transferOut(1, encoder.encode(commands.join('')));
-            console.log('Print job sent successfully');
-            
-        } catch (error) {
-            console.error('Print error:', error);
-            alert('Failed to print: ' + error.message);
-            connectedPrinter = null;
-        }
-    }
-
-    function printToBrowser() {
-        if (!currentQueue) return;
-        
-        const printWindow = window.open('', '_blank', 'width=350,height=500');
-        const now = new Date().toLocaleString('en-US', { 
-            month: 'short', day: 'numeric', year: 'numeric',
-            hour: '2-digit', minute: '2-digit', hour12: true 
-        });
-        
-        const displayNumber = currentQueue.queue_number.split('-').pop();
-        
-        printWindow.document.write(`
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Queue Number - ${displayNumber}</title>
-                <style>
-                    @media print { @page { margin: 0; size: 80mm auto; } body { margin: 0; padding: 10mm; } }
-                    body { font-family: Arial, sans-serif; text-align: center; padding: 20px; max-width: 300px; margin: 0 auto; }
-                    .header { font-size: 24px; font-weight: bold; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 3px double #000; }
-                    .organization-name { font-size: 18px; margin-bottom: 10px; color: #333; }
-                    .title { font-size: 18px; font-weight: bold; margin-bottom: 20px; text-transform: uppercase; }
-                    .queue-number { font-size: 84px; font-weight: bold; margin: 30px 0; letter-spacing: 4px; 
-                                   border: 5px solid #000; padding: 25px; background: linear-gradient(135deg, #f0f0f0, #fff); 
-                                   box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
-                    .counter-info { font-size: 28px; font-weight: bold; margin: 25px 0 10px 0; }
-                    .counter-name { font-size: 20px; margin-bottom: 25px; color: #333; }
-                    .instructions { font-size: 15px; margin: 25px 0; padding: 20px; border-top: 3px double #000; 
-                                   border-bottom: 3px double #000; line-height: 1.8; text-align: left; }
-                    .instructions strong { display: block; text-align: center; margin-bottom: 10px; font-size: 16px; }
-                    .footer { font-size: 13px; color: #666; margin-top: 20px; padding-top: 15px; border-top: 2px dashed #999; }
-                    .barcode { margin: 20px 0; padding: 15px; background: #fff; border: 2px solid #333; 
-                              font-family: 'Courier New', monospace; font-size: 18px; letter-spacing: 3px; font-weight: bold; }
-                </style>
-            </head>
-            <body>
-                <div class="organization-name" data-org-name>{{ $organization->organization_name }}</div>
-                <div class="header">QUEUE MANAGEMENT SYSTEM</div>
-                <div class="title">Priority Number</div>
-                <div class="queue-number">${displayNumber}</div>
-                <div class="barcode">*${currentQueue.queue_number}*</div>
-                <div class="counter-info">Counter ${currentQueue.counter.counter_number}</div>
-                <div class="counter-name">${currentQueue.counter.display_name}</div>
-                <div class="instructions">
-                    <strong>📋 INSTRUCTIONS</strong>
-                    1. Watch the monitor display<br>
-                    2. Listen for your number<br>
-                    3. Proceed to Counter ${currentQueue.counter.counter_number}<br>
-                    4. Keep this ticket visible
-                </div>
-                <div class="footer">Generated: ${now}<br><strong>Thank you for your patience!</strong></div>
-            </body>
-            </html>
-        `);
-        
-        printWindow.document.close();
-        printWindow.onload = function() {
-            setTimeout(() => {
-                printWindow.print();
-                setTimeout(() => printWindow.close(), 500);
-            }, 250);
-        };
-    }
-
-    function capturePhoto() {
-        console.log('capturePhoto called', currentQueue);
-        if (!currentQueue) {
-            alert('No queue number to capture');
-            return;
-        }
-
-        try {
-            generateTicketImage(currentQueue).then(() => {
-                console.log('generateTicketImage resolved');
-                alert('Queue ticket saved to your device.');
-            }).catch(err => {
-                console.error('Save failed (generateTicketImage):', err);
-                alert('Could not save ticket image. Please try printing instead.');
-            });
-        } catch (err) {
-            console.error('capturePhoto unexpected error:', err);
-            alert('Unexpected error occurred. Check console for details.');
-        }
-    }
-
-    async function generateTicketImage(queue) {
-        console.log('generateTicketImage called', queue);
-        return new Promise((resolve, reject) => {
-            try {
-                const orgName = `{{ $organization->organization_name }}` || 'Default Organization';
-                const now = new Date();
-                const nowStr = now.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
-                const displayNumber = String(queue.queue_number).split('-').pop();
-
-                const scale = 2; // export scale for sharper image
-                const width = 600;
-                const height = 1100;
-
-                const canvas = document.createElement('canvas');
-                canvas.width = width * scale;
-                canvas.height = height * scale;
-                canvas.style.width = width + 'px';
-                canvas.style.height = height + 'px';
-
-                const ctx = canvas.getContext('2d');
-                ctx.scale(scale, scale);
-
-                // Background
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, width, height);
-
-                // Helpers
-                function centerText(text, y, font, color) {
-                    ctx.font = font;
-                    ctx.fillStyle = color || '#111827';
-                    const metrics = ctx.measureText(text);
-                    const x = (width - metrics.width) / 2;
-                    ctx.fillText(text, x, y);
-                }
-
-                // Organization name
-                ctx.textBaseline = 'top';
-                centerText(orgName, 20, '800 20px Arial', '#111827');
-
-                // QUEUE MANAGEMENT / SYSTEM (two-line header)
-                centerText('QUEUE MANAGEMENT', 52, '700 18px Arial', '#111');
-                centerText('SYSTEM', 76, '700 18px Arial', '#111');
-
-                // Title
-                centerText('PRIORITY NUMBER', 110, '700 16px Arial', '#111');
-
-                // Large number area
-                const boxY = 140;
-                const boxHeight = 240;
-                ctx.fillStyle = '#ffffff';
-                ctx.strokeStyle = '#111';
-                ctx.lineWidth = 3;
-                ctx.fillRect(40, boxY, width - 80, boxHeight);
-                ctx.strokeRect(40, boxY, width - 80, boxHeight);
-
-                // Number text (big)
-                ctx.textBaseline = 'middle';
-                ctx.fillStyle = '#000';
-                ctx.font = '900 140px Arial';
-                let numberMetrics = ctx.measureText(displayNumber);
-                ctx.fillText(displayNumber, (width - numberMetrics.width) / 2, boxY + boxHeight / 2);
-
-                // Spaced barcode-like line: * 8 9 5 8 *
-                const spaced = displayNumber.split('').join(' ');
-                const barcodeText = `* ${spaced} *`;
-                centerText(barcodeText, boxY + boxHeight + 36, '700 28px Courier New, monospace', '#111');
-
-                // Counter info (two lines as in sample)
-                centerText('Counter ' + queue.counter.counter_number, boxY + boxHeight + 86, '700 20px Arial', '#111');
-                centerText(queue.counter.display_name, boxY + boxHeight + 112, '600 18px Arial', '#111');
-
-                // Instructions block
-                const instrY = boxY + boxHeight + 150;
-                const instrX = 60;
-                ctx.font = '700 14px Arial';
-                ctx.fillStyle = '#111';
-                ctx.fillText('📋 INSTRUCTIONS', instrX, instrY);
-
-                ctx.font = '14px Arial';
-                const lines = [
-                    '1. Watch the monitor display',
-                    '2. Listen for your number',
-                    `3. Proceed to Counter ${queue.counter.counter_number}`,
-                    '4. Keep this ticket visible'
-                ];
-                let ly = instrY + 28;
-                lines.forEach(line => {
-                    ctx.fillText(line, instrX, ly);
-                    ly += 24;
-                });
-
-                // Generated timestamp and footer
-                ctx.font = '13px Arial';
-                ctx.fillStyle = '#444';
-                centerText('Generated: ' + nowStr, ly + 18, '13px Arial', '#444');
-                centerText('Thank you for your patience!', ly + 44, '700 14px Arial', '#111');
-
-                // Include full verification URL + short signature snippet for tamper detection
-                try {
-                    const verifyUrl = `${location.origin}/{{ $companyCode }}/kiosk/verify-ticket?queue_number=${encodeURIComponent(queue.queue_number)}&signature=${encodeURIComponent(queue.signature)}`;
-                    ctx.font = '11px Arial';
-                    ctx.fillStyle = '#444';
-                    // Print a short visible signature
-                    if (queue.signature) {
-                        const sig = String(queue.signature).slice(0, 10);
-                        centerText('Sig: ' + sig, ly + 60, '12px Courier New, monospace', '#666');
-                    }
-                    // Print verification URL (small)
-                    ctx.font = '11px Arial';
-                    ctx.fillStyle = '#0066cc';
-                    // Truncate URL display for layout but keep full URL in the QR
-                    const shortUrl = verifyUrl.length > 64 ? verifyUrl.slice(0, 60) + '...' : verifyUrl;
-                    centerText('Verify: ' + shortUrl, ly + 84, '11px Arial', '#0066cc');
-
-                    // Generate QR code image via Google Charts and draw it on the ticket.
-                    // Size in px
-                    const qrSize = 180;
-                    const qrSrc = `https://chart.googleapis.com/chart?cht=qr&chs=${qrSize}x${qrSize}&chl=${encodeURIComponent(verifyUrl)}`;
-                    const img = new Image();
-                    img.crossOrigin = 'Anonymous';
-                    img.onload = () => {
-                        try {
-                            // draw QR at bottom-right area
-                            const qrX = width - 40 - qrSize;
-                            const qrY = ly + 100;
-                            ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
-
-                            // proceed to export
-                            canvas.toBlob(blob => {
-                                if (!blob) {
-                                    console.error('toBlob returned null after QR');
-                                    return reject(new Error('Blob generation failed'));
-                                }
-                                try {
-                                    const url = URL.createObjectURL(blob);
-                                    const a = document.createElement('a');
-                                    a.href = url;
-                                    a.download = `ticket-${queue.queue_number}.png`;
-                                    document.body.appendChild(a);
-                                    a.click();
-                                    document.body.removeChild(a);
-                                    URL.revokeObjectURL(url);
-                                    resolve();
-                                } catch (err) {
-                                    console.error('Error triggering download (after QR):', err);
-                                    return reject(err);
-                                }
-                            }, 'image/png');
-                        } catch (err) {
-                            console.error('Failed drawing QR:', err);
-                            // fallback: export without QR
-                            canvas.toBlob(blob => {
-                                if (!blob) return reject(new Error('Blob generation failed'));
-                                const url = URL.createObjectURL(blob);
-                                const a = document.createElement('a');
-                                a.href = url;
-                                a.download = `ticket-${queue.queue_number}.png`;
-                                document.body.appendChild(a);
-                                a.click();
-                                document.body.removeChild(a);
-                                URL.revokeObjectURL(url);
-                                resolve();
-                            }, 'image/png');
-                        }
-                    };
-                    img.onerror = (e) => {
-                        console.error('QR image load error', e);
-                        // export without QR
-                        canvas.toBlob(blob => {
-                            if (!blob) return reject(new Error('Blob generation failed'));
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = `ticket-${queue.queue_number}.png`;
-                            document.body.appendChild(a);
-                            a.click();
-                            document.body.removeChild(a);
-                            URL.revokeObjectURL(url);
-                            resolve();
-                        }, 'image/png');
-                    };
-                    img.src = qrSrc;
-                    // return here; onload will handle toBlob
-                    return;
-                } catch (err) {
-                    console.error('Failed to render verify URL on ticket:', err);
-                }
-
-                // Convert and download
-                canvas.toBlob(blob => {
-                    if (!blob) {
-                        console.error('toBlob returned null');
-                        return reject(new Error('Blob generation failed'));
-                    }
-                    try {
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `ticket-${queue.queue_number}.png`;
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                        URL.revokeObjectURL(url);
-                        resolve();
-                    } catch (err) {
-                        console.error('Error triggering download:', err);
-                        return reject(err);
-                    }
-                }, 'image/png');
-            } catch (err) {
-                reject(err);
+            function cx(text, y, font, color) {
+                ctx.font = font; ctx.fillStyle = color||'#111';
+                const m = ctx.measureText(text);
+                ctx.fillText(text, (W - m.width)/2, y);
             }
-        });
-    }
-    </script>
+            ctx.textBaseline='top';
+            cx(orgName,       20, '800 20px Arial', '#111');
+            cx('QUEUE MANAGEMENT SYSTEM', 50, '700 16px Arial','#111');
+            cx('PRIORITY NUMBER',         78, '700 14px Arial','#444');
+
+            const bY=110, bH=220;
+            ctx.fillStyle='#fff'; ctx.strokeStyle='#111'; ctx.lineWidth=3;
+            ctx.fillRect(40,bY,W-80,bH); ctx.strokeRect(40,bY,W-80,bH);
+            ctx.textBaseline='middle'; ctx.fillStyle='#000'; ctx.font='900 130px Arial';
+            const nm = ctx.measureText(display);
+            ctx.fillText(display,(W-nm.width)/2, bY+bH/2);
+
+            const barcodeText = '* '+display.split('').join(' ')+' *';
+            cx(barcodeText, bY+bH+30, '700 24px Courier New', '#111');
+            cx('Counter '+queue.counter.counter_number, bY+bH+70, '700 18px Arial','#111');
+            cx(queue.counter.display_name, bY+bH+95, '600 16px Arial','#444');
+
+            const iY=bY+bH+130;
+            ctx.textBaseline='top';
+            ctx.font='700 13px Arial'; ctx.fillStyle='#111';
+            ctx.fillText('📋 INSTRUCTIONS', 60, iY);
+            ctx.font='13px Arial'; let ly=iY+24;
+            ['1. Watch the monitor display','2. Listen for your number',
+             `3. Proceed to Counter ${queue.counter.counter_number}`,
+             '4. Keep this ticket visible'].forEach(l=>{ ctx.fillText(l,60,ly); ly+=22; });
+            cx('Generated: '+nowStr, ly+14, '12px Arial','#555');
+            cx('Thank you for your patience!', ly+34, '700 13px Arial','#111');
+
+            // QR code
+            try {
+                const verifyUrl = `${location.origin}/{{ $companyCode }}/kiosk/verify-ticket?queue_number=${encodeURIComponent(queue.queue_number)}&signature=${encodeURIComponent(queue.signature||'')}`;
+                const qrSz=160;
+                const img = new Image(); img.crossOrigin='Anonymous';
+                img.onload = () => {
+                    try { ctx.drawImage(img, W-40-qrSz, ly+55, qrSz, qrSz); } catch(e) {}
+                    canvas.toBlob(blob => blobDownload(blob, queue, resolve, reject), 'image/png');
+                };
+                img.onerror = () => canvas.toBlob(blob => blobDownload(blob, queue, resolve, reject), 'image/png');
+                img.src = `https://chart.googleapis.com/chart?cht=qr&chs=${qrSz}x${qrSz}&chl=${encodeURIComponent(verifyUrl)}`;
+                return;
+            } catch(e) {}
+
+            canvas.toBlob(blob => blobDownload(blob, queue, resolve, reject), 'image/png');
+        } catch(e) { reject(e); }
+    });
+}
+
+function blobDownload(blob, queue, resolve, reject) {
+    if (!blob) { return reject(new Error('Blob generation failed')); }
+    try {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `ticket-${queue.queue_number}.png`;
+        document.body.appendChild(a); a.click();
+        document.body.removeChild(a); URL.revokeObjectURL(url);
+        resolve();
+    } catch(e) { reject(e); }
+}
+
+function testPrint() {
+    if (!currentQueue) currentQueue = { queue_number:'TEST-0001', counter:{ counter_number:'1', display_name:'Test Counter' } };
+    printQueue();
+}
+
+/* ── bootstrap ────────────────────────────────────────────── */
+loadSettings();
+renderCounters(initialCounters);
+setInterval(refreshCounters, 5000);
+</script>
 </body>
 </html>
