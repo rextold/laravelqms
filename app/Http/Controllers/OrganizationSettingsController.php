@@ -20,7 +20,14 @@ class OrganizationSettingsController extends Controller
             abort(403);
         }
 
-        $settings = $organization->setting ?? new OrganizationSetting(['organization_id' => $organization->id]);
+        $settings = $organization->setting ?? new OrganizationSetting([
+            'organization_id' => $organization->id,
+            'primary_color'       => '#3b82f6',
+            'secondary_color'     => '#8b5cf6',
+            'accent_color'        => '#10b981',
+            'text_color'          => '#ffffff',
+            'queue_number_digits' => 4,
+        ]);
         return view('admin.organization-settings', compact('organization', 'settings'));
     }
 

@@ -98,6 +98,60 @@ class OrganizationSetting extends Model
         $this->attributes[$column] = $value;
     }
 
+    public function getOrganizationPhoneAttribute(): ?string
+    {
+        $column = $this->resolveExistingColumn(['organization_phone', 'company_phone', 'phone']);
+        if (!$column) {
+            return null;
+        }
+        return $this->attributes[$column] ?? null;
+    }
+
+    public function setOrganizationPhoneAttribute($value): void
+    {
+        $column = $this->resolveExistingColumn(['organization_phone', 'company_phone', 'phone']);
+        if (!$column) {
+            return;
+        }
+        $this->attributes[$column] = $value;
+    }
+
+    public function getOrganizationEmailAttribute(): ?string
+    {
+        $column = $this->resolveExistingColumn(['organization_email', 'company_email', 'email']);
+        if (!$column) {
+            return null;
+        }
+        return $this->attributes[$column] ?? null;
+    }
+
+    public function setOrganizationEmailAttribute($value): void
+    {
+        $column = $this->resolveExistingColumn(['organization_email', 'company_email', 'email']);
+        if (!$column) {
+            return;
+        }
+        $this->attributes[$column] = $value;
+    }
+
+    public function getOrganizationAddressAttribute(): ?string
+    {
+        $column = $this->resolveExistingColumn(['organization_address', 'company_address', 'address']);
+        if (!$column) {
+            return null;
+        }
+        return $this->attributes[$column] ?? null;
+    }
+
+    public function setOrganizationAddressAttribute($value): void
+    {
+        $column = $this->resolveExistingColumn(['organization_address', 'company_address', 'address']);
+        if (!$column) {
+            return;
+        }
+        $this->attributes[$column] = $value;
+    }
+
     public function getCompanyPhoneAttribute(): ?string
     {
         $column = $this->resolveExistingColumn(['company_phone', 'organization_phone', 'phone']);
