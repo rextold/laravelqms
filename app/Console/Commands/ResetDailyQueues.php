@@ -39,6 +39,7 @@ class ResetDailyQueues extends Command
         $activeQuery = Queue::whereIn('status', ['waiting', 'called', 'serving']);
 
         if ($orgId !== null) {
+            
             $activeQuery->where('organization_id', $orgId);
         }
 
