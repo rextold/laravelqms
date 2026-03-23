@@ -1,3 +1,12 @@
+# Disable ModSecurity for kiosk and monitor public polling endpoints.
+# These routes are hit every 1-5 seconds by browser clients — ModSecurity
+# rate/bot rules would otherwise return 403 Forbidden for the polling requests.
+<IfModule mod_security2.c>
+    <LocationMatch "/(kiosk|monitor)(/|$)">
+        SecRuleEngine Off
+    </LocationMatch>
+</IfModule>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes

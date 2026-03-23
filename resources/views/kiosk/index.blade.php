@@ -536,7 +536,10 @@ function refreshCounters() {
     refreshController = new AbortController();
     fetch(countersEndpoint, {
         credentials: 'same-origin', cache: 'no-store',
-        headers: { 'Accept': 'application/json' },
+        headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+        },
         signal: refreshController.signal,
     })
     .then(r => r.ok ? r.json() : Promise.reject(r))
