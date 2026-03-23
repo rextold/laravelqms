@@ -21,6 +21,9 @@
     <link rel="manifest" href="/manifest.json">
     <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
     <link rel="shortcut icon" href="/icons/icon-96x96.png">
+
+    <!-- YouTube IFrame Player API — required for programmatic volume/play control -->
+    <script src="https://www.youtube.com/iframe_api"></script>
     
     <style>
         /* ========================================
@@ -912,6 +915,13 @@
             playlistRotationIndex: 0,  // current position in STATE.videos array
             lastServerVideoId: null,   // last current_video_id received from server (detect changes)
             playlistTimer: null,       // setTimeout handle for YouTube rotation
+            // YouTube IFrame API state
+            ytPlayer: null,            // YT.Player instance — controlled via IFrame API
+            ytApiReady: false,         // true when onYouTubeIframeAPIReady fires
+            ytCurrentVideoId: null,    // YouTube video ID string loaded in player (not our DB id)
+            ytAudioUnlocked: false,    // true after first user interaction → can unmute YouTube
+            lastVolume: -1,            // last volume sent to ytPlayer (avoid redundant calls)
+            pendingYouTubeLoad: null,  // { ytId, videoControl } queued before API was ready
             // Pre-populated from server-side render — same shape as getData() returns.
             // Used to fill the counter/queue panels immediately on page load.
             initialCounters: @json($initialCounterData ?? []),
@@ -952,6 +962,16 @@
                 return cached;
             } catch (e) { return null; }
         }
+
+        // YouTube IFrame API readiness callback — called automatically by the API script
+        window.onYouTubeIframeAPIReady = function () {
+            STATE.ytApiReady = true;
+            console.log('[YouTube] IFrame API ready.');
+            if (STATE.pendingYouTubeLoad) {
+                _createYouTubePlayer(STATE.pendingYouTubeLoad.ytId, STATE.pendingYouTubeLoad.videoControl);
+                STATE.pendingYouTubeLoad = null;
+            }
+        };
 
         // Debug: Log video and audio information
         console.log('📹 Video Debug Info:');
@@ -1111,6 +1131,14 @@
                             audio.currentTime = 0;
                             console.log('✅ Audio unlocked successfully');
                             updateAudioStatus('ready');
+                            // Unmute the YouTube player now that the user has interacted
+                            STATE.ytAudioUnlocked = true;
+                            if (STATE.ytPlayer && typeof STATE.ytPlayer.unMute === 'function') {
+                                STATE.ytPlayer.unMute();
+                                const vol = STATE.videoControl?.volume ?? 80;
+                                STATE.ytPlayer.setVolume(vol);
+                                console.log('[YouTube] Unmuted after user interaction — volume:', vol);
+                            }
                         })
                         .catch(error => {
                             console.warn('⚠️ Audio unlock failed:', error.name, error.message);
@@ -1874,6 +1902,85 @@
         }
         
         // ========================================
+        // YOUTUBE IFRAME API HELPERS
+        // ========================================
+
+        /** Extract the YouTube video ID from an embed URL like https://www.youtube.com/embed/VIDEOID */
+        function extractYouTubeId(embedUrl) {
+            if (!embedUrl) return null;
+            const match = embedUrl.match(/\/embed\/([^?&#/]+)/);
+            return match ? match[1] : null;
+        }
+
+        /** Create (or replace) the YT.Player inside #videoPlayer. */
+        function _createYouTubePlayer(ytId, videoControl) {
+            const player = document.getElementById('videoPlayer');
+            let container = document.getElementById('yt-player-container');
+            if (!container) {
+                player.innerHTML = '';
+                container = document.createElement('div');
+                container.id = 'yt-player-container';
+                container.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;';
+                player.appendChild(container);
+            }
+
+            STATE.ytPlayer = new YT.Player('yt-player-container', {
+                videoId: ytId,
+                playerVars: {
+                    autoplay: 1,
+                    mute: 1,           // must start muted for autoplay; unmuted on user interaction
+                    modestbranding: 1,
+                    rel: 0,
+                    playsinline: 1,
+                    controls: 0,
+                },
+                events: {
+                    onReady: function (event) {
+                        event.target.playVideo();
+                        applyYouTubeControls(videoControl);
+                        const iframe = document.querySelector('#videoPlayer iframe');
+                        if (iframe) {
+                            iframe.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border:0;';
+                        }
+                        console.log('[YouTube] Player ready — video:', ytId);
+                    },
+                    onStateChange: function (event) {
+                        if (event.data === YT.PlayerState.ENDED) {
+                            advancePlaylist();
+                        }
+                    },
+                    onError: function (event) {
+                        console.error('[YouTube] Player error:', event.data);
+                    }
+                }
+            });
+        }
+
+        /**
+         * Apply the admin-controlled volume and play/pause state to the live YouTube player.
+         * Called on every poll tick when the same YouTube video is already loaded.
+         */
+        function applyYouTubeControls(videoControl) {
+            if (!STATE.ytPlayer || typeof STATE.ytPlayer.setVolume !== 'function') return;
+
+            const vol = (videoControl && typeof videoControl.volume === 'number') ? videoControl.volume : 80;
+
+            if (vol !== STATE.lastVolume) {
+                STATE.lastVolume = vol;
+                STATE.ytPlayer.setVolume(vol);
+                if (STATE.ytAudioUnlocked) {
+                    STATE.ytPlayer.unMute();
+                }
+            }
+
+            if (videoControl && !videoControl.is_playing) {
+                try { STATE.ytPlayer.pauseVideo(); } catch (e) {}
+            } else {
+                try { STATE.ytPlayer.playVideo(); } catch (e) {}
+            }
+        }
+
+        // ========================================
         // VIDEO PLAYER UPDATE
         // ========================================
         
@@ -1883,6 +1990,13 @@
             if (!videoControl || !videoControl.is_playing) {
                 clearTimeout(STATE.playlistTimer);
                 STATE.playlistTimer = null;
+                // Destroy the YouTube player instance to stop ghost audio/playback
+                if (STATE.ytPlayer) {
+                    try { STATE.ytPlayer.destroy(); } catch (e) {}
+                    STATE.ytPlayer = null;
+                    STATE.ytCurrentVideoId = null;
+                    STATE.lastVolume = -1;
+                }
                 player.innerHTML = `
                     <div class="no-video">
                         <i class="fas fa-pause-circle"></i>
@@ -1935,18 +2049,32 @@
 
             // Render video player
             if (video.is_youtube && video.youtube_embed_url) {
-                // YouTube video — muted to satisfy browser autoplay policy
-                const autoplayParams = `?autoplay=1&mute=1&loop=${multipleVideos ? 0 : 1}&modestbranding=1&rel=0&enablejsapi=1`;
-                const src = video.youtube_embed_url + autoplayParams;
-                const existing = player.querySelector('iframe');
-                
-                if (!existing || existing.src !== src) {
+                // YouTube video — controlled via IFrame Player API for live volume/play control
+                const ytId = extractYouTubeId(video.youtube_embed_url);
+                if (!ytId) {
+                    player.innerHTML = `<div class="no-video"><i class="fas fa-video"></i><p>Invalid YouTube URL</p></div>`;
+                    return;
+                }
+
+                if (STATE.ytCurrentVideoId === ytId && STATE.ytPlayer) {
+                    // Same video already playing — sync admin controls without recreating the player.
+                    // This runs every poll tick so volume/pause changes from another tab apply live.
+                    applyYouTubeControls(videoControl);
+                } else {
+                    // Different video or first load — (re)create the YT.Player
+                    STATE.ytCurrentVideoId = ytId;
                     clearTimeout(STATE.playlistTimer);
                     STATE.playlistTimer = null;
-                    player.innerHTML = `<iframe src="${src}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border:0;"></iframe>`;
-                    // YouTube iframes don't fire an ended event, so rotate on a fixed timer.
-                    if (multipleVideos) {
-                        STATE.playlistTimer = setTimeout(advancePlaylist, 60000); // 60 s per YouTube video
+                    STATE.lastVolume = -1;
+                    if (STATE.ytPlayer) {
+                        try { STATE.ytPlayer.destroy(); } catch (e) {}
+                        STATE.ytPlayer = null;
+                    }
+                    player.innerHTML = '<div id="yt-player-container" style="position:absolute;top:0;left:0;width:100%;height:100%;"></div>';
+                    if (STATE.ytApiReady) {
+                        _createYouTubePlayer(ytId, videoControl);
+                    } else {
+                        STATE.pendingYouTubeLoad = { ytId, videoControl };
                     }
                 }
             } else if (video.file_path) {
