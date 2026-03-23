@@ -560,11 +560,17 @@
         }
         
         .waiting-queue-number {
-            color: #fbbf24;
             font-weight: 700;
             font-size: 1.5rem;
             white-space: nowrap;
         }
+
+        /* Alternating colors across the whole waiting list (restart at every group) */
+        .waiting-queue-number.alt-0 { color: #fbbf24; } /* amber   */
+        .waiting-queue-number.alt-1 { color: #60a5fa; } /* blue    */
+        .waiting-queue-number.alt-2 { color: #34d399; } /* emerald */
+        .waiting-queue-number.alt-3 { color: #f87171; } /* rose    */
+        .waiting-queue-number.alt-4 { color: #a78bfa; } /* violet  */
         
         /* Empty States */
         .empty-state {
@@ -1300,7 +1306,7 @@
                     <div class="waiting-row">
                         <div class="waiting-counter-label">${counterName}:</div>
                         <div class="waiting-queue-numbers">
-                            ${group.queues.map(q => `<span class="waiting-queue-number">${q.queue_number}</span>`).join('')}
+                            ${group.queues.map((q, i) => `<span class="waiting-queue-number alt-${i % 5}">${q.queue_number}</span>`).join('')}
                         </div>
                     </div>
                 `;
