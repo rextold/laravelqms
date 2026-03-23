@@ -560,17 +560,23 @@
         }
         
         .waiting-queue-number {
-            font-weight: 700;
-            font-size: 1.5rem;
+            font-weight: 800;
+            font-size: 1.3rem;
             white-space: nowrap;
+            display: inline-block;
+            padding: 0.18rem 0.7rem;
+            border-radius: 8px;
+            letter-spacing: 0.05em;
+            line-height: 1.6;
+            border: 1px solid transparent;
         }
 
-        /* Alternating colors across the whole waiting list (restart at every group) */
-        .waiting-queue-number.alt-0 { color: #fbbf24; } /* amber   */
-        .waiting-queue-number.alt-1 { color: #60a5fa; } /* blue    */
-        .waiting-queue-number.alt-2 { color: #34d399; } /* emerald */
-        .waiting-queue-number.alt-3 { color: #f87171; } /* rose    */
-        .waiting-queue-number.alt-4 { color: #a78bfa; } /* violet  */
+        /* Alternating pill colors — semi-transparent background + matching border for dark monitor theme */
+        .waiting-queue-number.alt-0 { color: #fde68a; background: rgba(251,191,36,0.14); border-color: rgba(251,191,36,0.35); }  /* amber  */
+        .waiting-queue-number.alt-1 { color: #93c5fd; background: rgba(96,165,250,0.14); border-color: rgba(96,165,250,0.35); }  /* blue   */
+        .waiting-queue-number.alt-2 { color: #6ee7b7; background: rgba(52,211,153,0.14); border-color: rgba(52,211,153,0.35); }  /* emerald */
+        .waiting-queue-number.alt-3 { color: #fca5a5; background: rgba(248,113,113,0.14); border-color: rgba(248,113,113,0.35); } /* rose   */
+        .waiting-queue-number.alt-4 { color: #c4b5fd; background: rgba(167,139,250,0.14); border-color: rgba(167,139,250,0.35); } /* violet */
         
         /* Empty States */
         .empty-state {
@@ -750,7 +756,8 @@
             }
             
             .waiting-queue-number {
-                font-size: 0.8rem;
+                font-size: 0.75rem;
+                padding: 0.1rem 0.45rem;
             }
         }
     </style>
@@ -901,6 +908,10 @@
             videoRotationIndex: 0,
             videos: @json($videos ?? []),
             videoControl: @json($videoControl ?? null),
+            // Playlist rotation state
+            playlistRotationIndex: 0,  // current position in STATE.videos array
+            lastServerVideoId: null,   // last current_video_id received from server (detect changes)
+            playlistTimer: null,       // setTimeout handle for YouTube rotation
             // Pre-populated from server-side render — same shape as getData() returns.
             // Used to fill the counter/queue panels immediately on page load.
             initialCounters: @json($initialCounterData ?? []),
@@ -1214,6 +1225,10 @@
                 // reflected instantly without a monitor page reload.
                 if (Array.isArray(data.videos)) {
                     STATE.videos = data.videos;
+                }
+                // Keep STATE.videoControl current so advancePlaylist() can reference it.
+                if (data.video_control !== undefined) {
+                    STATE.videoControl = data.video_control;
                 }
 
                 updateCountersDisplay(data.counters || [], data.waiting_queues || []);
@@ -1866,6 +1881,8 @@
             const player = document.getElementById('videoPlayer');
             
             if (!videoControl || !videoControl.is_playing) {
+                clearTimeout(STATE.playlistTimer);
+                STATE.playlistTimer = null;
                 player.innerHTML = `
                     <div class="no-video">
                         <i class="fas fa-pause-circle"></i>
@@ -1884,17 +1901,25 @@
                 `;
                 return;
             }
-            
-            // Find video to play
-            let video = null;
-            if (videoControl.current_video_id) {
-                video = STATE.videos.find(v => v.id === videoControl.current_video_id);
+
+            // ── Detect if the admin changed the target video.
+            // If so, snap rotation to that video so the monitor obeys immediately.
+            const serverVideoId = videoControl.current_video_id ? parseInt(videoControl.current_video_id) : null;
+            if (serverVideoId !== STATE.lastServerVideoId) {
+                STATE.lastServerVideoId = serverVideoId;
+                if (serverVideoId) {
+                    const idx = STATE.videos.findIndex(v => parseInt(v.id) === serverVideoId);
+                    if (idx !== -1) {
+                        STATE.playlistRotationIndex = idx;
+                    }
+                }
+                // Reset the YouTube timer whenever the admin changes the selection.
+                clearTimeout(STATE.playlistTimer);
+                STATE.playlistTimer = null;
             }
             
-            if (!video) {
-                STATE.videoRotationIndex = Math.floor(Date.now() / 10000) % STATE.videos.length;
-                video = STATE.videos[STATE.videoRotationIndex];
-            }
+            // Use the current playlist rotation index (client-side advance through all videos).
+            const video = STATE.videos[STATE.playlistRotationIndex] || STATE.videos[0];
             
             if (!video) {
                 player.innerHTML = `
@@ -1906,33 +1931,49 @@
                 return;
             }
             
+            const multipleVideos = STATE.videos.length > 1;
+
             // Render video player
             if (video.is_youtube && video.youtube_embed_url) {
-                // YouTube video - force autoplay with mute to satisfy browser autoplay policies
-                const muteParam = 1;
-                const autoplayParams = `?autoplay=1&mute=${muteParam}&loop=1&modestbranding=1&rel=0&enablejsapi=1`;
+                // YouTube video — muted to satisfy browser autoplay policy
+                const autoplayParams = `?autoplay=1&mute=1&loop=${multipleVideos ? 0 : 1}&modestbranding=1&rel=0&enablejsapi=1`;
                 const src = video.youtube_embed_url + autoplayParams;
                 const existing = player.querySelector('iframe');
                 
                 if (!existing || existing.src !== src) {
+                    clearTimeout(STATE.playlistTimer);
+                    STATE.playlistTimer = null;
                     player.innerHTML = `<iframe src="${src}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border:0;"></iframe>`;
+                    // YouTube iframes don't fire an ended event, so rotate on a fixed timer.
+                    if (multipleVideos) {
+                        STATE.playlistTimer = setTimeout(advancePlaylist, 60000); // 60 s per YouTube video
+                    }
                 }
             } else if (video.file_path) {
                 // File video
-                const existing = player.querySelector('video');
                 const src = `/storage/${video.file_path}`;
+                const existing = player.querySelector('video');
                 
                 if (!existing || !existing.querySelector(`source[src="${src}"]`)) {
+                    clearTimeout(STATE.playlistTimer);
+                    STATE.playlistTimer = null;
                     player.innerHTML = `
-                        <video autoplay loop style="width: 100%; height: 100%; object-fit: cover;">
+                        <video autoplay style="width: 100%; height: 100%; object-fit: cover;">
                             <source src="${src}" type="video/mp4">
                             Your browser does not support the video tag.
                         </video>
                     `;
                     const videoEl = player.querySelector('video');
                     if (videoEl) {
-                        videoEl.muted = true; // Mute to allow autoplay
+                        videoEl.muted = true;
                         videoEl.volume = (videoControl && typeof videoControl.volume === 'number') ? (videoControl.volume / 100) : 0.8;
+                        if (multipleVideos) {
+                            // Do NOT loop — advance to next video when this one ends.
+                            videoEl.loop = false;
+                            videoEl.addEventListener('ended', advancePlaylist, { once: true });
+                        } else {
+                            videoEl.loop = true;
+                        }
                         videoEl.play().catch(e => console.log('Video play failed:', e));
                     }
                 }
@@ -1946,6 +1987,15 @@
             }
             
             STATE.currentVideo = video;
+        }
+
+        // Advance to the next video in the playlist and re-render the player.
+        function advancePlaylist() {
+            clearTimeout(STATE.playlistTimer);
+            STATE.playlistTimer = null;
+            if (!STATE.videos || STATE.videos.length <= 1) return;
+            STATE.playlistRotationIndex = (STATE.playlistRotationIndex + 1) % STATE.videos.length;
+            updateVideoPlayer(STATE.videoControl);
         }
         
         // ========================================
