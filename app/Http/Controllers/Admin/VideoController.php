@@ -456,6 +456,23 @@ class VideoController extends Controller
     }
 
     /**
+     * Clear all videos from the playlist
+     */
+    public function clearPlaylist(Request $request)
+    {
+        $orgCode = $request->route('organization_code');
+        $organization = \App\Models\Organization::where('organization_code', $orgCode)->firstOrFail();
+
+        PlaylistItem::where('organization_id', $organization->id)->delete();
+
+        // Stop playback and clear the now-playing pointer
+        $control = VideoControl::getCurrent($organization->id);
+        $control->update(['current_video_id' => null, 'is_playing' => false]);
+
+        return response()->json(['success' => true, 'message' => 'Playlist cleared.']);
+    }
+
+    /**
      * Reorder playlist
      */
     public function reorderPlaylist(Request $request)

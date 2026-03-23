@@ -225,6 +225,7 @@ Route::prefix('{organization_code}')->group(function () {
                     Route::get('/', [VideoController::class, 'getPlaylist'])->name('get');
                     Route::post('/add', [VideoController::class, 'addToPlaylist'])->name('add');
                     Route::post('/remove', [VideoController::class, 'removeFromPlaylist'])->name('remove');
+                    Route::post('/clear', [VideoController::class, 'clearPlaylist'])->name('clear');
                     Route::post('/reorder', [VideoController::class, 'reorderPlaylist'])->name('reorder');
                     Route::post('/control', [VideoController::class, 'updatePlaylistControl'])->name('control');
                     Route::post('/now-playing', [VideoController::class, 'setNowPlaying'])->name('now-playing');

@@ -539,248 +539,347 @@
 
 @push('scripts')
 <script>
-let isPlaying = {{ $control->is_playing ? 'true' : 'false' }};
-let isMuted = false;
-const orgCode = '{{ request()->route("organization_code") }}';
-let currentPlaylist = [];
-let nowPlayingVideo = null;
-let isLoadingPlaylist = false;
-let isLoadingMonitor = false;
-let repeatMode = '{{ $control->repeat_mode ?? 'off' }}';
-let isShuffle = {{ $control->is_shuffle ? 'true' : 'false' }};
-let isSequence = {{ $control->is_sequence !== false ? 'true' : 'false' }};
-let previousVolume = {{ $control->volume }};
+// ── Immutable config ──────────────────────────────────────────────────────────
+const ORGCODE = @json(request()->route('organization_code'));
+const CSRF    = document.querySelector('meta[name="csrf-token"]')?.content ?? '{{ csrf_token() }}';
 
-const throttle = (func, limit) => {
-    let inThrottle;
-    return (...args) => {
-        if (!inThrottle) {
-            func.apply(this, args);
-            inThrottle = true;
-            setTimeout(() => inThrottle = false, limit);
-        }
-    };
-};
+// ── Mutable state ─────────────────────────────────────────────────────────────
+let isPlaying  = {{ $control->is_playing ? 'true' : 'false' }};
+let isMuted    = false;
+let prevVol    = {{ (int)$control->volume }};
+let repeatMode = @json($control->repeat_mode ?? 'off');
+let isShuffle  = {{ $control->is_shuffle ? 'true' : 'false' }};
+let currentList  = [];   // playlist items — synced from server
+let nowPlaying   = null; // current video object — synced from server
+let syncing      = false;
+let syncingStats = false;
 
-document.addEventListener('DOMContentLoaded', function() {
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const $el = id => document.getElementById(id);
+const jsonHeaders = () => ({ 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' });
+const apiPost = (path, body) =>
+    fetch(`/${ORGCODE}${path}`, { method: 'POST', headers: jsonHeaders(), body: JSON.stringify(body) }).then(r => r.json());
+const apiDel  = (path) =>
+    fetch(`/${ORGCODE}${path}`, { method: 'DELETE', headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' } }).then(r => r.json());
+const apiPut  = (path, body) =>
+    fetch(`/${ORGCODE}${path}`, { method: 'PUT',  headers: jsonHeaders(), body: JSON.stringify(body) }).then(r => r.json());
+const apiGet  = (path) =>
+    fetch(`/${ORGCODE}${path}`, { cache: 'no-store', credentials: 'same-origin', headers: { 'Accept': 'application/json' } }).then(r => r.json());
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
     updatePlayButton();
     updateRepeatBtn();
     updateShuffleBtn();
-    loadPlaylist();
-    refreshMonitorData();
-    
-    setInterval(() => syncPlaylistAndControl(), 2000);
-    setInterval(() => refreshMonitorData(), 3000);
+    syncState();
+    syncMonitorStats();
+    setInterval(syncState,        2000);
+    setInterval(syncMonitorStats, 4000);
 });
 
-function loadPlaylist() {
-    if (isLoadingPlaylist) return;
-    isLoadingPlaylist = true;
-    
-    fetch(`/${orgCode}/admin/playlist`, { cache: 'no-store', credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
-        .then(r => r.json())
+// ── Single sync function (replaces loadPlaylist + syncPlaylistAndControl) ─────
+function syncState() {
+    if (syncing) return;
+    syncing = true;
+    apiGet('/admin/playlist')
         .then(d => {
-            if (d.success) {
-                nowPlayingVideo = d.now_playing || null;
-                currentPlaylist = d.playlist || [];
-                renderPlaylist(d.playlist);
-                updatePlaylistControlUI(d.control);
-                updateNowPlayingDisplay(d.now_playing);
-                if (d?.control && typeof d.control.is_playing !== 'undefined') {
-                    isPlaying = !!d.control.is_playing;
-                    updatePlayButton();
-                }
-            }
-            isLoadingPlaylist = false;
-        })
-        .catch(() => { isLoadingPlaylist = false; });
-}
-
-function syncPlaylistAndControl() {
-    if (isLoadingPlaylist) return;
-    isLoadingPlaylist = true;
-    fetch(`/${orgCode}/admin/playlist`, { cache: 'no-store', credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
-        .then(r => r.json())
-        .then(d => {
-            if (d.success) {
-                nowPlayingVideo = d.now_playing || null;
-                currentPlaylist = d.playlist || [];
-                renderPlaylist(d.playlist);
-                updateNowPlayingDisplay(d.now_playing);
-                if (d?.control?.is_playing !== undefined) {
-                    isPlaying = !!d.control.is_playing;
-                    updatePlayButton();
-                }
+            if (!d.success) return;
+            currentList = d.playlist || [];
+            nowPlaying  = d.now_playing || null;
+            renderPlaylist(currentList);
+            renderNowPlaying(nowPlaying);
+            if (d.control) {
+                isPlaying  = !!d.control.is_playing;
+                repeatMode = d.control.repeat_mode || 'off';
+                isShuffle  = !!d.control.is_shuffle;
+                updatePlayButton();
+                updateRepeatBtn();
+                updateShuffleBtn();
             }
         })
         .catch(() => {})
-        .finally(() => { isLoadingPlaylist = false; });
+        .finally(() => { syncing = false; });
 }
 
-function renderPlaylist(playlist) {
-    const container = document.getElementById('playlistContainer');
-    const countEl = document.getElementById('playlistCount');
-    
-    if (countEl) {
-        countEl.textContent = `${playlist?.length || 0} videos in queue`;
-    }
-    
-    if (!playlist || playlist.length === 0) {
+// ── Render playlist (XSS-safe — uses textContent for user data) ───────────────
+function renderPlaylist(list) {
+    const container = $el('playlistContainer');
+    const countEl   = $el('playlistCount');
+    if (countEl) countEl.textContent = `${list.length} video${list.length !== 1 ? 's' : ''} in queue`;
+
+    if (!list.length) {
         container.innerHTML = `
             <div class="text-center py-12 text-gray-500">
                 <i class="fas fa-inbox text-3xl mb-3 opacity-50"></i>
                 <p class="text-sm">Queue is empty</p>
                 <p class="text-xs text-gray-600 mt-1">Add videos from the library</p>
-            </div>
-        `;
+            </div>`;
         return;
     }
 
-    const fragment = document.createDocumentFragment();
-    playlist.forEach((item, idx) => {
-        const div = document.createElement('div');
-        const isActive = nowPlayingVideo && item.video_id === nowPlayingVideo.id;
-        div.className = `px-4 py-3 flex items-center justify-between group transition cursor-pointer border-l-4 ${
-            isActive 
-                ? 'bg-blue-500/10 border-blue-500' 
-                : 'hover:bg-gray-700/30 border-transparent'
+    const frag = document.createDocumentFragment();
+    list.forEach((item, idx) => {
+        const isActive = nowPlaying && item.video_id === nowPlaying.id;
+
+        // Badge (number or playing indicator)
+        const badge = document.createElement('div');
+        badge.className = `w-8 h-8 ${isActive ? 'bg-blue-500' : 'bg-gray-700'} rounded-lg flex items-center justify-center flex-shrink-0`;
+        if (isActive && isPlaying) {
+            badge.innerHTML = '<i class="fas fa-volume-up text-white text-xs animate-pulse"></i>';
+        } else {
+            const num = document.createElement('span');
+            num.className = `text-xs font-bold ${isActive ? 'text-white' : 'text-gray-400'}`;
+            num.textContent = idx + 1;
+            badge.appendChild(num);
+        }
+
+        // Title — textContent prevents XSS
+        const titleP = document.createElement('p');
+        titleP.className = 'text-sm font-medium text-white truncate';
+        titleP.textContent = item.title;
+
+        const typeP = document.createElement('p');
+        typeP.className = 'text-xs text-gray-500';
+        typeP.textContent = item.is_youtube ? 'YouTube' : 'File';
+
+        const info = document.createElement('div');
+        info.className = 'min-w-0 flex-1';
+        info.appendChild(titleP);
+        info.appendChild(typeP);
+
+        const left = document.createElement('div');
+        left.className = 'flex items-center space-x-3 flex-1 min-w-0';
+        left.appendChild(badge);
+        left.appendChild(info);
+
+        // Action buttons
+        const btnPlay = document.createElement('button');
+        btnPlay.type = 'button'; btnPlay.title = 'Play';
+        btnPlay.className = `playNowBtn w-8 h-8 bg-green-500/20 hover:bg-green-500 text-green-400 hover:text-white rounded-lg flex items-center justify-center transition ${isActive && isPlaying ? 'hidden' : ''}`;
+        btnPlay.innerHTML = '<i class="fas fa-play text-xs"></i>';
+
+        const btnPause = document.createElement('button');
+        btnPause.type = 'button'; btnPause.title = 'Pause';
+        btnPause.className = `pauseBtn w-8 h-8 bg-yellow-500/20 hover:bg-yellow-500 text-yellow-400 hover:text-white rounded-lg flex items-center justify-center transition ${isActive && isPlaying ? '' : 'hidden'}`;
+        btnPause.innerHTML = '<i class="fas fa-pause text-xs"></i>';
+
+        const btnRem = document.createElement('button');
+        btnRem.type = 'button'; btnRem.title = 'Remove';
+        btnRem.className = 'w-8 h-8 bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white rounded-lg flex items-center justify-center transition';
+        btnRem.innerHTML = '<i class="fas fa-times text-xs"></i>';
+
+        const actions = document.createElement('div');
+        actions.className = 'flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition';
+        actions.appendChild(btnPlay);
+        actions.appendChild(btnPause);
+        actions.appendChild(btnRem);
+
+        const row = document.createElement('div');
+        row.className = `px-4 py-3 flex items-center justify-between group transition cursor-pointer border-l-4 ${
+            isActive ? 'bg-blue-500/10 border-blue-500' : 'hover:bg-gray-700/30 border-transparent'
         }`;
-        div.dataset.videoId = item.video_id;
-        div.innerHTML = `
-            <div class="flex items-center space-x-3 flex-1 min-w-0">
-                <div class="w-8 h-8 ${isActive ? 'bg-blue-500' : 'bg-gray-700'} rounded-lg flex items-center justify-center flex-shrink-0">
-                    ${isActive && isPlaying 
-                        ? '<i class="fas fa-volume-up text-white text-xs animate-pulse"></i>' 
-                        : `<span class="text-xs font-bold ${isActive ? 'text-white' : 'text-gray-400'}">${idx + 1}</span>`
-                    }
-                </div>
-                <div class="min-w-0 flex-1">
-                    <p class="text-sm font-medium text-white truncate">${item.title}</p>
-                    <p class="text-xs text-gray-500">${item.is_youtube ? 'YouTube' : 'File'}</p>
-                </div>
-            </div>
-            <div class="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition">
-                <button type="button" class="playNowBtn w-8 h-8 bg-green-500/20 hover:bg-green-500 text-green-400 hover:text-white rounded-lg flex items-center justify-center transition ${isActive && isPlaying ? 'hidden' : ''}" title="Play">
-                    <i class="fas fa-play text-xs"></i>
-                </button>
-                <button type="button" class="pauseBtn w-8 h-8 bg-yellow-500/20 hover:bg-yellow-500 text-yellow-400 hover:text-white rounded-lg flex items-center justify-center transition ${isActive && isPlaying ? '' : 'hidden'}" title="Pause">
-                    <i class="fas fa-pause text-xs"></i>
-                </button>
-                <button type="button" class="removeBtn w-8 h-8 bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white rounded-lg flex items-center justify-center transition" title="Remove">
-                    <i class="fas fa-times text-xs"></i>
-                </button>
-            </div>
-        `;
-        
-        div.querySelector('.playNowBtn')?.addEventListener('click', (e) => { e.stopPropagation(); playNow(item.video_id); });
-        div.querySelector('.pauseBtn')?.addEventListener('click', (e) => { e.stopPropagation(); pausePlayback(); });
-        div.querySelector('.removeBtn').addEventListener('click', (e) => { e.stopPropagation(); removeFromPlaylist(item.video_id); });
-        div.addEventListener('dblclick', () => playNow(item.video_id));
-        
-        fragment.appendChild(div);
+        row.dataset.videoId = item.video_id;
+        row.appendChild(left);
+        row.appendChild(actions);
+
+        btnPlay.addEventListener('click',  e => { e.stopPropagation(); playNow(item.video_id); });
+        btnPause.addEventListener('click', e => { e.stopPropagation(); pausePlayback(); });
+        btnRem.addEventListener('click',   e => { e.stopPropagation(); removeFromPlaylist(item.video_id); });
+        row.addEventListener('dblclick', () => playNow(item.video_id));
+
+        frag.appendChild(row);
     });
-    
+
     container.innerHTML = '';
-    container.appendChild(fragment);
+    container.appendChild(frag);
 }
 
-function refreshMonitorData() {
-    if (isLoadingMonitor) return;
-    isLoadingMonitor = true;
-    
-    fetch(`/${orgCode}/monitor/data`)
-        .then(r => r.json())
-        .then(d => {
-            const activeCounters = d.counters?.length || 0;
-            const waitingQueues = d.waiting_queues?.reduce((sum, q) => sum + (q.queues?.length || 0), 0) || 0;
-            
-            document.getElementById('counterCount').textContent = activeCounters;
-            document.getElementById('waitingCount').textContent = waitingQueues;
-            document.getElementById('servedCount').textContent = d.served_today || 0;
-            isLoadingMonitor = false;
-        })
-        .catch(() => { isLoadingMonitor = false; });
-}
+// ── Now Playing display (XSS-safe) ───────────────────────────────────────────
+function renderNowPlaying(video) {
+    const titleEl = $el('nowPlayingTitle');
+    const typeEl  = $el('nowPlayingType');
+    const thumbEl = $el('nowPlayingThumbnail');
 
-function updateNowPlayingDisplay(nowPlaying) {
-    const titleEl = document.getElementById('nowPlayingTitle');
-    const typeEl = document.getElementById('nowPlayingType');
-    const thumbEl = document.getElementById('nowPlayingThumbnail');
-    
-    if (nowPlaying && nowPlaying.title) {
-        nowPlayingVideo = nowPlaying;
-        titleEl.textContent = nowPlaying.title;
-        
-        const isYoutube = nowPlaying.video_type === 'youtube';
-        typeEl.innerHTML = `
-            <span class="inline-flex items-center">
-                <i class="${isYoutube ? 'fab fa-youtube text-red-400' : 'fas fa-file-video text-blue-400'} text-xs mr-2"></i>
-                <span>${isYoutube ? 'YouTube Video' : 'Uploaded File'}</span>
-            </span>
-            ${isPlaying ? '<span class="ml-3 px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full text-xs font-medium"><i class="fas fa-circle animate-pulse mr-1"></i>Playing</span>' : ''}
-        `;
-        
-        thumbEl.innerHTML = isYoutube 
-            ? '<i class="fab fa-youtube text-red-400 text-2xl"></i>'
-            : '<i class="fas fa-play text-blue-400 text-2xl"></i>';
-        thumbEl.className = 'w-16 h-16 bg-gray-700 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden';
-    } else {
-        nowPlayingVideo = null;
+    if (!video) {
         titleEl.textContent = 'No video selected';
-        typeEl.innerHTML = '<span class="inline-flex items-center"><i class="fas fa-circle text-gray-600 text-xs mr-1"></i><span>—</span></span>';
-        thumbEl.innerHTML = '<i class="fas fa-film text-gray-500 text-2xl"></i>';
-    }
-}
-
-function setNowPlayingFromSelect() {
-    const sel = document.getElementById('setNowSelect');
-    if (!sel || !sel.value) {
-        showToast('Please select a video first', 'error');
+        thumbEl.innerHTML   = '<i class="fas fa-film text-gray-500 text-2xl"></i>';
+        typeEl.innerHTML    = '<span class="inline-flex items-center"><i class="fas fa-circle text-gray-600 text-xs mr-1"></i><span>—</span></span>';
         return;
     }
-    playNow(parseInt(sel.value, 10));
+
+    const isYT = video.video_type === 'youtube';
+    titleEl.textContent = video.title;
+    thumbEl.innerHTML   = `<i class="${isYT ? 'fab fa-youtube text-red-400' : 'fas fa-play text-blue-400'} text-2xl"></i>`;
+
+    typeEl.textContent = '';
+    const typeSpan = document.createElement('span');
+    typeSpan.className = 'inline-flex items-center';
+    const icon = document.createElement('i');
+    icon.className = `${isYT ? 'fab fa-youtube text-red-400' : 'fas fa-file-video text-blue-400'} text-xs mr-2`;
+    const label = document.createElement('span');
+    label.textContent = isYT ? 'YouTube Video' : 'Uploaded File';
+    typeSpan.appendChild(icon);
+    typeSpan.appendChild(label);
+    typeEl.appendChild(typeSpan);
+
+    if (isPlaying) {
+        const badge = document.createElement('span');
+        badge.className = 'ml-3 px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full text-xs font-medium';
+        badge.innerHTML = '<i class="fas fa-circle animate-pulse mr-1"></i>';
+        const lbl = document.createElement('span');
+        lbl.textContent = 'Playing';
+        badge.appendChild(lbl);
+        typeEl.appendChild(badge);
+    }
+}
+
+// Alias — kept so any old inline references still work
+const updateNowPlayingDisplay = renderNowPlaying;
+
+// ── Monitor stats ─────────────────────────────────────────────────────────────
+function syncMonitorStats() {
+    if (syncingStats) return;
+    syncingStats = true;
+    apiGet('/monitor/data')
+        .then(d => {
+            $el('counterCount').textContent = d.counters?.length ?? 0;
+            $el('waitingCount').textContent = d.waiting_queues?.reduce((s, q) => s + (q.queues?.length ?? 0), 0) ?? 0;
+            $el('servedCount').textContent  = d.served_today ?? 0;
+        })
+        .catch(() => {})
+        .finally(() => { syncingStats = false; });
+}
+
+// ── Playback controls ─────────────────────────────────────────────────────────
+function togglePlay() {
+    isPlaying = !isPlaying;
+    updatePlayButton();
+    pushControl();
+}
+
+function playNow(videoId) {
+    isPlaying = true;
+    updatePlayButton();
+    // Optimistic display — get video_type from the library row data attribute
+    const libRow = document.querySelector(`[data-video-row][data-video-id="${parseInt(videoId, 10)}"]`);
+    nowPlaying = {
+        id:         parseInt(videoId, 10),
+        title:      libRow?.dataset.videoTitle ?? '',
+        video_type: libRow?.dataset.videoType  ?? 'file',
+    };
+    renderNowPlaying(nowPlaying);
+
+    apiPost('/admin/playlist/now-playing', { video_id: videoId })
+        .then(() => { pushControl(); syncState(); })
+        .catch(() => {});
+}
+
+function pausePlayback() {
+    isPlaying = false;
+    updatePlayButton();
+    pushControl();
+}
+
+function stopPlayback() {
+    isPlaying  = false;
+    nowPlaying = null;
+    updatePlayButton();
+    renderNowPlaying(null);
+    // Use inline fetch to explicitly clear current_video_id
+    fetch(`/${ORGCODE}/admin/videos/control`, {
+        method: 'POST',
+        headers: jsonHeaders(),
+        body: JSON.stringify({
+            is_playing:       false,
+            volume:           parseInt($el('volumeSlider').value, 10),
+            bell_volume:      parseInt($el('bellVolumeSlider').value, 10),
+            current_video_id: null,
+        })
+    }).catch(() => {});
 }
 
 function prevVideo() {
-    const currentIdx = currentPlaylist.findIndex(v => nowPlayingVideo && v.video_id === nowPlayingVideo.id);
-    if (currentIdx > 0) {
-        playNow(currentPlaylist[currentIdx - 1].video_id);
-    } else if (repeatMode === 'all' && currentPlaylist.length > 0) {
-        playNow(currentPlaylist[currentPlaylist.length - 1].video_id);
+    const idx = currentList.findIndex(v => nowPlaying && v.video_id === nowPlaying.id);
+    if (idx > 0) {
+        playNow(currentList[idx - 1].video_id);
+    } else if (repeatMode === 'all' && currentList.length > 0) {
+        playNow(currentList[currentList.length - 1].video_id);
     }
 }
 
 function nextVideo() {
-    const currentIdx = currentPlaylist.findIndex(v => nowPlayingVideo && v.video_id === nowPlayingVideo.id);
-    if (currentIdx !== -1 && currentIdx < currentPlaylist.length - 1) {
-        playNow(currentPlaylist[currentIdx + 1].video_id);
-    } else if (repeatMode === 'all' && currentPlaylist.length > 0) {
-        playNow(currentPlaylist[0].video_id);
+    const idx = currentList.findIndex(v => nowPlaying && v.video_id === nowPlaying.id);
+    if (idx !== -1 && idx < currentList.length - 1) {
+        playNow(currentList[idx + 1].video_id);
+    } else if (repeatMode === 'all' && currentList.length > 0) {
+        playNow(currentList[0].video_id);
     }
 }
 
-function updatePlaylistControlUI(control) {
-    if (control) {
-        repeatMode = control.repeat_mode || 'off';
-        isShuffle = control.is_shuffle || false;
-        isSequence = control.is_sequence !== false;
-        updateRepeatBtn();
-        updateShuffleBtn();
+// ── Push control state to server ─────────────────────────────────────────────
+function pushControl() {
+    apiPost('/admin/videos/control', {
+        is_playing:       isPlaying,
+        volume:           parseInt($el('volumeSlider').value, 10),
+        bell_volume:      parseInt($el('bellVolumeSlider').value, 10),
+        current_video_id: nowPlaying ? nowPlaying.id : null,
+    }).catch(() => {});
+}
+
+// ── Volume controls ───────────────────────────────────────────────────────────
+function updateVolumeDisplay(value) {
+    $el('volumeValue').textContent = value + '%';
+    $el('volumeIcon').className = `fas ${value == 0 ? 'fa-volume-mute' : value < 50 ? 'fa-volume-down' : 'fa-volume-up'} text-gray-300`;
+}
+
+function updateVolume(value) {
+    isMuted = (value == 0);
+    pushControl();
+}
+
+function toggleMute() {
+    const slider = $el('volumeSlider');
+    if (isMuted) {
+        slider.value = prevVol;
+        isMuted = false;
+    } else {
+        prevVol      = slider.value;
+        slider.value = 0;
+        isMuted      = true;
+    }
+    updateVolumeDisplay(slider.value);
+    pushControl();
+}
+
+function updateBellVolumeDisplay(value) { $el('bellVolumeValue').textContent = value + '%'; }
+function updateBellVolume()             { pushControl(); }
+
+// ── Play button UI ────────────────────────────────────────────────────────────
+function updatePlayButton() {
+    const btn  = $el('playBtn');
+    const icon = $el('playIcon');
+    if (!btn || !icon) return;
+    if (isPlaying) {
+        icon.className = 'fas fa-pause text-white text-xl';
+        btn.className  = 'w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 rounded-2xl flex items-center justify-center transition transform hover:scale-105 shadow-lg shadow-green-500/30';
+    } else {
+        icon.className = 'fas fa-play text-white text-xl ml-1';
+        btn.className  = 'w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 rounded-2xl flex items-center justify-center transition transform hover:scale-105 shadow-lg shadow-blue-500/30';
     }
 }
 
+// ── Repeat / Shuffle ──────────────────────────────────────────────────────────
 function updateRepeatBtn() {
-    const btn = document.getElementById('repeatBtn');
-    const modes = { 'off': 'Off', 'one': 'One', 'all': 'All' };
-    const active = repeatMode !== 'off';
+    const btn   = $el('repeatBtn');
+    const modes = { off: 'Off', one: 'One', all: 'All' };
     btn.innerHTML = `<i class="fas fa-repeat"></i><span>${modes[repeatMode] || 'Off'}</span>`;
     btn.className = `px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center space-x-2 ${
-        active ? 'bg-blue-500 text-white' : 'bg-gray-700/50 hover:bg-gray-600'
+        repeatMode !== 'off' ? 'bg-blue-500 text-white' : 'bg-gray-700/50 hover:bg-gray-600'
     }`;
 }
 
 function updateShuffleBtn() {
-    const btn = document.getElementById('shuffleBtn');
+    const btn = $el('shuffleBtn');
     btn.innerHTML = `<i class="fas fa-shuffle"></i><span>${isShuffle ? 'On' : 'Off'}</span>`;
     btn.className = `px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center space-x-2 ${
         isShuffle ? 'bg-purple-500 text-white' : 'bg-gray-700/50 hover:bg-gray-600'
@@ -789,402 +888,150 @@ function updateShuffleBtn() {
 
 function toggleRepeat() {
     const modes = ['off', 'one', 'all'];
-    const idx = modes.indexOf(repeatMode);
-    repeatMode = modes[(idx + 1) % modes.length];
+    repeatMode = modes[(modes.indexOf(repeatMode) + 1) % modes.length];
     updateRepeatBtn();
-    updatePlaylistControl();
+    apiPost('/admin/playlist/control', { repeat_mode: repeatMode, is_shuffle: isShuffle }).catch(() => {});
 }
 
 function toggleShuffle() {
     isShuffle = !isShuffle;
     updateShuffleBtn();
-    updatePlaylistControl();
+    apiPost('/admin/playlist/control', { repeat_mode: repeatMode, is_shuffle: isShuffle }).catch(() => {});
 }
 
-function updatePlaylistControl() {
-    fetch(`/${orgCode}/admin/playlist/control`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-        body: JSON.stringify({ repeat_mode: repeatMode, is_shuffle: isShuffle, is_sequence: isSequence })
-    }).catch(() => {});
-}
-
-function togglePlay() {
-    isPlaying = !isPlaying;
-    updatePlayButton();
-    updateControl();
-}
-
-function toggleMute() {
-    const slider = document.getElementById('volumeSlider');
-    const icon = document.getElementById('volumeIcon');
-    
-    if (isMuted) {
-        slider.value = previousVolume;
-        isMuted = false;
-    } else {
-        previousVolume = slider.value;
-        slider.value = 0;
-        isMuted = true;
-    }
-    
-    updateVolumeDisplay(slider.value);
-    updateVolume(slider.value);
-    
-    icon.className = `fas ${isMuted || slider.value == 0 ? 'fa-volume-mute' : slider.value < 50 ? 'fa-volume-down' : 'fa-volume-up'} text-gray-300`;
-}
-
-function updatePlayButton() {
-    const btn = document.getElementById('playBtn');
-    const icon = document.getElementById('playIcon');
-    if (!btn || !icon) return;
-    
-    if (isPlaying) {
-        icon.className = 'fas fa-pause text-white text-xl';
-        btn.className = 'w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 rounded-2xl flex items-center justify-center transition transform hover:scale-105 shadow-lg shadow-green-500/30';
-    } else {
-        icon.className = 'fas fa-play text-white text-xl ml-1';
-        btn.className = 'w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 rounded-2xl flex items-center justify-center transition transform hover:scale-105 shadow-lg shadow-blue-500/30';
-    }
-}
-
-function updateControl() {
-    fetch(`/${orgCode}/admin/videos/control`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-        body: JSON.stringify({
-            is_playing: isPlaying,
-            volume: document.getElementById('volumeSlider').value,
-            bell_volume: document.getElementById('bellVolumeSlider').value,
-            current_video_id: nowPlayingVideo ? nowPlayingVideo.id : null
-        })
-    }).catch(() => {});
-}
-
-function updateVolume(value) {
-    const icon = document.getElementById('volumeIcon');
-    icon.className = `fas ${value == 0 ? 'fa-volume-mute' : value < 50 ? 'fa-volume-down' : 'fa-volume-up'} text-gray-300`;
-    isMuted = value == 0;
-    updateControl();
-}
-
-function updateVolumeDisplay(value) {
-    document.getElementById('volumeValue').textContent = value + '%';
-}
-
-function updateBellVolume(value) {
-    updateControl();
-}
-
-function updateBellVolumeDisplay(value) {
-    document.getElementById('bellVolumeValue').textContent = value + '%';
+// ── Playlist management ───────────────────────────────────────────────────────
+function setNowPlayingFromSelect() {
+    const sel = $el('setNowSelect');
+    if (!sel?.value) { showToast('Please select a video first', 'error'); return; }
+    playNow(parseInt(sel.value, 10));
 }
 
 function addToPlaylist(videoId) {
-    fetch(`/${orgCode}/admin/playlist/add`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-        body: JSON.stringify({ video_id: videoId })
-    })
-    .then(r => r.json())
-    .then(d => {
-        if (d.success) {
-            loadPlaylist();
-            showToast('Added to queue', 'success');
-        } else {
-            showToast(d.error || 'Already in queue', 'error');
-        }
-    })
-    .catch(e => showToast('Error: ' + e.message, 'error'));
-}
-
-function toggleActive(videoId, toggleUrl) {
-    fetch(toggleUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
-    })
-    .then(r => r.json())
-    .then(d => {
-        if (d.success) {
-            const row = document.querySelector(`[data-video-row][data-video-id="${videoId}"]`);
-            if (row) {
-                const icon = row.querySelector('button[title="Toggle Active"] i');
-                if (icon) {
-                    icon.className = `fas fa-toggle-${d.is_active ? 'on text-green-400' : 'off'} text-xs`;
-                }
-                const statusText = row.querySelector('.text-yellow-500');
-                if (d.is_active && statusText) {
-                    statusText.remove();
-                } else if (!d.is_active) {
-                    const nameEl = row.querySelector('.text-xs.text-gray-500');
-                    if (nameEl && !nameEl.querySelector('.text-yellow-500')) {
-                        nameEl.innerHTML += ' <span class="ml-2 text-yellow-500">(Inactive)</span>';
-                    }
-                }
-            }
-            showToast(`Video ${d.is_active ? 'activated' : 'deactivated'}`, 'success');
-        }
-    })
-    .catch(() => showToast('Error toggling video', 'error'));
+    apiPost('/admin/playlist/add', { video_id: videoId })
+        .then(d => {
+            if (d.success) { syncState(); showToast('Added to queue', 'success'); }
+            else showToast(d.error || 'Already in queue', 'error');
+        })
+        .catch(e => showToast('Error: ' + e.message, 'error'));
 }
 
 function removeFromPlaylist(videoId) {
-    fetch(`/${orgCode}/admin/playlist/remove`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-        body: JSON.stringify({ video_id: videoId })
-    })
-    .then(r => r.json())
-    .then(d => {
-        if (d.success) {
-            loadPlaylist();
-            showToast('Removed from queue', 'success');
-        }
-    })
-    .catch(() => {});
+    apiPost('/admin/playlist/remove', { video_id: videoId })
+        .then(d => { if (d.success) { syncState(); showToast('Removed from queue', 'success'); } })
+        .catch(() => {});
 }
 
 function clearPlaylist() {
     if (!confirm('Clear all videos from the queue?')) return;
-    
-    const removals = currentPlaylist.map(item =>
-        fetch(`/${orgCode}/admin/playlist/remove`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-            body: JSON.stringify({ video_id: item.video_id })
-        })
-    );
-    
-    Promise.all(removals)
-        .then(() => {
-            loadPlaylist();
-            showToast('Queue cleared', 'success');
-        })
-        .catch(() => {
-            loadPlaylist();
-            showToast('Some items may not have been removed', 'error');
-        });
-}
-
-function playNow(videoId) {
-    isPlaying = true;
-    updatePlayButton();
-    
-    const row = document.querySelector(`[data-video-row][data-video-id="${videoId}"]`);
-    const title = row ? row.dataset.videoTitle || row.querySelector('.font-medium')?.textContent : null;
-    nowPlayingVideo = { id: videoId, title: title };
-    updateNowPlayingDisplay(nowPlayingVideo);
-    
-    fetch(`/${orgCode}/admin/playlist/now-playing`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-        body: JSON.stringify({ video_id: videoId })
-    })
-    .then(() => {
-        updateControl();
-        syncPlaylistAndControl();
-    })
-    .catch(() => {});
-}
-
-function pausePlayback() {
-    isPlaying = false;
-    updatePlayButton();
-    updateControl();
-}
-
-function stopPlayback() {
-    isPlaying = false;
-    nowPlayingVideo = null;
-    updatePlayButton();
-    updateNowPlayingDisplay(null);
-    
-    fetch(`/${orgCode}/admin/videos/control`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-        body: JSON.stringify({
-            is_playing: false,
-            volume: document.getElementById('volumeSlider').value,
-            bell_volume: document.getElementById('bellVolumeSlider').value,
-            current_video_id: null
-        })
-    })
-    .then(() => loadPlaylist())
-    .catch(() => {});
-}
-
-// Form submission with progress
-document.getElementById('videoForm')?.addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const progressDiv = document.getElementById('uploadProgress');
-    const uploadBar = document.getElementById('uploadBar');
-    const uploadPercent = document.getElementById('uploadPercent');
-    const submitBtn = document.getElementById('uploadBtn');
-    
-    progressDiv.classList.remove('hidden');
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fas fa-spinner animate-spin"></i><span>Uploading...</span>';
-    
-    const formData = new FormData(this);
-    const xhr = new XMLHttpRequest();
-    
-    xhr.upload.addEventListener('progress', (evt) => {
-        if (evt.lengthComputable) {
-            const pct = Math.round((evt.loaded / evt.total) * 100);
-            uploadPercent.textContent = pct + '%';
-            uploadBar.style.width = pct + '%';
-        }
-    });
-    
-    xhr.addEventListener('load', () => {
-        if (xhr.status === 200) {
-            try {
-                const response = JSON.parse(xhr.responseText);
-                if (response.success) {
-                    uploadPercent.textContent = '100%';
-                    uploadBar.style.width = '100%';
-                    
-                    setTimeout(() => {
-                        progressDiv.classList.add('hidden');
-                        uploadBar.style.width = '0%';
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = '<i class="fas fa-upload"></i><span>Add Video</span>';
-                        document.getElementById('videoForm').reset();
-                        showToast('Video added successfully!', 'success');
-                        location.reload();
-                    }, 800);
-                }
-            } catch (error) {
-                location.reload();
+    apiPost('/admin/playlist/clear', {})
+        .then(d => {
+            if (d.success) {
+                isPlaying  = false;
+                nowPlaying = null;
+                updatePlayButton();
+                renderNowPlaying(null);
+                syncState();
+                showToast('Queue cleared', 'success');
+            } else {
+                showToast(d.error || 'Failed to clear', 'error');
             }
-        } else {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-upload"></i><span>Add Video</span>';
-            progressDiv.classList.add('hidden');
-            showToast('Upload failed. Please try again.', 'error');
-        }
-    });
-    
-    xhr.addEventListener('error', () => {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fas fa-upload"></i><span>Add Video</span>';
-        progressDiv.classList.add('hidden');
-        showToast('Upload failed. Please try again.', 'error');
-    });
-    
-    xhr.open('POST', this.action, true);
-    xhr.setRequestHeader('X-CSRF-TOKEN', '{{ csrf_token() }}');
-    xhr.send(formData);
-});
-
-function toggleVideoType() {
-    const type = document.querySelector('input[name="video_type"]:checked').value;
-    document.getElementById('fileInput').classList.toggle('hidden', type !== 'file');
-    document.getElementById('youtubeInput').classList.toggle('hidden', type !== 'youtube');
+        })
+        .catch(() => showToast('Error clearing playlist', 'error'));
 }
 
+// ── Video library row actions ─────────────────────────────────────────────────
+function toggleActive(videoId, toggleUrl) {
+    fetch(toggleUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF } })
+        .then(r => r.json())
+        .then(d => {
+            if (!d.success) { showToast('Error toggling video', 'error'); return; }
+            const row = document.querySelector(`[data-video-row][data-video-id="${videoId}"]`);
+            if (row) {
+                const toggleIcon = row.querySelector('button[title="Toggle Active"] i');
+                if (toggleIcon) toggleIcon.className = `fas fa-toggle-${d.is_active ? 'on text-green-400' : 'off'} text-xs`;
+                const old = row.querySelector('.text-yellow-500');
+                if (d.is_active && old) {
+                    old.remove();
+                } else if (!d.is_active && !old) {
+                    const nameEl = row.querySelector('.text-xs.text-gray-500');
+                    if (nameEl) {
+                        const s = document.createElement('span');
+                        s.className = 'ml-2 text-yellow-500';
+                        s.textContent = '(Inactive)';
+                        nameEl.appendChild(s);
+                    }
+                }
+            }
+            showToast(`Video ${d.is_active ? 'activated' : 'deactivated'}`, 'success');
+        })
+        .catch(() => showToast('Error toggling video', 'error'));
+}
+
+// ── Modals ────────────────────────────────────────────────────────────────────
 function deleteVideoModal(videoId, filename) {
-    document.getElementById('delete-video-name').textContent = filename || 'Untitled Video';
-    window.currentDeleteUrl = `/${orgCode}/admin/videos/${videoId}`;
-    window.currentVideoId = videoId;
-    document.getElementById('delete-video-modal').classList.remove('hidden');
-}
-
-function openEditVideo(videoId, title) {
-    window.currentEditUrl = `/${orgCode}/admin/videos/${videoId}`;
-    window.currentEditVideoId = videoId;
-    document.getElementById('edit-video-title').value = title || '';
-    document.getElementById('edit-video-modal').classList.remove('hidden');
-}
-
-function confirmEditVideo() {
-    const title = document.getElementById('edit-video-title').value.trim();
-    if (!title) {
-        showToast('Title is required', 'error');
-        return;
-    }
-
-    fetch(window.currentEditUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
-        body: JSON.stringify({ title })
-    })
-    .then(r => r.json())
-    .then(d => {
-        if (d.success) {
-            closeModalVideo('edit-video-modal');
-            showToast('Video updated', 'success');
-            location.reload();
-        } else {
-            showToast('Error updating video', 'error');
-        }
-    })
-    .catch(() => showToast('Error updating video', 'error'));
-}
-
-function closeModalVideo(modalId) {
-    document.getElementById(modalId).classList.add('hidden');
-}
-
-function closeModalReset(modalId) {
-    document.getElementById(modalId).classList.add('hidden');
+    $el('delete-video-name').textContent = filename || 'Untitled Video';
+    window._deleteVideoId = videoId;
+    $el('delete-video-modal').classList.remove('hidden');
 }
 
 function confirmDeleteVideo() {
-    fetch(window.currentDeleteUrl, {
-        method: 'DELETE',
-        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
-    })
-    .then(r => r.json())
-    .then(d => {
-        if (d.success) {
-            closeModalVideo('delete-video-modal');
-            showToast('Video deleted', 'success');
-            const row = document.querySelector(`[data-video-row][data-video-id="${window.currentVideoId}"]`);
-            if (row) {
-                row.style.opacity = '0';
-                row.style.transition = 'opacity 200ms ease';
-                setTimeout(() => row.remove(), 200);
+    apiDel(`/admin/videos/${window._deleteVideoId}`)
+        .then(d => {
+            if (d.success) {
+                closeModal('delete-video-modal');
+                showToast('Video deleted', 'success');
+                const row = document.querySelector(`[data-video-row][data-video-id="${window._deleteVideoId}"]`);
+                if (row) { row.style.transition = 'opacity 200ms'; row.style.opacity = '0'; setTimeout(() => row.remove(), 200); }
+                syncState();
+            } else {
+                showToast('Error: ' + (d.error || 'Unknown'), 'error');
             }
-            loadPlaylist();
-        } else {
-            showToast('Error: ' + (d.error || 'Unknown'), 'error');
-        }
-    })
-    .catch(e => showToast('Error: ' + e.message, 'error'));
+        })
+        .catch(e => showToast('Error: ' + e.message, 'error'));
 }
 
-function resetBellSoundModal() {
-    document.getElementById('reset-bell-modal').classList.remove('hidden');
+function openEditVideo(videoId, title) {
+    window._editVideoId = videoId;
+    $el('edit-video-title').value = title || '';
+    $el('edit-video-modal').classList.remove('hidden');
 }
+
+function confirmEditVideo() {
+    const title = $el('edit-video-title').value.trim();
+    if (!title) { showToast('Title is required', 'error'); return; }
+    apiPut(`/admin/videos/${window._editVideoId}`, { title })
+        .then(d => {
+            if (d.success) { closeModal('edit-video-modal'); showToast('Video updated', 'success'); location.reload(); }
+            else showToast('Error updating video', 'error');
+        })
+        .catch(() => showToast('Error updating video', 'error'));
+}
+
+function closeModal(id)        { $el(id).classList.add('hidden'); }
+const closeModalVideo = closeModal;
+const closeModalReset = closeModal;
+
+function resetBellSoundModal() { $el('reset-bell-modal').classList.remove('hidden'); }
 
 function confirmResetBell() {
-    fetch(`/${orgCode}/admin/videos/reset-bell`, {
-        method: 'POST',
-        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
-    })
-    .then(() => {
-        closeModalReset('reset-bell-modal');
-        showToast('Bell sound reset to default', 'success');
-        setTimeout(() => location.reload(), 500);
-    })
-    .catch(() => showToast('Error resetting bell', 'error'));
+    apiPost('/admin/videos/reset-bell', {})
+        .then(() => { closeModal('reset-bell-modal'); showToast('Bell sound reset to default', 'success'); setTimeout(() => location.reload(), 500); })
+        .catch(() => showToast('Error resetting bell', 'error'));
 }
 
+// ── Toast (XSS-safe — textContent for message) ────────────────────────────────
 function showToast(message, type = 'success') {
     const toast = document.createElement('div');
-    toast.className = `fixed bottom-6 right-6 px-5 py-3 rounded-xl text-sm font-medium text-white max-w-sm z-[9999] shadow-xl transform translate-x-0 transition-all duration-300 flex items-center space-x-3 ${
-        type === 'success' 
-            ? 'bg-gradient-to-r from-green-600 to-green-700' 
-            : 'bg-gradient-to-r from-red-600 to-red-700'
+    toast.className = `fixed bottom-6 right-6 px-5 py-3 rounded-xl text-sm font-medium text-white max-w-sm z-[9999] shadow-xl transition-all duration-300 flex items-center space-x-3 ${
+        type === 'success' ? 'bg-gradient-to-r from-green-600 to-green-700' : 'bg-gradient-to-r from-red-600 to-red-700'
     }`;
-    toast.innerHTML = `
-        <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
-        <span>${message}</span>
-    `;
+    const icon = document.createElement('i');
+    icon.className = `fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}`;
+    const text = document.createElement('span');
+    text.textContent = message; // textContent — no XSS
+    toast.appendChild(icon);
+    toast.appendChild(text);
     document.body.appendChild(toast);
-    
     setTimeout(() => {
         toast.style.opacity = '0';
         toast.style.transform = 'translateX(100px)';
@@ -1192,34 +1039,80 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 
-// Close modals on backdrop click
-document.querySelectorAll('[id$="-modal"]').forEach(modal => {
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.classList.add('hidden');
+// ── Video upload form with XHR progress ──────────────────────────────────────
+document.getElementById('videoForm')?.addEventListener('submit', function (e) {
+    e.preventDefault();
+    const progressDiv = $el('uploadProgress');
+    const uploadBar   = $el('uploadBar');
+    const uploadPct   = $el('uploadPercent');
+    const submitBtn   = $el('uploadBtn');
+
+    progressDiv.classList.remove('hidden');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner animate-spin"></i><span>Uploading...</span>';
+
+    const xhr = new XMLHttpRequest();
+    xhr.upload.addEventListener('progress', evt => {
+        if (evt.lengthComputable) {
+            const pct = Math.round(evt.loaded / evt.total * 100);
+            uploadPct.textContent = pct + '%';
+            uploadBar.style.width = pct + '%';
         }
     });
+    xhr.addEventListener('load', () => {
+        if (xhr.status === 200) {
+            try {
+                const res = JSON.parse(xhr.responseText);
+                if (res.success) {
+                    uploadPct.textContent = '100%';
+                    uploadBar.style.width = '100%';
+                    setTimeout(() => {
+                        progressDiv.classList.add('hidden');
+                        uploadBar.style.width = '0%';
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i class="fas fa-upload"></i><span>Add Video</span>';
+                        this.reset();
+                        showToast('Video added successfully!', 'success');
+                        location.reload();
+                    }, 800);
+                    return;
+                }
+            } catch (_) {}
+        }
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-upload"></i><span>Add Video</span>';
+        progressDiv.classList.add('hidden');
+        showToast('Upload failed. Please try again.', 'error');
+    });
+    xhr.addEventListener('error', () => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-upload"></i><span>Add Video</span>';
+        progressDiv.classList.add('hidden');
+        showToast('Upload failed. Please try again.', 'error');
+    });
+    xhr.open('POST', this.action, true);
+    xhr.setRequestHeader('X-CSRF-TOKEN', CSRF);
+    xhr.send(new FormData(this));
 });
 
-// Keyboard shortcuts
-document.addEventListener('keydown', (e) => {
+function toggleVideoType() {
+    const type = document.querySelector('input[name="video_type"]:checked').value;
+    $el('fileInput').classList.toggle('hidden',    type !== 'file');
+    $el('youtubeInput').classList.toggle('hidden', type !== 'youtube');
+}
+
+// ── Modal backdrop click dismissal ───────────────────────────────────────────
+document.querySelectorAll('[id$="-modal"]').forEach(m => {
+    m.addEventListener('click', e => { if (e.target === m) m.classList.add('hidden'); });
+});
+
+// ── Keyboard shortcuts ────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-    
-    switch(e.key) {
-        case ' ':
-            e.preventDefault();
-            togglePlay();
-            break;
-        case 'ArrowLeft':
-            prevVideo();
-            break;
-        case 'ArrowRight':
-            nextVideo();
-            break;
-        case 'm':
-            toggleMute();
-            break;
-    }
+    if      (e.key === ' ')           { e.preventDefault(); togglePlay(); }
+    else if (e.key === 'ArrowLeft')   prevVideo();
+    else if (e.key === 'ArrowRight')  nextVideo();
+    else if (e.key === 'm')           toggleMute();
 });
 </script>
 @endpush
