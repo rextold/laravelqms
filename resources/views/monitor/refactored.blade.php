@@ -885,12 +885,17 @@
         
         const STATE = {
             isConnected: true,
+            isInitialized: false,  // true after the first successful poll
             isFetching: false,
             previousServingState: new Map(),
             currentVideo: null,
             videoRotationIndex: 0,
             videos: @json($videos ?? []),
             videoControl: @json($videoControl ?? null),
+            // Pre-populated from server-side render — same shape as getData() returns.
+            // Used to fill the counter/queue panels immediately on page load.
+            initialCounters: @json($initialCounterData ?? []),
+            initialWaitingQueues: @json($initialWaitingQueues ?? []),
         };
         
         // Debug: Log video and audio information
@@ -956,6 +961,12 @@
             // Render the initial video state immediately from blade data so the
             // player is never stuck on "No active video" while the first poll is in-flight.
             updateVideoPlayer(STATE.videoControl);
+
+            // Render the initial counters/queues from blade data immediately so the
+            // monitor shows real data before the first HTTP poll arrives.
+            if (STATE.initialCounters.length > 0 || STATE.initialWaitingQueues.length > 0) {
+                updateCountersDisplay(STATE.initialCounters, STATE.initialWaitingQueues);
+            }
             
             // Initialize audio element
             const audio = document.getElementById('notificationSound');
@@ -1142,15 +1153,20 @@
                 updateVideoPlayer(data.video_control || STATE.videoControl);
                 updateMarqueeDisplay(data.marquee);
                 
-                // Only mark connected after a successful response
+                // Mark initialized after the first successful poll
+                STATE.isInitialized = true;
+
+                // Only update status dot when recovering from a disconnected state
                 if (!STATE.isConnected) {
                     STATE.isConnected = true;
                     updateConnectionStatus(true);
                 }
             } catch (error) {
                 console.error('Refresh failed:', error);
-                // Only transition to disconnected state once (avoids repeated DOM updates)
-                if (STATE.isConnected) {
+                // Only show "Reconnecting" if we have previously had a successful poll.
+                // On first load the blade-rendered data is still valid, so we silently
+                // retry without alarming the display with a "Reconnecting" status.
+                if (STATE.isConnected && STATE.isInitialized) {
                     STATE.isConnected = false;
                     updateConnectionStatus(false);
                 }

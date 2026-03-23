@@ -62,11 +62,78 @@ class MonitorController extends Controller
             $counterQueues[$counter->id] = $counter->getCurrentQueue();
         }
 
+        // Pre-format counters in the same shape getData() returns so the blade can
+        // seed STATE.initialCounters and render immediately — no first-poll wait.
+        $initialCounterData = [];
+        foreach ($onlineCounters as $counter) {
+            $currentQueue = $counterQueues[$counter->id] ?? null;
+            $initialCounterData[] = [
+                'counter' => [
+                    'id'                => $counter->id,
+                    'counter_number'    => $counter->counter_number,
+                    'display_name'      => $counter->display_name,
+                    'short_description' => $counter->short_description ?? null,
+                ],
+                'queue' => $currentQueue ? [
+                    'id'           => $currentQueue->id,
+                    'queue_number' => (function () use ($currentQueue) {
+                        $value = (string) ($currentQueue->queue_number ?? '');
+                        $pos = strrpos($value, '-');
+                        return $pos === false ? $value : substr($value, $pos + 1);
+                    })(),
+                    'status'       => $currentQueue->status,
+                    'created_at'   => optional($currentQueue->created_at)->toDateTimeString(),
+                    'called_at'    => optional($currentQueue->called_at)->toDateTimeString(),
+                    'notified_at'  => optional($currentQueue->notified_at)->toDateTimeString(),
+                ] : null,
+                'recent_recall' => false,
+            ];
+        }
+
+        // Pre-format waiting queues in the same shape getData() returns.
+        $initialWaitingQueues = \App\Models\Queue::where('organization_id', $organization->id)
+            ->where('status', 'waiting')
+            ->select(['id', 'queue_number', 'counter_id', 'created_at'])
+            ->with('counter:id,counter_number,display_name')
+            ->orderBy('counter_id')
+            ->orderBy('created_at')
+            ->limit(200)
+            ->get()
+            ->groupBy('counter_id')
+            ->map(function ($queues) {
+                $counter = optional($queues->first()->counter);
+                return [
+                    'counter_number' => $counter->counter_number ?? '?',
+                    'display_name'   => $counter->display_name ?? 'Counter',
+                    'queues'         => $queues->take(5)->map(function ($queue) {
+                        $value = (string) ($queue->queue_number ?? '');
+                        $pos = strrpos($value, '-');
+                        return ['queue_number' => $pos === false ? $value : substr($value, $pos + 1)];
+                    })->values()->all(),
+                ];
+            });
+
+        // Include online counters that have no waiting queues (so panel shows them too)
+        foreach ($onlineCounters as $counter) {
+            if (!$initialWaitingQueues->has($counter->id)) {
+                $initialWaitingQueues->put($counter->id, [
+                    'counter_number' => $counter->counter_number,
+                    'display_name'   => $counter->display_name ?? 'Counter',
+                    'queues'         => [],
+                ]);
+            }
+        }
+        $initialWaitingQueues = $initialWaitingQueues->values()->all();
+
         // Check if refactored view exists, use it; otherwise fall back to original
         if (view()->exists('monitor.refactored')) {
-            return view('monitor.refactored', compact('onlineCounters', 'videos', 'videoControl', 'marquee', 'counterQueues', 'settings', 'companyCode', 'organization'));
+            return view('monitor.refactored', compact(
+                'onlineCounters', 'videos', 'videoControl', 'marquee',
+                'counterQueues', 'settings', 'companyCode', 'organization',
+                'initialCounterData', 'initialWaitingQueues'
+            ));
         }
-        
+
         return view('monitor.index', compact('onlineCounters', 'videos', 'videoControl', 'marquee', 'counterQueues', 'settings', 'companyCode', 'organization'));
     }
 

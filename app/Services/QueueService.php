@@ -56,12 +56,19 @@ class QueueService
                     $digits = 4;
                 }
 
-                // Initialize sequence from existing queues if needed
-                $lastSeq = (int) ($settings->last_queue_sequence ?? 0);
-                if ($organizationId && $lastSeq <= 0) {
-                    // Fast path: queue numbers are now digits-only; use most recent row and parse suffix.
-                    // This avoids full-table scans on large queue history.
+                // Daily reset: detect a new calendar day and restart from 1.
+                $today = now()->toDateString();
+                $lastDate = $settings->last_queue_date instanceof \Carbon\Carbon
+                    ? $settings->last_queue_date->toDateString()
+                    : (string) ($settings->last_queue_date ?? '');
+                $isNewDay = ($lastDate !== $today);
+
+                $lastSeq = $isNewDay ? 0 : (int) ($settings->last_queue_sequence ?? 0);
+
+                if (!$isNewDay && $organizationId && $lastSeq <= 0) {
+                    // Bootstrap only within today's queues so we don't inherit yesterday's numbers.
                     $latestQueueNumber = (string) (Queue::where('organization_id', $organizationId)
+                        ->whereDate('created_at', $today)
                         ->orderByDesc('id')
                         ->value('queue_number') ?? '');
 
@@ -74,6 +81,7 @@ class QueueService
 
                 $nextSeq = $lastSeq + 1;
                 $settings->last_queue_sequence = $nextSeq;
+                $settings->last_queue_date = $today;
                 $settings->save();
 
                 $queueNumber = str_pad((string) $nextSeq, $digits, '0', STR_PAD_LEFT);
@@ -98,23 +106,38 @@ class QueueService
             $digits = (int) ($settings->queue_number_digits ?? 4);
             if ($digits <= 0) $digits = 4;
 
-            // Determine last sequence by inspecting the most recent queue number
-            $latestQueueNumber = (string) (Queue::where('organization_id', $organizationId)
-                ->orderByDesc('id')
-                ->value('queue_number') ?? '');
-            $lastSeq = 0;
-            if ($latestQueueNumber !== '') {
-                $parts = explode('-', $latestQueueNumber);
-                $suffix = end($parts);
-                $lastSeq = (int) $suffix;
+            // Daily reset check (same logic as the transactional path)
+            $today = now()->toDateString();
+            $lastDate = $settings->last_queue_date instanceof \Carbon\Carbon
+                ? $settings->last_queue_date->toDateString()
+                : (string) ($settings->last_queue_date ?? '');
+            $isNewDay = ($lastDate !== $today);
+
+            if ($isNewDay) {
+                $lastSeq = 0;
+            } else {
+                // Determine last sequence by inspecting only today's queue numbers
+                $latestQueueNumber = (string) (Queue::where('organization_id', $organizationId)
+                    ->whereDate('created_at', $today)
+                    ->orderByDesc('id')
+                    ->value('queue_number') ?? '');
+                $lastSeq = 0;
+                if ($latestQueueNumber !== '') {
+                    $parts = explode('-', $latestQueueNumber);
+                    $suffix = end($parts);
+                    $lastSeq = (int) $suffix;
+                }
             }
 
             $nextSeq = $lastSeq + 1;
             $queueNumber = str_pad((string) $nextSeq, $digits, '0', STR_PAD_LEFT);
 
-            // Try to persist the last_queue_sequence best-effort (no locking)
+            // Try to persist the new sequence and date best-effort (no locking)
             try {
-                OrganizationSetting::where('organization_id', $organizationId)->update(['last_queue_sequence' => $nextSeq]);
+                OrganizationSetting::where('organization_id', $organizationId)->update([
+                    'last_queue_sequence' => $nextSeq,
+                    'last_queue_date' => $today,
+                ]);
             } catch (\Throwable $_) {
                 // ignore persistence errors on fallback
             }

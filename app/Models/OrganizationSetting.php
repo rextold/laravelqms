@@ -33,7 +33,12 @@ class OrganizationSetting extends Model
         'email',
         'queue_number_digits',
         'last_queue_sequence',
+        'last_queue_date',
         'is_active',
+    ];
+
+    protected $casts = [
+        'last_queue_date' => 'date',
     ];
 
     public function organization()

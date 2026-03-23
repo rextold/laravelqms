@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Console\Scheduling\Schedule;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -34,4 +35,11 @@ return Application::configure(basePath: dirname(__DIR__))
                 'message' => 'Your session has expired. Please login again.'
             ]);
         });
-    })->create();
+    })
+    ->withSchedule(function (Schedule $schedule) {
+        // Reset queue sequences at midnight every day.
+        // Marks any still-active queues from the previous day as completed and
+        // clears last_queue_sequence so the first ticket of the new day is 0001.
+        $schedule->command('queue:reset-daily')->dailyAt('00:00');
+    })
+    ->create();
