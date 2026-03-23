@@ -13,6 +13,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <!-- PWA -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="theme-color" content="#667eea">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1116,12 +1117,16 @@
                     credentials: 'same-origin',
                     headers: { 
                         'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? ''
                     }
                 });
                 
                 if (!response.ok) {
-                    console.error(`Monitor data fetch failed: ${response.status} ${response.statusText}`);
+                    // Clone so we can read the body AND later inspect it without consuming the stream.
+                    const bodyText = await response.clone().text().catch(() => '(could not read body)');
+                    console.error(`[Monitor] Data fetch failed: HTTP ${response.status} ${response.statusText}`);
+                    console.error('[Monitor] Response body:', bodyText.substring(0, 500));
                     throw new Error(`Network response was not ok: ${response.status}`);
                 }
                 

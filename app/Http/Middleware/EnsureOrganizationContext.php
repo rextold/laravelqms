@@ -55,7 +55,9 @@ class EnsureOrganizationContext
         $this->setOrganizationContext($request, $organization);
 
         // CRITICAL: Public routes (kiosk, monitor) - allow access without ANY checks
-        // This must come before any authentication or authorization checks
+        // isPublicRoute uses three independent checks; the path-based check is the
+        // guaranteed fallback in case route caching stores full class names instead
+        // of middleware aliases (which would break the in_array('allow.public') check).
         if ($this->isPublicRoute($request)) {
             return $next($request);
         }
@@ -88,43 +90,39 @@ class EnsureOrganizationContext
 
     private function isPublicRoute(Request $request): bool
     {
-        // Check for allow.public middleware
-        $route = $request->route();
-        if ($route && in_array('allow.public', $route->middleware())) {
+        $path = $request->getPathInfo();
+        $uri  = $request->getRequestUri();
+
+        // ── Fastest check: explicit path match (works even when route cache is
+        // present and stores full class names instead of alias strings).
+        if (preg_match('#/(monitor|kiosk)(/|$)#', $path) ||
+            preg_match('#/(monitor|kiosk)(/|$)#', $uri)) {
             return true;
         }
-        
-        // Explicitly allow monitor and kiosk routes by name
-        $routeName = $route ? ($route->getName() ?? '') : '';
-        $publicRoutePatterns = [
-            'monitor.',   // All monitor routes (index, data, etc.)
-            'kiosk.',     // All kiosk routes (index, generate, counters, verify)
-        ];
-        
-        foreach ($publicRoutePatterns as $pattern) {
+
+        $route = $request->route();
+        if (!$route) {
+            return false;
+        }
+
+        // Route-name check (prefixed group names: monitor.index, monitor.data, kiosk.*).
+        $routeName = $route->getName() ?? '';
+        foreach (['monitor.', 'kiosk.'] as $pattern) {
             if (str_starts_with($routeName, $pattern)) {
                 return true;
             }
         }
-        
-        // Also check path for public routes (fallback for AJAX and dynamic routes)
-        $path = $request->getPathInfo();
-        $uri = $request->getRequestUri();
-        
-        // Multiple checks to ensure monitor/kiosk routes are always public
-        if (str_contains($path, '/monitor') || 
-            str_contains($uri, '/monitor') ||
-            str_contains($path, '/kiosk') ||
-            str_contains($uri, '/kiosk')) {
+
+        // Middleware-alias check (may fail when route cache uses full class names).
+        $middlewareList = $route->middleware();
+        if (in_array('allow.public', $middlewareList)) {
             return true;
         }
-        
-        // Regex check for monitor or kiosk data endpoint
-        if (preg_match('#/(monitor|kiosk)(/|$)#', $path) || 
-            preg_match('#/(monitor|kiosk)(/|$)#', $uri)) {
+        // Tolerate full class name as well (route-cache edge case).
+        if (in_array(\App\Http\Middleware\AllowPublicAccess::class, $middlewareList)) {
             return true;
         }
-        
+
         return false;
     }
 

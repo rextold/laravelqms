@@ -72,6 +72,35 @@ class MonitorController extends Controller
 
     public function getData(Request $request)
     {
+        try {
+            return $this->buildDataResponse($request);
+        } catch (\Throwable $e) {
+            // Never let getData() throw — the monitor JS would treat non-JSON
+            // responses as a failure and enter the reconnect loop.
+            \Illuminate\Support\Facades\Log::error('[MonitorController] getData error: ' . $e->getMessage(), [
+                'file'  => $e->getFile(),
+                'line'  => $e->getLine(),
+                'org'   => $request->route('organization_code'),
+            ]);
+
+            return response()->json([
+                'error'   => true,
+                'message' => 'Temporary data unavailable. Retrying…',
+                // Return empty-but-valid structure so the monitor JS keeps running.
+                'counters'       => [],
+                'video_control'  => null,
+                'marquee'        => null,
+                'waiting_queues' => [],
+                'videos'         => [],
+            ], 200)  // 200 so the JS poll loop continues normally
+                ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+                ->header('Pragma', 'no-cache')
+                ->header('Expires', '0');
+        }
+    }
+
+    private function buildDataResponse(Request $request): \Illuminate\Http\JsonResponse
+    {
         $organization = Organization::where('organization_code', $request->route('organization_code'))->firstOrFail();
         
         $onlineCounters = User::onlineCounters()
@@ -165,11 +194,11 @@ class MonitorController extends Controller
             });
 
         return response()->json([
-            'counters' => $counterQueues,
-            'video_control' => $videoControl,
-            'marquee' => $marquee,
+            'counters'       => $counterQueues,
+            'video_control'  => $videoControl,
+            'marquee'        => $marquee,
             'waiting_queues' => $waitingQueues,
-            'videos' => $videos,
+            'videos'         => $videos,
         ])
             ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
             ->header('Pragma', 'no-cache')
