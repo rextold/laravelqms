@@ -880,19 +880,22 @@
         
         const CONFIG = {
             orgCode: '{{ $companyCode }}',
-            refreshInterval: 1500, // 1.5 seconds
-            reconnectDelay: 3000,
-            callBannerDuration: 8000, // Show banner for 8 seconds
-            voiceEnabled: true, // Enable train station-style voice announcements
-            voiceRate: 0.9, // Speech rate (0.1 to 10)
-            voicePitch: 1.0, // Speech pitch (0 to 2)
-            voiceVolume: 1.0, // Speech volume (0 to 1)
+            refreshInterval: 1500,         // 1.5 s  — normal poll
+            slowPollInterval: 10000,       // 10 s   — degraded mode after repeated failures
+            maxFailuresBeforeSlowdown: 5,  // consecutive failures before slowing down
+            _slowMode: false,              // internal flag
+            callBannerDuration: 8000,      // Show banner for 8 seconds
+            voiceEnabled: true,            // Enable train station-style voice announcements
+            voiceRate: 0.9,                // Speech rate (0.1 to 10)
+            voicePitch: 1.0,               // Speech pitch (0 to 2)
+            voiceVolume: 1.0,              // Speech volume (0 to 1)
         };
         
         const STATE = {
             isConnected: true,
             isInitialized: false,  // true after the first successful poll
             isFetching: false,
+            failureCount: 0,       // consecutive failed polls since last success
             previousServingState: new Map(),
             currentVideo: null,
             videoRotationIndex: 0,
@@ -903,7 +906,42 @@
             initialCounters: @json($initialCounterData ?? []),
             initialWaitingQueues: @json($initialWaitingQueues ?? []),
         };
-        
+
+        // ========================================
+        // LOCAL STORAGE CACHE
+        // Persists the last-known display state so:
+        //   • page reloads restore data instantly (no blank screen)
+        //   • network blips never wipe the customer display
+        // ========================================
+        const LS_CACHE_KEY = 'qms_monitor_' + CONFIG.orgCode;
+
+        function saveToLocalStorage(data) {
+            try {
+                localStorage.setItem(LS_CACHE_KEY, JSON.stringify({
+                    t: Date.now(),
+                    counters:       data.counters       || [],
+                    waiting_queues: data.waiting_queues || [],
+                    videos:         Array.isArray(data.videos) ? data.videos : [],
+                    video_control:  data.video_control  || null,
+                    marquee:        data.marquee        || null,
+                }));
+            } catch (e) { /* storage quota or private-mode — ignore */ }
+        }
+
+        function loadFromLocalStorage() {
+            try {
+                const raw = localStorage.getItem(LS_CACHE_KEY);
+                if (!raw) return null;
+                const cached = JSON.parse(raw);
+                // Discard cache older than 4 hours to avoid extremely stale data
+                if (!cached.t || Date.now() - cached.t > 4 * 60 * 60 * 1000) {
+                    localStorage.removeItem(LS_CACHE_KEY);
+                    return null;
+                }
+                return cached;
+            } catch (e) { return null; }
+        }
+
         // Debug: Log video and audio information
         console.log('📹 Video Debug Info:');
         console.log('- Total videos:', STATE.videos.length);
@@ -973,7 +1011,25 @@
             if (STATE.initialCounters.length > 0 || STATE.initialWaitingQueues.length > 0) {
                 updateCountersDisplay(STATE.initialCounters, STATE.initialWaitingQueues);
             }
-            
+
+            // Restore from localStorage as extra fallback:
+            //   • when blade data is empty (e.g. server issue at page-load time)
+            //   • on hard-reload while the server is temporarily unreachable
+            const lsCached = loadFromLocalStorage();
+            if (lsCached) {
+                if (STATE.initialCounters.length === 0 && STATE.initialWaitingQueues.length === 0) {
+                    updateCountersDisplay(lsCached.counters || [], lsCached.waiting_queues || []);
+                    console.log('[Monitor] Restored display data from localStorage cache.');
+                }
+                if (!STATE.videoControl && lsCached.video_control) {
+                    STATE.videoControl = lsCached.video_control;
+                    updateVideoPlayer(lsCached.video_control);
+                }
+                if (lsCached.videos && lsCached.videos.length > 0 && STATE.videos.length === 0) {
+                    STATE.videos = lsCached.videos;
+                }
+            }
+
             // Initialize audio element
             const audio = document.getElementById('notificationSound');
             if (audio) {
@@ -1075,11 +1131,16 @@
             // Handle visibility change
             document.addEventListener('visibilitychange', () => {
                 if (!document.hidden) {
+                    // Immediately refresh data when the tab/window regains focus
                     refreshMonitorData();
+                    // Re-acquire wake lock — it is released automatically on visibility loss
+                    if ('wakeLock' in navigator) {
+                        navigator.wakeLock.request('screen').catch(() => {});
+                    }
                 }
             });
-            
-            // Keep screen awake
+
+            // Keep screen awake (initial acquisition)
             if ('wakeLock' in navigator) {
                 navigator.wakeLock.request('screen').catch(() => {});
             }
@@ -1158,7 +1219,22 @@
                 updateCountersDisplay(data.counters || [], data.waiting_queues || []);
                 updateVideoPlayer(data.video_control || STATE.videoControl);
                 updateMarqueeDisplay(data.marquee);
-                
+
+                // ── Persistence: save every successful response to localStorage
+                // so a page reload never shows a blank screen.
+                saveToLocalStorage(data);
+
+                // ── Reset consecutive-failure tracking
+                STATE.failureCount = 0;
+
+                // ── If we were in slow-poll degraded mode, return to normal fast polling
+                if (CONFIG._slowMode) {
+                    CONFIG._slowMode = false;
+                    clearInterval(refreshTimer);
+                    refreshTimer = setInterval(refreshMonitorData, CONFIG.refreshInterval);
+                    console.log('[Monitor] Restored to normal poll interval.');
+                }
+
                 // Mark initialized after the first successful poll
                 STATE.isInitialized = true;
 
@@ -1169,19 +1245,31 @@
                 }
             } catch (error) {
                 console.error('Refresh failed:', error);
-                // Only show "Reconnecting" if we have previously had a successful poll.
-                // On first load the blade-rendered data is still valid, so we silently
-                // retry without alarming the display with a "Reconnecting" status.
+
+                // Track consecutive failures
+                STATE.failureCount++;
+
+                // After several failures, switch to a slower poll rate to reduce
+                // server load during sustained outages. The display keeps showing
+                // the last cached data — customer transactions are never interrupted.
+                if (!CONFIG._slowMode && STATE.failureCount >= CONFIG.maxFailuresBeforeSlowdown) {
+                    CONFIG._slowMode = true;
+                    clearInterval(refreshTimer);
+                    refreshTimer = setInterval(refreshMonitorData, CONFIG.slowPollInterval);
+                    console.warn('[Monitor] Switched to slow-poll mode after', STATE.failureCount, 'consecutive failures.');
+                }
+
+                // Only show status change if we were previously connected AND
+                // already initialized (so the blade-pre-rendered data stays visible
+                // during the very first poll without alarming the display).
                 if (STATE.isConnected && STATE.isInitialized) {
                     STATE.isConnected = false;
                     updateConnectionStatus(false);
                 }
 
-                // For any persistent error (including 403), log it.
-                // Do NOT call location.reload() — that causes an infinite reload
-                // loop when the server consistently rejects or returns an error.
-                // The reconnect logic in updateConnectionStatus handles retrying gracefully.
-                console.warn('[Monitor] Data fetch error, will retry automatically:', error.message);
+                // Do NOT call location.reload() — that causes an infinite reload loop.
+                // The polling interval keeps retrying automatically.
+                console.warn('[Monitor] Data fetch error, retrying automatically:', error.message);
             } finally {
                 STATE.isFetching = false;
             }
@@ -1190,25 +1278,17 @@
         function updateConnectionStatus(connected) {
             const statusDot = document.getElementById('statusDot');
             const statusText = document.getElementById('statusText');
-            
+
             if (connected) {
                 statusDot.classList.remove('disconnected');
                 statusText.textContent = 'Connected';
             } else {
                 statusDot.classList.add('disconnected');
                 statusText.textContent = 'Reconnecting...';
-                
-                // Stop the regular interval while disconnected to avoid parallel requests.
-                // A single delayed retry will restart the cycle once it succeeds.
-                stopRefreshCycle();
-                setTimeout(() => {
-                    if (!STATE.isConnected) {
-                        refreshMonitorData().finally(() => {
-                            // Restart the regular poll cycle after the reconnect attempt
-                            if (!refreshTimer) startRefreshCycle();
-                        });
-                    }
-                }, CONFIG.reconnectDelay);
+                // ── The polling interval keeps running — NO stopRefreshCycle() here.
+                // Stopping polling would freeze the display for customers if the
+                // retry happened to also fail.  Let the interval handle retries
+                // automatically (at normal rate, or slow-poll rate if degraded).
             }
         }
         
