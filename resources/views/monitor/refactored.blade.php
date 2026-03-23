@@ -81,7 +81,9 @@
             background: var(--bg-header);
             border-radius: 16px;
             box-shadow: 0 8px 32px var(--shadow);
-            z-index: 1;
+            /* z-index must be > #yt-overlay (z=3) so the .call-banner (position:fixed,
+               z=1000) inside this grid-item stacking context renders above the video. */
+            z-index: 10;
         }
         
         .monitor-header::before {
@@ -2111,11 +2113,12 @@
                 events: {
                     onReady: function (event) {
                         STATE.ytPlayerReady = true;
-                        event.target.playVideo();
-                        applyYouTubeControls(videoControl);
-                        // Show the overlay now that the player is ready
-                        const overlay = document.getElementById('yt-overlay');
-                        if (overlay) overlay.style.display = 'block';
+                        // Use the latest STATE.videoControl (not the stale closure value)
+                        // so that if admin stopped playback while the player was loading,
+                        // we respect the stopped state instead of auto-playing.
+                        const currentControl = STATE.videoControl || videoControl;
+                        // applyYouTubeControls handles both play/pause AND overlay visibility.
+                        applyYouTubeControls(currentControl);
                         console.log('[YouTube] Persistent player ready — video:', ytId);
                         // Drain any pending switch that arrived before API was ready
                         if (STATE.pendingYouTubeLoad) {
@@ -2139,12 +2142,17 @@
         /**
          * Fast video switch — uses loadVideoById() so the player pre-buffers
          * the new video without any iframe teardown. Typically < 1 s to start.
+         * Also handles the case where the same YouTube video comes back in rotation
+         * after having ended (playerState === 0).
          */
         function _ytSwitch(ytId, videoControl) {
-            const overlay = document.getElementById('yt-overlay');
-            if (overlay) overlay.style.display = 'block';
+            // Detect when the same video ended so we can restart it (e.g. single-video
+            // loop or the same YouTube video appearing twice in the playlist).
+            const playerEnded = STATE.ytPlayer &&
+                typeof STATE.ytPlayer.getPlayerState === 'function' &&
+                STATE.ytPlayer.getPlayerState() === 0; // 0 = YT.PlayerState.ENDED
 
-            if (STATE.ytCurrentVideoId !== ytId) {
+            if (STATE.ytCurrentVideoId !== ytId || playerEnded) {
                 STATE.ytCurrentVideoId = ytId;
                 STATE.lastVolume = -1;  // force volume re-apply
                 try {
@@ -2153,12 +2161,15 @@
                     console.error('[YouTube] loadVideoById failed:', e);
                 }
             }
+            // applyYouTubeControls is the single source of truth for overlay
+            // visibility and play/pause — do NOT set overlay.style.display here.
             applyYouTubeControls(videoControl);
         }
 
         /**
          * Apply the admin-controlled volume and play/pause state to the live YouTube player.
-         * Called on every poll tick when the same YouTube video is already loaded.
+         * Also controls the yt-overlay visibility so this is the single source of truth:
+         * overlay shown ⟺ player is playing. Called on every poll tick.
          */
         function applyYouTubeControls(videoControl) {
             if (!STATE.ytPlayer || typeof STATE.ytPlayer.setVolume !== 'function') return;
@@ -2173,10 +2184,14 @@
                 }
             }
 
+            const overlay = document.getElementById('yt-overlay');
             if (videoControl && !videoControl.is_playing) {
                 try { STATE.ytPlayer.pauseVideo(); } catch (e) {}
+                // Hide the overlay so a paused/stopped frame doesn't remain visible
+                if (overlay) overlay.style.display = 'none';
             } else {
                 try { STATE.ytPlayer.playVideo(); } catch (e) {}
+                if (overlay) overlay.style.display = 'block';
             }
         }
 
@@ -2367,14 +2382,19 @@
 
             // Use admin's queue order if defined; fall back to full library order.
             const order = STATE.playlistOrder.length > 0 ? STATE.playlistOrder : STATE.videos.map(v => v.id);
-            if (order.length <= 1) return;
 
-            // Find where the current video sits in the sequence, then advance.
-            const currentId = STATE.videos[STATE.playlistRotationIndex]?.id;
-            const orderIdx  = currentId ? order.indexOf(parseInt(currentId)) : -1;
-            const nextId    = order[(orderIdx + 1) % order.length];
-            const nextIdx   = STATE.videos.findIndex(v => parseInt(v.id) === parseInt(nextId));
-            STATE.playlistRotationIndex = nextIdx !== -1 ? nextIdx : 0;
+            // Only advance the index for multi-video playlists.
+            // For a single video, leave playlistRotationIndex unchanged — updateVideoPlayer
+            // will call _ytSwitch which detects the ENDED player state and restarts it.
+            // (File videos with a single entry use loop=true, so they never reach here.)
+            if (order.length > 1) {
+                // Find where the current video sits in the sequence, then advance.
+                const currentId = STATE.videos[STATE.playlistRotationIndex]?.id;
+                const orderIdx  = currentId ? order.indexOf(parseInt(currentId)) : -1;
+                const nextId    = order[(orderIdx + 1) % order.length];
+                const nextIdx   = STATE.videos.findIndex(v => parseInt(v.id) === parseInt(nextId));
+                STATE.playlistRotationIndex = nextIdx !== -1 ? nextIdx : 0;
+            }
 
             updateVideoPlayer(STATE.videoControl);
         }
