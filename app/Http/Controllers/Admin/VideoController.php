@@ -222,8 +222,17 @@ class VideoController extends Controller
             
             return redirect()->back()->with('error', 'Failed to delete video: ' . $e->getMessage());
         }
-    }    public function updateControl(Request $request)
+    }
+
+    public function updateControl(Request $request)
     {
+        // CSRF was verified by middleware — release the session lock now so the
+        // monitor's 1s polls and counter's queue calls are not blocked while
+        // this DB update runs.
+        if ($request->hasSession()) {
+            $request->session()->save();
+        }
+
         $orgCode = $request->route('organization_code');
         $organization = \App\Models\Organization::where('organization_code', $orgCode)->firstOrFail();
 
@@ -356,6 +365,12 @@ class VideoController extends Controller
      */
     public function getPlaylist(Request $request)
     {
+        // Release session lock — this GET-only polling endpoint does not use session data.
+        // Without this, the 2s poll holds the file lock and blocks concurrent admin/counter requests.
+        if ($request->hasSession()) {
+            $request->session()->save();
+        }
+
         $orgCode = $request->route('organization_code');
         $organization = \App\Models\Organization::where('organization_code', $orgCode)->first();
         

@@ -139,6 +139,15 @@ class MonitorController extends Controller
 
     public function getData(Request $request)
     {
+        // Release the PHP session file lock immediately — this endpoint is public
+        // and does not use session data. Holding the lock blocks concurrent requests
+        // from the same browser (admin panel, counter) that also need the session.
+        // This eliminates the "Reconnecting..." delay seen when admin clicks video
+        // controls at the same time as the monitor polls.
+        if ($request->hasSession()) {
+            $request->session()->save();
+        }
+
         try {
             return $this->buildDataResponse($request);
         } catch (\Throwable $e) {

@@ -41,5 +41,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // Marks any still-active queues from the previous day as completed and
         // clears last_queue_sequence so the first ticket of the new day is 0001.
         $schedule->command('queue:reset-daily')->dailyAt('00:00');
+
+        // Data lifecycle: delete completed/skipped records older than 90 days.
+        // Runs every Sunday at 02:00 to keep the queues table lean.
+        // Adjust --days if a longer audit trail is required.
+        $schedule->command('queue:prune --days=90')->weeklyOn(0, '02:00');
     })
     ->create();
