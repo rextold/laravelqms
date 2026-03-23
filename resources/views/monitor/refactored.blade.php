@@ -1028,6 +1028,7 @@
             videoControl: @json($videoControl ?? null),
             // Playlist rotation state
             playlistRotationIndex: 0,  // current position in STATE.videos array
+            playlistOrder: [],          // video IDs in admin's queue sequence_order (for auto-advance)
             lastServerVideoId: null,   // last current_video_id received from server (detect changes)
             lastControlUpdatedAt: null, // updated_at of last processed video_control (detect re-play of same video)
             playlistTimer: null,       // setTimeout handle for YouTube rotation
@@ -1368,14 +1369,17 @@
                 
                 const data = await response.json();
 
-                // Update the video source for advancePlaylist():
-                // Prefer the admin's curated playlist queue (sequence_order) so
-                // auto-advance cycles in the same order the admin sees.
-                // Fall back to the full library when no playlist is configured.
-                if (Array.isArray(data.playlist) && data.playlist.length > 0) {
-                    STATE.videos = data.playlist;
-                } else if (Array.isArray(data.videos)) {
+                // Always keep STATE.videos as the FULL library so any video (including
+                // those not in the queue) can be looked up by current_video_id.
+                if (Array.isArray(data.videos)) {
                     STATE.videos = data.videos;
+                }
+                // Separately track the admin's curated queue order (for auto-advance).
+                // advancePlaylist() uses these IDs to cycle through videos in queue order.
+                if (Array.isArray(data.playlist) && data.playlist.length > 0) {
+                    STATE.playlistOrder = data.playlist.map(v => v.id);
+                } else {
+                    STATE.playlistOrder = [];
                 }
                 // Keep STATE.videoControl current so advancePlaylist() can reference it.
                 if (data.video_control !== undefined) {
@@ -2284,8 +2288,19 @@
         function advancePlaylist() {
             clearTimeout(STATE.playlistTimer);
             STATE.playlistTimer = null;
-            if (!STATE.videos || STATE.videos.length <= 1) return;
-            STATE.playlistRotationIndex = (STATE.playlistRotationIndex + 1) % STATE.videos.length;
+            if (!STATE.videos || STATE.videos.length === 0) return;
+
+            // Use admin's queue order if defined; fall back to full library order.
+            const order = STATE.playlistOrder.length > 0 ? STATE.playlistOrder : STATE.videos.map(v => v.id);
+            if (order.length <= 1) return;
+
+            // Find where the current video sits in the sequence, then advance.
+            const currentId = STATE.videos[STATE.playlistRotationIndex]?.id;
+            const orderIdx  = currentId ? order.indexOf(parseInt(currentId)) : -1;
+            const nextId    = order[(orderIdx + 1) % order.length];
+            const nextIdx   = STATE.videos.findIndex(v => parseInt(v.id) === parseInt(nextId));
+            STATE.playlistRotationIndex = nextIdx !== -1 ? nextIdx : 0;
+
             updateVideoPlayer(STATE.videoControl);
         }
         
