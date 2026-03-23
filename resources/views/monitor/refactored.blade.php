@@ -580,7 +580,109 @@
         .waiting-queue-number.alt-2 { color: #6ee7b7; background: rgba(52,211,153,0.14); border-color: rgba(52,211,153,0.35); }  /* emerald */
         .waiting-queue-number.alt-3 { color: #fca5a5; background: rgba(248,113,113,0.14); border-color: rgba(248,113,113,0.35); } /* rose   */
         .waiting-queue-number.alt-4 { color: #c4b5fd; background: rgba(167,139,250,0.14); border-color: rgba(167,139,250,0.35); } /* violet */
-        
+
+        /* ========================================
+           WAITING QUEUE — COMPACT BOTTOM STRIP
+           Vertical label on left + horizontal scroll
+           ======================================== */
+        .waiting-queue-section .queue-card {
+            flex-direction: row;
+            align-items: stretch;
+            min-height: unset;
+        }
+
+        /* Left label column — replaces the tall card header */
+        .waiting-queue-section .queue-card-header {
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 0 0.75rem;
+            border-bottom: none;
+            border-right: 1px solid var(--border);
+            flex-shrink: 0;
+            gap: 0.2rem;
+            min-width: 68px;
+        }
+
+        .waiting-queue-section .queue-icon {
+            width: 24px;
+            height: 24px;
+            font-size: 0.65rem;
+            border-radius: 6px;
+        }
+
+        .waiting-queue-section .queue-card-title {
+            font-size: 0.58rem;
+            letter-spacing: 0.07em;
+        }
+
+        /* Scrollable horizontal row of queue entries */
+        .waiting-queue-section .queue-card-content {
+            flex: 1;
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            overflow-y: hidden;
+            align-items: center;
+            height: 60px;
+            padding: 0 0.25rem;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .waiting-queue-section .queue-card-content::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Each counter entry is an inline non-wrapping row */
+        .waiting-queue-section .waiting-row {
+            flex-direction: row;
+            flex-shrink: 0;
+            flex-wrap: nowrap;
+            border-bottom: none;
+            border-right: 1px solid rgba(245, 158, 11, 0.12);
+            padding: 0 0.6rem;
+            align-items: center;
+            gap: 0.3rem;
+            height: 100%;
+        }
+
+        .waiting-queue-section .waiting-counter-label {
+            font-size: 0.72rem;
+        }
+
+        .waiting-queue-section .waiting-queue-numbers {
+            gap: 0.22rem;
+            overflow: visible;
+            flex-wrap: nowrap;
+        }
+
+        .waiting-queue-section .waiting-queue-number {
+            font-size: 0.78rem;
+            padding: 0.05rem 0.35rem;
+            line-height: 1.5;
+            border-radius: 5px;
+            font-weight: 700;
+        }
+
+        /* Compact empty state for the strip */
+        .waiting-queue-section .empty-state {
+            flex-direction: row;
+            padding: 0 1rem;
+            height: 100%;
+            gap: 0.5rem;
+        }
+
+        .waiting-queue-section .empty-state i {
+            font-size: 0.9rem;
+            margin-bottom: 0;
+        }
+
+        .waiting-queue-section .empty-state p {
+            font-size: 0.75rem;
+        }
+
         /* Empty States */
         .empty-state {
             padding: 3rem 1.5rem;
@@ -749,13 +851,12 @@
             }
             
             .waiting-row {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 0.5rem;
+                /* keep flex-row in the strip — no stacking */
+                gap: 0.3rem;
             }
             
             .waiting-counter-label {
-                font-size: 0.85rem;
+                font-size: 0.7rem;
             }
             
             .waiting-queue-number {
