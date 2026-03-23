@@ -36,81 +36,134 @@
         
         <!-- Main Playback Control Panel -->
         <div class="bg-gray-800/50 backdrop-blur-sm rounded-2xl border border-gray-700/50 overflow-hidden shadow-xl">
+
+            <!-- Panel top bar: status + repeat/shuffle -->
+            <div class="bg-gray-900/60 px-6 py-3 border-b border-gray-700/50 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <span class="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
+                    <span class="text-xs font-semibold uppercase tracking-widest text-gray-400">Monitor Playback Control</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="toggleRepeat()" id="repeatBtn"
+                            class="px-3 py-1.5 bg-gray-700/50 hover:bg-gray-600 rounded-lg text-xs font-medium transition flex items-center space-x-1.5"
+                            title="Repeat Mode">
+                        <i class="fas fa-repeat text-gray-400 text-xs"></i>
+                        <span class="text-gray-300">Off</span>
+                    </button>
+                    <button onclick="toggleShuffle()" id="shuffleBtn"
+                            class="px-3 py-1.5 bg-gray-700/50 hover:bg-gray-600 rounded-lg text-xs font-medium transition flex items-center space-x-1.5"
+                            title="Shuffle">
+                        <i class="fas fa-shuffle text-gray-400 text-xs"></i>
+                        <span class="text-gray-300">Off</span>
+                    </button>
+                </div>
+            </div>
+
             <div class="p-6">
-                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-                    
-                    <!-- Now Playing Info -->
-                    <div class="flex items-center space-x-4 flex-1 min-w-0">
-                        <div id="nowPlayingThumbnail" class="w-16 h-16 bg-gray-700 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
+                <div class="flex flex-col xl:flex-row gap-6">
+
+                    <!-- Now Playing -->
+                    <div class="flex items-center space-x-5 flex-1 min-w-0">
+                        <div id="nowPlayingThumbnail"
+                             class="w-20 h-20 flex-shrink-0 bg-gradient-to-br from-gray-700 to-gray-800 rounded-2xl flex items-center justify-center overflow-hidden shadow-lg border border-gray-600/40">
                             <i class="fas fa-film text-gray-500 text-2xl"></i>
                         </div>
                         <div class="min-w-0 flex-1">
-                            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Now Playing on Monitor</p>
-                            <h2 id="nowPlayingTitle" class="text-lg font-bold text-white truncate">No video selected</h2>
-                            <p id="nowPlayingType" class="text-sm text-gray-400 flex items-center space-x-2">
+                            <p class="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-1">Now Playing on Monitor</p>
+                            <h2 id="nowPlayingTitle" class="text-xl font-bold text-white truncate leading-tight">No video selected</h2>
+                            <div id="nowPlayingType" class="mt-1.5 text-sm text-gray-400 flex items-center">
                                 <span class="inline-flex items-center">
                                     <i class="fas fa-circle text-gray-600 text-xs mr-1"></i>
                                     <span>—</span>
                                 </span>
-                            </p>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Playback Controls -->
-                    <div class="flex items-center space-x-3">
-                        <button id="prevBtn" type="button" onclick="prevVideo()" 
-                                class="w-12 h-12 bg-gray-700/50 hover:bg-gray-600 rounded-xl flex items-center justify-center transition transform hover:scale-105">
-                            <i class="fas fa-step-backward text-gray-300"></i>
-                        </button>
-                        <button id="playBtn" type="button" onclick="togglePlay()" 
-                                class="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 rounded-2xl flex items-center justify-center transition transform hover:scale-105 shadow-lg shadow-blue-500/30">
-                            <i id="playIcon" class="fas fa-play text-white text-xl ml-1"></i>
-                        </button>
-                        <button id="nextBtn" type="button" onclick="nextVideo()" 
-                                class="w-12 h-12 bg-gray-700/50 hover:bg-gray-600 rounded-xl flex items-center justify-center transition transform hover:scale-105">
-                            <i class="fas fa-step-forward text-gray-300"></i>
-                        </button>
-                        <button id="stopBtn" type="button" onclick="stopPlayback()" 
-                                class="w-12 h-12 bg-gray-700/50 hover:bg-red-600 rounded-xl flex items-center justify-center transition transform hover:scale-105">
-                            <i class="fas fa-stop text-gray-300"></i>
-                        </button>
-                    </div>
+                    <!-- Transport + Volumes -->
+                    <div class="flex flex-col gap-4 xl:min-w-[420px]">
 
-                    <!-- Volume Control -->
-                    <div class="flex items-center space-x-3 lg:min-w-[200px]">
-                        <button onclick="toggleMute()" class="w-10 h-10 bg-gray-700/50 hover:bg-gray-600 rounded-lg flex items-center justify-center transition">
-                            <i id="volumeIcon" class="fas fa-volume-up text-gray-300"></i>
-                        </button>
-                        <div class="flex-1">
-                            <input type="range" id="volumeSlider" min="0" max="100" value="{{ $control->volume }}" 
-                                   class="w-full h-2 bg-gray-700 rounded-full appearance-none cursor-pointer accent-blue-500" 
-                                   oninput="updateVolumeDisplay(this.value)" onchange="updateVolume(this.value)">
-                            <div class="flex justify-between text-xs text-gray-500 mt-1">
-                                <span>0</span>
-                                <span id="volumeValue" class="font-medium text-gray-400">{{ $control->volume }}%</span>
-                                <span>100</span>
+                        <!-- Transport Controls -->
+                        <div class="flex items-center justify-center space-x-3">
+                            <button id="prevBtn" type="button" onclick="prevVideo()"
+                                    class="w-11 h-11 bg-gray-700/60 hover:bg-gray-600 border border-gray-600/40 rounded-xl flex items-center justify-center transition transform hover:scale-105 active:scale-95"
+                                    title="Previous">
+                                <i class="fas fa-step-backward text-gray-300"></i>
+                            </button>
+                            <button id="stopBtn" type="button" onclick="stopPlayback()"
+                                    class="w-11 h-11 bg-gray-700/60 hover:bg-red-600/80 border border-gray-600/40 rounded-xl flex items-center justify-center transition transform hover:scale-105 active:scale-95"
+                                    title="Stop">
+                                <i class="fas fa-stop text-gray-300"></i>
+                            </button>
+                            <button id="playBtn" type="button" onclick="togglePlay()"
+                                    class="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 rounded-2xl flex items-center justify-center transition transform hover:scale-105 active:scale-95 shadow-lg shadow-blue-500/40">
+                                <i id="playIcon" class="fas fa-play text-white text-xl ml-1"></i>
+                            </button>
+                            <button id="nextBtn" type="button" onclick="nextVideo()"
+                                    class="w-11 h-11 bg-gray-700/60 hover:bg-gray-600 border border-gray-600/40 rounded-xl flex items-center justify-center transition transform hover:scale-105 active:scale-95"
+                                    title="Next">
+                                <i class="fas fa-step-forward text-gray-300"></i>
+                            </button>
+                        </div>
+
+                        <!-- Video + Bell volume side-by-side -->
+                        <div class="grid grid-cols-2 gap-4 bg-gray-900/40 rounded-xl p-4 border border-gray-700/30">
+                            <!-- Video Volume -->
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center space-x-1.5">
+                                        <button onclick="toggleMute()"
+                                                class="w-6 h-6 rounded-md flex items-center justify-center transition hover:bg-gray-600"
+                                                title="Toggle Mute">
+                                            <i id="volumeIcon" class="fas fa-volume-up text-gray-300 text-xs"></i>
+                                        </button>
+                                        <span class="text-xs font-medium text-gray-400">Video Vol.</span>
+                                    </div>
+                                    <span id="volumeValue" class="text-xs font-bold text-blue-400">{{ $control->volume }}%</span>
+                                </div>
+                                <input type="range" id="volumeSlider" min="0" max="100" value="{{ $control->volume }}"
+                                       class="w-full h-1.5 bg-gray-700 rounded-full appearance-none cursor-pointer accent-blue-500"
+                                       oninput="updateVolumeDisplay(this.value)" onchange="updateVolume(this.value)">
+                            </div>
+                            <!-- Bell Volume -->
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center space-x-1.5">
+                                        <div class="w-6 h-6 rounded-md flex items-center justify-center bg-yellow-500/20">
+                                            <i class="fas fa-bell text-yellow-400 text-xs"></i>
+                                        </div>
+                                        <span class="text-xs font-medium text-gray-400">Bell Vol.</span>
+                                    </div>
+                                    <span id="bellVolumeValue" class="text-xs font-bold text-yellow-400">{{ $control->bell_volume ?? 100 }}%</span>
+                                </div>
+                                <input type="range" id="bellVolumeSlider" min="0" max="100" value="{{ $control->bell_volume ?? 100 }}"
+                                       class="w-full h-1.5 bg-gray-700 rounded-full appearance-none cursor-pointer accent-yellow-500"
+                                       oninput="updateBellVolumeDisplay(this.value)" onchange="updateBellVolume(this.value)">
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Quick Video Selector -->
-                <div class="mt-6 pt-6 border-t border-gray-700/50">
-                    <div class="flex items-center space-x-4">
-                        <label class="text-sm font-medium text-gray-400">Quick Select:</label>
-                        <select id="setNowSelect" class="flex-1 max-w-md bg-gray-700/50 text-sm text-white px-4 py-2.5 rounded-xl border border-gray-600/50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none">
-                            <option value="">Choose a video to play...</option>
-                            @foreach($videos as $v)
-                                <option value="{{ $v->id }}" data-type="{{ $v->isYoutube() ? 'youtube' : 'file' }}">
-                                    {{ $v->title }} ({{ $v->isYoutube() ? 'YouTube' : 'File' }})
-                                </option>
-                            @endforeach
-                        </select>
-                        <button type="button" onclick="setNowPlayingFromSelect()" 
-                                class="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-semibold transition shadow-lg shadow-blue-500/20">
-                            <i class="fas fa-play mr-2"></i>Play Now
-                        </button>
+                <!-- Quick Play Bar -->
+                <div class="mt-5 pt-5 border-t border-gray-700/50 flex flex-wrap items-center gap-3">
+                    <div class="flex items-center space-x-2 shrink-0">
+                        <i class="fas fa-bolt text-yellow-400 text-xs"></i>
+                        <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Quick Play</span>
                     </div>
+                    <select id="setNowSelect"
+                            class="flex-1 min-w-0 max-w-md bg-gray-700/50 text-sm text-white px-4 py-2 rounded-xl border border-gray-600/50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition">
+                        <option value="">Choose a video to play...</option>
+                        @foreach($videos as $v)
+                            <option value="{{ $v->id }}" data-type="{{ $v->isYoutube() ? 'youtube' : 'file' }}">
+                                {{ $v->title }} ({{ $v->isYoutube() ? 'YouTube' : 'File' }})
+                            </option>
+                        @endforeach
+                    </select>
+                    <button type="button" onclick="setNowPlayingFromSelect()"
+                            class="px-5 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-semibold transition shadow-lg shadow-blue-500/20 flex items-center space-x-2 shrink-0">
+                        <i class="fas fa-play text-xs"></i>
+                        <span>Play Now</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -133,25 +186,12 @@
                                 <p class="text-xs text-gray-400" id="playlistCount">0 videos in queue</p>
                             </div>
                         </div>
-                        <div class="flex items-center space-x-2">
-                            <button onclick="toggleRepeat()" id="repeatBtn" 
-                                    class="px-3 py-1.5 bg-gray-700/50 hover:bg-gray-600 rounded-lg text-xs font-medium transition flex items-center space-x-2" 
-                                    title="Repeat Mode">
-                                <i class="fas fa-repeat"></i>
-                                <span>Off</span>
-                            </button>
-                            <button onclick="toggleShuffle()" id="shuffleBtn" 
-                                    class="px-3 py-1.5 bg-gray-700/50 hover:bg-gray-600 rounded-lg text-xs font-medium transition flex items-center space-x-2" 
-                                    title="Shuffle">
-                                <i class="fas fa-shuffle"></i>
-                                <span>Off</span>
-                            </button>
-                            <button onclick="clearPlaylist()" 
-                                    class="px-3 py-1.5 bg-gray-700/50 hover:bg-red-600 rounded-lg text-xs font-medium transition" 
-                                    title="Clear Queue">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
+                        <button onclick="clearPlaylist()"
+                                class="px-3 py-1.5 bg-gray-700/50 hover:bg-red-600 rounded-lg text-xs font-medium transition flex items-center space-x-1.5"
+                                title="Clear Queue">
+                            <i class="fas fa-trash text-xs"></i>
+                            <span>Clear</span>
+                        </button>
                     </div>
                     <div id="playlistContainer" class="max-h-[400px] overflow-y-auto">
                         <div class="text-center py-12 text-gray-500">
@@ -373,17 +413,6 @@
                         </div>
                     </div>
                     <div class="p-6 space-y-4">
-                        <!-- Bell Volume -->
-                        <div>
-                            <div class="flex items-center justify-between mb-2">
-                                <label class="text-sm font-medium text-gray-400">Bell Volume</label>
-                                <span id="bellVolumeValue" class="text-sm font-medium text-gray-300">{{ $control->bell_volume ?? 100 }}%</span>
-                            </div>
-                            <input type="range" id="bellVolumeSlider" min="0" max="100" value="{{ $control->bell_volume ?? 100 }}" 
-                                   class="w-full h-2 bg-gray-700 rounded-full appearance-none cursor-pointer accent-yellow-500"
-                                   oninput="updateBellVolumeDisplay(this.value)" onchange="updateBellVolume(this.value)">
-                        </div>
-
                         <!-- Current Bell Sound -->
                         <div class="bg-gray-700/30 rounded-xl p-3">
                             <p class="text-xs text-gray-500 mb-1">Current Sound</p>
