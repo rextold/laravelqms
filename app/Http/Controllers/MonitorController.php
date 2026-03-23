@@ -38,7 +38,7 @@ class MonitorController extends Controller
                 ];
             });
         
-        $videoControl = VideoControl::getCurrent();
+        $videoControl = VideoControl::getCurrent($organization->id);
         $marquee = MarqueeSetting::getActiveForOrganization($organization->id);
         $settings = OrganizationSetting::where('organization_id', $organization->id)->first();
         
@@ -77,7 +77,7 @@ class MonitorController extends Controller
         $onlineCounters = User::onlineCounters()
             ->where('organization_id', $organization->id)
             ->get(['id', 'organization_id', 'counter_number', 'display_name', 'short_description']);
-        $videoControl = VideoControl::getCurrent();
+        $videoControl = VideoControl::getCurrent($organization->id);
         $marquee = MarqueeSetting::getActiveForOrganization($organization->id);
 
         $counterQueues = [];

@@ -1094,7 +1094,7 @@
             if (STATE.isFetching) return;
             
             STATE.isFetching = true;
-            updateConnectionStatus(true);
+            // Do NOT update status here — only update based on the result below.
             
             try {
                 const response = await fetch(`/${CONFIG.orgCode}/monitor/data`, {
@@ -1118,12 +1118,18 @@
                 updateVideoPlayer(data.video_control || STATE.videoControl);
                 updateMarqueeDisplay(data.marquee);
                 
-                STATE.isConnected = true;
-                updateConnectionStatus(true);
+                // Only mark connected after a successful response
+                if (!STATE.isConnected) {
+                    STATE.isConnected = true;
+                    updateConnectionStatus(true);
+                }
             } catch (error) {
                 console.error('Refresh failed:', error);
-                STATE.isConnected = false;
-                updateConnectionStatus(false);
+                // Only transition to disconnected state once (avoids repeated DOM updates)
+                if (STATE.isConnected) {
+                    STATE.isConnected = false;
+                    updateConnectionStatus(false);
+                }
                 
                 // If 403 error, try to reload the page to get new CSRF token
                 if (error.message.includes('403')) {
@@ -1151,9 +1157,16 @@
                 statusDot.classList.add('disconnected');
                 statusText.textContent = 'Reconnecting...';
                 
-                // Attempt reconnection
+                // Stop the regular interval while disconnected to avoid parallel requests.
+                // A single delayed retry will restart the cycle once it succeeds.
+                stopRefreshCycle();
                 setTimeout(() => {
-                    if (!STATE.isConnected) refreshMonitorData();
+                    if (!STATE.isConnected) {
+                        refreshMonitorData().finally(() => {
+                            // Restart the regular poll cycle after the reconnect attempt
+                            if (!refreshTimer) startRefreshCycle();
+                        });
+                    }
                 }, CONFIG.reconnectDelay);
             }
         }
