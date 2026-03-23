@@ -153,14 +153,6 @@
                 </div>
                 @endif
 
-                <!-- Hidden Remove Logo form -->
-                <form id="removeLogoForm"
-                      action="{{ route('admin.organization-settings.remove-logo', ['organization_code' => request()->route('organization_code')]) }}"
-                      method="POST" class="hidden">
-                    @csrf
-                    @method('DELETE')
-                </form>
-
                 <div>
                     <label class="block text-gray-700 font-semibold mb-3">Upload Logo</label>
                     <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50 hover:bg-gray-100 transition">
@@ -296,9 +288,17 @@
     </form>
 </div>
 
+{{-- Remove Logo form is OUTSIDE the main form — nested forms break HTML --}}
+<form id="removeLogoForm"
+      action="{{ route('admin.organization-settings.remove-logo', ['organization_code' => request()->route('organization_code')]) }}"
+      method="POST" class="hidden">
+    @csrf
+    @method('DELETE')
+</form>
+
 <script>
-// Logo preview
-function previewLogo(input) {
+// Functions called from inline HTML attributes must be on window
+window.previewLogo = function(input) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
         reader.onload = function(e) {
@@ -308,7 +308,27 @@ function previewLogo(input) {
         };
         reader.readAsDataURL(input.files[0]);
     }
-}
+};
+
+window.confirmRemoveLogo = function() {
+    if (!confirm('Are you sure you want to remove the logo?')) return;
+    const form = document.getElementById('removeLogoForm');
+    if (!form) return;
+    fetch(form.action, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') }
+    }).then(r => r.json()).then(data => {
+        if (data.success) {
+            showAjaxMessage('success', data.message || 'Logo removed.');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showAjaxMessage('error', data.message || 'Failed to remove logo.');
+        }
+    }).catch(() => showAjaxMessage('error', 'Network error while removing logo.'));
+};
+
+document.addEventListener('DOMContentLoaded', function() {
 
 function normalizeHexColor(value) {
     if (value == null) return null;
@@ -475,24 +495,6 @@ function showAjaxMessage(type, message) {
     }, 4000);
 }
 
-function confirmRemoveLogo() {
-    if (!confirm('Are you sure you want to remove the logo?')) return;
-    const form = document.getElementById('removeLogoForm');
-    if (!form) return;
-    fetch(form.action, {
-        method: 'POST',
-        body: new FormData(form),
-        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') }
-    }).then(r => r.json()).then(data => {
-        if (data.success) {
-            showAjaxMessage('success', data.message || 'Logo removed.');
-            setTimeout(() => location.reload(), 1500);
-        } else {
-            showAjaxMessage('error', data.message || 'Failed to remove logo.');
-        }
-    }).catch(() => showAjaxMessage('error', 'Network error while removing logo.'));
-}
-
 // Organization name live preview
 document.getElementById('organizationName').addEventListener('input', function() {
     document.getElementById('previewTitle').textContent = this.value || @json($organization->organization_name);
@@ -503,5 +505,7 @@ document.getElementById('queueDigits').addEventListener('change', function() {
     const digits = parseInt(this.value, 10) || 4;
     document.getElementById('queueExample').textContent = '0'.repeat(digits);
 });
+
+}); // end DOMContentLoaded
 </script>
 @endsection
