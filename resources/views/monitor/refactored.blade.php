@@ -357,6 +357,14 @@
             object-fit: cover;
             border: none;
         }
+
+        /* YouTube persistent overlay fills the section */
+        #yt-overlay iframe {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            border: 0;
+        }
         
         .no-video {
             display: flex;
@@ -931,6 +939,12 @@
                     <p>No active video</p>
                 </div>
             </div>
+            <!-- Persistent YouTube overlay — created once, never destroyed.
+                 Shown/hidden via display property. loadVideoById() switches
+                 videos in < 1 s without re-initialising the IFrame API. -->
+            <div id="yt-overlay" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;z-index:3;background:#000;">
+                <div id="yt-player-div" style="width:100%;height:100%;"></div>
+            </div>
         </div>
         
         <!-- Queue Sidebar -->
@@ -1017,12 +1031,13 @@
             lastServerVideoId: null,   // last current_video_id received from server (detect changes)
             playlistTimer: null,       // setTimeout handle for YouTube rotation
             // YouTube IFrame API state
-            ytPlayer: null,            // YT.Player instance — controlled via IFrame API
+            ytPlayer: null,            // YT.Player instance — persistent, never destroyed
+            ytPlayerReady: false,      // true after onReady fires (loadVideoById is safe to call)
             ytApiReady: false,         // true when onYouTubeIframeAPIReady fires
             ytCurrentVideoId: null,    // YouTube video ID string loaded in player (not our DB id)
             ytAudioUnlocked: false,    // true after first user interaction → can unmute YouTube
             lastVolume: -1,            // last volume sent to ytPlayer (avoid redundant calls)
-            pendingYouTubeLoad: null,  // { ytId, videoControl } queued before API was ready
+            pendingYouTubeLoad: null,  // { ytId, videoControl } queued before player is ready
             // Pre-populated from server-side render — same shape as getData() returns.
             // Used to fill the counter/queue panels immediately on page load.
             initialCounters: @json($initialCounterData ?? []),
@@ -1068,9 +1083,11 @@
         window.onYouTubeIframeAPIReady = function () {
             STATE.ytApiReady = true;
             console.log('[YouTube] IFrame API ready.');
+            // If a video was queued before the API loaded, create the persistent player now
             if (STATE.pendingYouTubeLoad) {
-                _createYouTubePlayer(STATE.pendingYouTubeLoad.ytId, STATE.pendingYouTubeLoad.videoControl);
+                const p = STATE.pendingYouTubeLoad;
                 STATE.pendingYouTubeLoad = null;
+                _createYouTubePlayer(p.ytId, p.videoControl);
             }
         };
 
@@ -2013,23 +2030,17 @@
             return match ? match[1] : null;
         }
 
-        /** Create (or replace) the YT.Player inside #videoPlayer. */
+        /**
+         * Create the YT.Player ONCE into the persistent #yt-overlay.
+         * After this call STATE.ytPlayer is reused forever — no destroy/recreate.
+         * To switch videos call STATE.ytPlayer.loadVideoById(newId) directly.
+         */
         function _createYouTubePlayer(ytId, videoControl) {
-            const player = document.getElementById('videoPlayer');
-            let container = document.getElementById('yt-player-container');
-            if (!container) {
-                player.innerHTML = '';
-                container = document.createElement('div');
-                container.id = 'yt-player-container';
-                container.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;';
-                player.appendChild(container);
-            }
-
-            STATE.ytPlayer = new YT.Player('yt-player-container', {
+            STATE.ytPlayer = new YT.Player('yt-player-div', {
                 videoId: ytId,
                 playerVars: {
                     autoplay: 1,
-                    mute: 1,           // must start muted for autoplay; unmuted on user interaction
+                    mute: 1,          // start muted for autoplay policy; unmute on user interaction
                     modestbranding: 1,
                     rel: 0,
                     playsinline: 1,
@@ -2037,13 +2048,19 @@
                 },
                 events: {
                     onReady: function (event) {
+                        STATE.ytPlayerReady = true;
                         event.target.playVideo();
                         applyYouTubeControls(videoControl);
-                        const iframe = document.querySelector('#videoPlayer iframe');
-                        if (iframe) {
-                            iframe.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border:0;';
+                        // Show the overlay now that the player is ready
+                        const overlay = document.getElementById('yt-overlay');
+                        if (overlay) overlay.style.display = 'block';
+                        console.log('[YouTube] Persistent player ready — video:', ytId);
+                        // Drain any pending switch that arrived before API was ready
+                        if (STATE.pendingYouTubeLoad) {
+                            const p = STATE.pendingYouTubeLoad;
+                            STATE.pendingYouTubeLoad = null;
+                            _ytSwitch(p.ytId, p.videoControl);
                         }
-                        console.log('[YouTube] Player ready — video:', ytId);
                     },
                     onStateChange: function (event) {
                         if (event.data === YT.PlayerState.ENDED) {
@@ -2055,6 +2072,26 @@
                     }
                 }
             });
+        }
+
+        /**
+         * Fast video switch — uses loadVideoById() so the player pre-buffers
+         * the new video without any iframe teardown. Typically < 1 s to start.
+         */
+        function _ytSwitch(ytId, videoControl) {
+            const overlay = document.getElementById('yt-overlay');
+            if (overlay) overlay.style.display = 'block';
+
+            if (STATE.ytCurrentVideoId !== ytId) {
+                STATE.ytCurrentVideoId = ytId;
+                STATE.lastVolume = -1;  // force volume re-apply
+                try {
+                    STATE.ytPlayer.loadVideoById(ytId);   // pre-buffers + plays instantly
+                } catch (e) {
+                    console.error('[YouTube] loadVideoById failed:', e);
+                }
+            }
+            applyYouTubeControls(videoControl);
         }
 
         /**
@@ -2086,18 +2123,24 @@
         // ========================================
         
         function updateVideoPlayer(videoControl) {
-            const player = document.getElementById('videoPlayer');
-            
+            const player  = document.getElementById('videoPlayer');
+            const overlay = document.getElementById('yt-overlay');
+
+            // ── Helper: hide YT overlay and silence any ghost audio ─────────────
+            function _hideYT() {
+                if (overlay) overlay.style.display = 'none';
+                if (STATE.ytPlayer && STATE.ytPlayerReady) {
+                    // Pause instead of destroy — keeps the player alive for next use.
+                    try { STATE.ytPlayer.pauseVideo(); } catch (e) {}
+                }
+                STATE.ytCurrentVideoId = null;
+            }
+
+            // ── Paused / stopped by admin ────────────────────────────────────────
             if (!videoControl || !videoControl.is_playing) {
                 clearTimeout(STATE.playlistTimer);
                 STATE.playlistTimer = null;
-                // Destroy the YouTube player instance to stop ghost audio/playback
-                if (STATE.ytPlayer) {
-                    try { STATE.ytPlayer.destroy(); } catch (e) {}
-                    STATE.ytPlayer = null;
-                    STATE.ytCurrentVideoId = null;
-                    STATE.lastVolume = -1;
-                }
+                _hideYT();
                 player.innerHTML = `
                     <div class="no-video">
                         <i class="fas fa-pause-circle"></i>
@@ -2106,8 +2149,9 @@
                 `;
                 return;
             }
-            
+
             if (!STATE.videos || STATE.videos.length === 0) {
+                _hideYT();
                 player.innerHTML = `
                     <div class="no-video">
                         <i class="fas fa-video-slash"></i>
@@ -2117,90 +2161,81 @@
                 return;
             }
 
-            // ── Detect if the admin changed the target video.
-            // If so, snap rotation to that video so the monitor obeys immediately.
+            // ── Snap rotation index when admin explicitly picks a video ──────────
             const serverVideoId = videoControl.current_video_id ? parseInt(videoControl.current_video_id) : null;
             if (serverVideoId !== STATE.lastServerVideoId) {
                 STATE.lastServerVideoId = serverVideoId;
                 if (serverVideoId) {
                     const idx = STATE.videos.findIndex(v => parseInt(v.id) === serverVideoId);
-                    if (idx !== -1) {
-                        STATE.playlistRotationIndex = idx;
-                    }
+                    if (idx !== -1) STATE.playlistRotationIndex = idx;
                 }
-                // Reset the YouTube timer whenever the admin changes the selection.
                 clearTimeout(STATE.playlistTimer);
                 STATE.playlistTimer = null;
             }
-            
-            // Use the current playlist rotation index (client-side advance through all videos).
+
             const video = STATE.videos[STATE.playlistRotationIndex] || STATE.videos[0];
-            
             if (!video) {
-                player.innerHTML = `
-                    <div class="no-video">
-                        <i class="fas fa-video"></i>
-                        <p>Video not available</p>
-                    </div>
-                `;
+                _hideYT();
+                player.innerHTML = `<div class="no-video"><i class="fas fa-video"></i><p>Video not available</p></div>`;
                 return;
             }
-            
+
             const multipleVideos = STATE.videos.length > 1;
 
-            // Render video player
+            // ════════════════════════════════════════════════════════════════════
+            // YOUTUBE PATH — persistent player, loadVideoById for instant switch
+            // ════════════════════════════════════════════════════════════════════
             if (video.is_youtube && video.youtube_embed_url) {
-                // YouTube video — controlled via IFrame Player API for live volume/play control
                 const ytId = extractYouTubeId(video.youtube_embed_url);
                 if (!ytId) {
+                    _hideYT();
                     player.innerHTML = `<div class="no-video"><i class="fas fa-video"></i><p>Invalid YouTube URL</p></div>`;
                     return;
                 }
 
-                if (STATE.ytCurrentVideoId === ytId && STATE.ytPlayer) {
-                    // Same video already playing — sync admin controls without recreating the player.
-                    // This runs every poll tick so volume/pause changes from another tab apply live.
-                    applyYouTubeControls(videoControl);
-                } else {
-                    // Different video, first load, OR switching FROM a file video TO YouTube.
-                    // Stop any playing <video> element first to prevent ghost audio.
-                    const existingFileVideo = player.querySelector('video');
-                    if (existingFileVideo) {
-                        existingFileVideo.pause();
-                        existingFileVideo.src = '';
-                    }
+                // Stop any file <video> element to prevent ghost audio
+                const existingFileVideo = player.querySelector('video');
+                if (existingFileVideo) {
+                    existingFileVideo.pause();
+                    existingFileVideo.src = '';
+                    existingFileVideo.remove();
+                }
+                // Clear the idle / paused placeholder text
+                const noVideoEl = player.querySelector('.no-video');
+                if (noVideoEl) noVideoEl.remove();
+
+                if (!STATE.ytPlayer) {
+                    // ── First time: create the persistent player ─────────────────
                     STATE.ytCurrentVideoId = ytId;
-                    clearTimeout(STATE.playlistTimer);
-                    STATE.playlistTimer = null;
-                    STATE.lastVolume = -1;
-                    if (STATE.ytPlayer) {
-                        try { STATE.ytPlayer.destroy(); } catch (e) {}
-                        STATE.ytPlayer = null;
-                    }
-                    player.innerHTML = '<div id="yt-player-container" style="position:absolute;top:0;left:0;width:100%;height:100%;"></div>';
                     if (STATE.ytApiReady) {
                         _createYouTubePlayer(ytId, videoControl);
                     } else {
+                        // API script hasn't loaded yet — queue it
                         STATE.pendingYouTubeLoad = { ytId, videoControl };
                     }
+                } else if (STATE.ytPlayerReady) {
+                    // ── Player already exists — fast switch via loadVideoById ────
+                    _ytSwitch(ytId, videoControl);
+                } else {
+                    // Player exists but not ready yet — queue the switch
+                    STATE.pendingYouTubeLoad = { ytId, videoControl };
                 }
+
+            // ════════════════════════════════════════════════════════════════════
+            // FILE VIDEO PATH
+            // ════════════════════════════════════════════════════════════════════
             } else if (video.file_path) {
-                // File video — switching FROM YouTube? Destroy YT player first to stop ghost audio.
-                if (STATE.ytPlayer) {
-                    try { STATE.ytPlayer.destroy(); } catch (e) {}
-                    STATE.ytPlayer = null;
-                    STATE.ytCurrentVideoId = null;
-                    STATE.lastVolume = -1;
-                }
+                // Hide the YT overlay (player stays alive, just out of view)
+                _hideYT();
 
                 const src = `/storage/${video.file_path}`;
                 const existing = player.querySelector('video');
 
-                // Apply live volume changes to an already-playing file video (cross-tab control)
+                // Live volume / pause sync for an already-playing file video
                 if (existing && existing.querySelector(`source[src="${src}"]`)) {
                     const vol = (videoControl && typeof videoControl.volume === 'number') ? (videoControl.volume / 100) : 0.8;
                     existing.volume = vol;
-                    if (!videoControl || !videoControl.is_playing) {
+                    if (!videoControl.is_playing) {
                         existing.pause();
                     } else if (existing.paused) {
                         existing.play().catch(() => {});
@@ -2209,34 +2244,27 @@
                     clearTimeout(STATE.playlistTimer);
                     STATE.playlistTimer = null;
                     player.innerHTML = `
-                        <video autoplay style="width: 100%; height: 100%; object-fit: cover;">
+                        <video autoplay style="width:100%;height:100%;object-fit:cover;">
                             <source src="${src}" type="video/mp4">
-                            Your browser does not support the video tag.
                         </video>
                     `;
                     const videoEl = player.querySelector('video');
                     if (videoEl) {
-                        videoEl.muted = true;
+                        videoEl.muted  = true;
                         videoEl.volume = (videoControl && typeof videoControl.volume === 'number') ? (videoControl.volume / 100) : 0.8;
+                        videoEl.loop   = !multipleVideos;
                         if (multipleVideos) {
-                            // Do NOT loop — advance to next video when this one ends.
-                            videoEl.loop = false;
                             videoEl.addEventListener('ended', advancePlaylist, { once: true });
-                        } else {
-                            videoEl.loop = true;
                         }
-                        videoEl.play().catch(e => console.log('Video play failed:', e));
+                        videoEl.play().catch(e => console.log('[Video] play failed:', e));
                     }
                 }
+
             } else {
-                player.innerHTML = `
-                    <div class="no-video">
-                        <i class="fas fa-video"></i>
-                        <p>Video not available</p>
-                    </div>
-                `;
+                _hideYT();
+                player.innerHTML = `<div class="no-video"><i class="fas fa-video"></i><p>Video not available</p></div>`;
             }
-            
+
             STATE.currentVideo = video;
         }
 
