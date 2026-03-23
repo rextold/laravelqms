@@ -1387,12 +1387,19 @@
             
             STATE.isFetching = true;
             // Do NOT update status here — only update based on the result below.
+
+            // Abort the fetch if the server doesn't respond within 5 seconds.
+            // Without a timeout, a slow/blocked server keeps STATE.isFetching=true
+            // indefinitely, causing all subsequent polls to be silently skipped.
+            const _abortCtrl    = new AbortController();
+            const _abortTimeout = setTimeout(() => _abortCtrl.abort(), 5000);
             
             try {
                 const response = await fetch(`/${CONFIG.orgCode}/monitor/data`, {
                     method: 'GET',
                     cache: 'no-store',
                     credentials: 'same-origin',
+                    signal: _abortCtrl.signal,
                     headers: { 
                         'Accept': 'application/json',
                         'X-Requested-With': 'XMLHttpRequest',
@@ -1455,7 +1462,11 @@
                     updateConnectionStatus(true);
                 }
             } catch (error) {
-                console.error('Refresh failed:', error);
+                if (error.name === 'AbortError') {
+                    console.warn('[Monitor] Data fetch timed out (>5 s) — server or network may be slow.');
+                } else {
+                    console.error('Refresh failed:', error);
+                }
 
                 // Track consecutive failures
                 STATE.failureCount++;
@@ -1482,6 +1493,7 @@
                 // The polling interval keeps retrying automatically.
                 console.warn('[Monitor] Data fetch error, retrying automatically:', error.message);
             } finally {
+                clearTimeout(_abortTimeout);
                 STATE.isFetching = false;
             }
         }
@@ -2306,9 +2318,12 @@
 
                 const src = `/storage/${video.file_path}`;
                 const existing = player.querySelector('video');
+                // Use .src property (resolved absolute URL) with includes() for reliable matching.
+                // querySelector with attribute selector can fail if the browser normalises the src.
+                const existingSrc = existing ? existing.querySelector('source') : null;
 
                 // Live volume / pause sync for an already-playing file video
-                if (existing && existing.querySelector(`source[src="${src}"]`)) {
+                if (existing && existingSrc && existingSrc.src.includes(video.file_path)) {
                     const vol = (videoControl && typeof videoControl.volume === 'number') ? (videoControl.volume / 100) : 0.8;
                     existing.volume = vol;
                     if (!videoControl.is_playing) {
@@ -2320,7 +2335,7 @@
                     clearTimeout(STATE.playlistTimer);
                     STATE.playlistTimer = null;
                     player.innerHTML = `
-                        <video autoplay style="width:100%;height:100%;object-fit:cover;">
+                        <video autoplay muted style="width:100%;height:100%;object-fit:cover;">
                             <source src="${src}" type="video/mp4">
                         </video>
                     `;

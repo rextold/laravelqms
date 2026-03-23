@@ -1033,7 +1033,7 @@
                 const existingVideo = player.querySelector('video');
                 if (!existingVideo) {
                     player.innerHTML = `
-                        <video autoplay loop style="width: 100%; height: 100%; object-fit: cover;">
+                        <video autoplay muted loop style="width: 100%; height: 100%; object-fit: cover;">
                             <source src="/storage/${video.file_path}" type="video/mp4">
                             Your browser does not support the video tag.
                         </video>
@@ -1050,7 +1050,7 @@
                     const expectedSrc = `/storage/${video.file_path}`;
                     if (!srcEl || srcEl.src.indexOf(expectedSrc) === -1) {
                         player.innerHTML = `
-                            <video autoplay loop style="width: 100%; height: 100%; object-fit: cover;">
+                            <video autoplay muted loop style="width: 100%; height: 100%; object-fit: cover;">
                                 <source src="/storage/${video.file_path}" type="video/mp4">
                                 Your browser does not support the video tag.
                             </video>
