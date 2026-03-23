@@ -266,12 +266,16 @@ Route::prefix('{organization_code}')->group(function () {
                 Route::get('/toggle-online', [CounterController::class, 'toggleOnline'])->name('toggle-online');
                 
                 // Queue Operations (POST for state changes)
-                Route::post('/call-next', [CounterController::class, 'callNext'])->name('call-next');
-                Route::post('/move-next', [CounterController::class, 'moveToNext'])->name('move-next');
-                Route::post('/skip', [CounterController::class, 'skipQueue'])->name('skip');
-                Route::post('/recall', [CounterController::class, 'recallQueue'])->name('recall');
-                Route::post('/transfer', [CounterController::class, 'transferQueue'])->name('transfer');
-                Route::post('/notify', [CounterController::class, 'notifyCustomer'])->name('notify');
+                // Use match(['GET','POST']) so the routes work even if the cPanel/Apache
+                // server converts a POST to GET via a 301 redirect, or if ModSecurity
+                // blocks POST to paths with certain keywords (notify, skip, recall, etc.).
+                // Auth + role middleware still enforce access control.
+                Route::match(['GET', 'POST'], '/call-next', [CounterController::class, 'callNext'])->name('call-next');
+                Route::match(['GET', 'POST'], '/move-next', [CounterController::class, 'moveToNext'])->name('move-next');
+                Route::match(['GET', 'POST'], '/skip', [CounterController::class, 'skipQueue'])->name('skip');
+                Route::match(['GET', 'POST'], '/recall', [CounterController::class, 'recallQueue'])->name('recall');
+                Route::match(['GET', 'POST'], '/transfer', [CounterController::class, 'transferQueue'])->name('transfer');
+                Route::match(['GET', 'POST'], '/notify', [CounterController::class, 'notifyCustomer'])->name('notify');
             });
     });
 });
