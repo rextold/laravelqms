@@ -2171,7 +2171,7 @@
             }
 
             // ── Snap rotation index when admin explicitly picks a video ──────────
-            const serverVideoId   = videoControl.current_video_id ? parseInt(videoControl.current_video_id) : null;
+            const serverVideoId    = videoControl.current_video_id ? parseInt(videoControl.current_video_id) : null;
             const controlUpdatedAt = videoControl.updated_at ?? null;
             // Detect a new play command: either a different video OR admin re-played
             // the same video (updated_at changed but video_id stayed the same).
@@ -2179,6 +2179,7 @@
             const replayDetected = !videoChanged && serverVideoId &&
                                    controlUpdatedAt && controlUpdatedAt !== STATE.lastControlUpdatedAt;
             if (videoChanged || replayDetected) {
+                // 1. Update tracking FIRST so the scheduled call below won't re-trigger void.
                 STATE.lastServerVideoId    = serverVideoId;
                 STATE.lastControlUpdatedAt = controlUpdatedAt;
                 if (serverVideoId) {
@@ -2187,6 +2188,24 @@
                 }
                 clearTimeout(STATE.playlistTimer);
                 STATE.playlistTimer = null;
+
+                // 2. VOID: immediately stop the current video and show a blank screen.
+                //    This gives a clear visual break so the new video always feels intentional.
+                const existingVid = player.querySelector('video');
+                if (existingVid) { existingVid.pause(); existingVid.src = ''; }
+                _hideYT();
+                player.innerHTML = `
+                    <div class="no-video" style="background:#000;">
+                        <i class="fas fa-circle-notch fa-spin" style="opacity:0.3;font-size:2rem;"></i>
+                    </div>`;
+
+                // 3. PLAY: after a short pause, render the new video.
+                //    STATE.lastServerVideoId is already set so this call won't void again.
+                STATE.playlistTimer = setTimeout(() => {
+                    STATE.playlistTimer = null;
+                    updateVideoPlayer(STATE.videoControl);
+                }, 350);
+                return;
             }
 
             const video = STATE.videos[STATE.playlistRotationIndex] || STATE.videos[0];
