@@ -6,7 +6,7 @@
 @section('content')
 <div class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
     <!-- Header Bar -->
-    <div class="bg-gray-900/80 backdrop-blur-sm border-b border-gray-700/50 px-6 py-4 sticky top-0 z-40">
+    <div class="bg-gray-900/80 backdrop-blur-sm border-b border-gray-700/50 px-6 py-4 sticky top-0 z-20">
         <div class="max-w-7xl mx-auto flex items-center justify-between">
             <div class="flex items-center space-x-4">
                 <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">

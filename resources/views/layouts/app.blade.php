@@ -303,7 +303,7 @@
         <!-- Main Content -->
         <div class="flex-1 flex flex-col overflow-hidden">
             <!-- Top Bar -->
-            <header class="bg-white shadow-sm z-10">
+            <header class="bg-white shadow-sm relative z-50">
                 <div class="px-6 py-4 flex items-center justify-between">
                     <button onclick="toggleSidebar()" class="md:hidden text-gray-600 hover:text-gray-900">
                         <i class="fas fa-bars text-xl"></i>
