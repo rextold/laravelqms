@@ -2061,7 +2061,13 @@
                     // This runs every poll tick so volume/pause changes from another tab apply live.
                     applyYouTubeControls(videoControl);
                 } else {
-                    // Different video or first load — (re)create the YT.Player
+                    // Different video, first load, OR switching FROM a file video TO YouTube.
+                    // Stop any playing <video> element first to prevent ghost audio.
+                    const existingFileVideo = player.querySelector('video');
+                    if (existingFileVideo) {
+                        existingFileVideo.pause();
+                        existingFileVideo.src = '';
+                    }
                     STATE.ytCurrentVideoId = ytId;
                     clearTimeout(STATE.playlistTimer);
                     STATE.playlistTimer = null;
@@ -2078,11 +2084,27 @@
                     }
                 }
             } else if (video.file_path) {
-                // File video
+                // File video — switching FROM YouTube? Destroy YT player first to stop ghost audio.
+                if (STATE.ytPlayer) {
+                    try { STATE.ytPlayer.destroy(); } catch (e) {}
+                    STATE.ytPlayer = null;
+                    STATE.ytCurrentVideoId = null;
+                    STATE.lastVolume = -1;
+                }
+
                 const src = `/storage/${video.file_path}`;
                 const existing = player.querySelector('video');
-                
-                if (!existing || !existing.querySelector(`source[src="${src}"]`)) {
+
+                // Apply live volume changes to an already-playing file video (cross-tab control)
+                if (existing && existing.querySelector(`source[src="${src}"]`)) {
+                    const vol = (videoControl && typeof videoControl.volume === 'number') ? (videoControl.volume / 100) : 0.8;
+                    existing.volume = vol;
+                    if (!videoControl || !videoControl.is_playing) {
+                        existing.pause();
+                    } else if (existing.paused) {
+                        existing.play().catch(() => {});
+                    }
+                } else {
                     clearTimeout(STATE.playlistTimer);
                     STATE.playlistTimer = null;
                     player.innerHTML = `
