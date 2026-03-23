@@ -19,13 +19,7 @@
             --accent-color: {{ $settings->accent_color ?? '#10b981' }};
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        *, ::before, ::after {
-            box-sizing: border-box;
-            border-width: 2px;
-            border-style: solid;
-            border-color: #e5e7eb;
-        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; border: none; }
         html, body {
             height: 100%;
             min-height: 100dvh;
@@ -47,7 +41,7 @@
 
         /* helper: center contents inside a glass card when applied */
         .glass-card.center {
-            /* display: flex; */
+            display: flex;
             align-items: center;
             justify-content: center;
             padding: 10px;
@@ -243,7 +237,47 @@
         }
         
         /* vertical center helper */
-        .vertical-center { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1rem; min-height: calc(100dvh - 2rem); }
+        .vertical-center { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:.75rem; min-height: calc(100dvh - 2rem); }
+
+        /* ── Spacing & sizing helpers (previously undefined) ─────────────────── */
+        .padding-sm  { padding: .85rem 1rem; }
+        .padding-md  { padding: 1.25rem 1.5rem; }
+        .spacing-sm  { margin-bottom: .75rem; }
+        .spacing-md  { margin-bottom: 1.25rem; }
+
+        .section-title      { font-size: 1.05rem; font-weight: 800; color: #1e293b; }
+        .title-size         { font-size: clamp(1.1rem, 4vw, 1.6rem); }
+        .logo-size          { width: 48px; height: 48px; }
+        .btn-text           { font-size: .9rem; }
+        .queue-number-size  { font-size: clamp(3.5rem, 14vw, 6rem); line-height: 1; }
+        .counter-grid-height{ min-height: 0; }
+        .main-container     { width: 100%; max-width: 960px; padding: 0 .5rem; }
+        .step-content       { width: 100%; max-width: 900px; }
+        .step-header        { width: 100%; }
+
+        /* ── Step indicators ─────────────────────────────────────────────────── */
+        .step-indicator {
+            display: flex; flex-direction: column; align-items: center;
+            padding: .45rem 1rem; border-radius: .75rem;
+            font-size: .75rem; font-weight: 700; min-width: 60px;
+            transition: all .2s;
+        }
+        .step-indicator-number { font-size: .95rem; font-weight: 900; margin-bottom: 1px; }
+        .step-indicator-text   { font-size: .7rem; }
+        .step-active    { background: var(--primary-color); color: #fff; }
+        .step-completed { background: var(--accent-color);  color: #fff; }
+        .step-indicators-container { padding: .45rem .75rem; }
+
+        /* ── Input resets (inputs need their own border) ─────────────────────── */
+        input[type="text"], input[type="number"], input[type="email"], select, textarea {
+            border: 1.5px solid #d1d5db !important;
+            border-radius: .5rem;
+            padding: .5rem .75rem;
+            outline: none;
+            font-size: .9rem;
+            transition: border-color .2s;
+        }
+        input:focus, select:focus, textarea:focus { border-color: var(--primary-color) !important; }
     </style>
 </head>
 <body>
@@ -438,10 +472,7 @@
                         <i class="fas fa-redo mr-2 text-sm"></i>Get Another Number
                     </button>
 
-                    <style>
-                        /* small margin for counter cards and glass cards to create breathing room */
-                        .counter-btn, .glass-card, .btn-text { margin: .35rem; }
-                    </style>
+
                 </div>
             </div>
         </div>
@@ -572,15 +603,39 @@
             button.type = 'button';
             button.className = 'counter-btn';
             button.onclick = () => selectCounter(counter.id, counter.counter_number, counter.display_name);
-            button.innerHTML = `
-                <div class="counter-number">${counter.counter_number}</div>
-                <div class="counter-title">${counter.display_name}</div>
-                <div class="counter-desc">${counter.short_description || 'Ready to serve'}</div>
-                <div class="counter-status">
-                    <span class="status-indicator"></span>
-                    <span class="status-text">Available</span>
-                </div>
-            `;
+
+            // Number badge
+            const badge = document.createElement('div');
+            badge.className = 'counter-number';
+            badge.textContent = counter.counter_number;
+
+            // Title
+            const titleEl = document.createElement('div');
+            titleEl.className = 'counter-title';
+            titleEl.textContent = counter.display_name;
+
+            // Description
+            const descEl = document.createElement('div');
+            descEl.className = 'counter-desc';
+            descEl.textContent = counter.short_description || 'Ready to serve';
+
+            // Status row
+            const dot = document.createElement('span');
+            dot.className = 'status-indicator';
+
+            const statusTxt = document.createElement('span');
+            statusTxt.className = 'status-text';
+            statusTxt.textContent = 'Available';
+
+            const statusRow = document.createElement('div');
+            statusRow.className = 'counter-status';
+            statusRow.appendChild(dot);
+            statusRow.appendChild(statusTxt);
+
+            button.appendChild(badge);
+            button.appendChild(titleEl);
+            button.appendChild(descEl);
+            button.appendChild(statusRow);
             countersGrid.appendChild(button);
         });
     }
