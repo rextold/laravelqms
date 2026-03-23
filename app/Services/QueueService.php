@@ -84,7 +84,7 @@ class QueueService
                 $settings->last_queue_date = $today;
                 $settings->save();
 
-                $queueNumber = str_pad((string) $nextSeq, $digits, '0', STR_PAD_LEFT);
+                $queueNumber = now()->format('Ymd') . '-' . str_pad((string) $nextSeq, $digits, '0', STR_PAD_LEFT);
 
                 return Queue::create([
                     'queue_number' => $queueNumber,
@@ -130,7 +130,7 @@ class QueueService
             }
 
             $nextSeq = $lastSeq + 1;
-            $queueNumber = str_pad((string) $nextSeq, $digits, '0', STR_PAD_LEFT);
+            $queueNumber = now()->format('Ymd') . '-' . str_pad((string) $nextSeq, $digits, '0', STR_PAD_LEFT);
 
             // Try to persist the new sequence and date best-effort (no locking)
             try {
