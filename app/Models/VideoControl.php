@@ -22,9 +22,13 @@ class VideoControl extends Model
     ];
 
     protected $casts = [
-        'is_playing' => 'boolean',
-        'is_shuffle' => 'boolean',
-        'is_sequence' => 'boolean',
+        'is_playing'       => 'boolean',
+        'is_shuffle'       => 'boolean',
+        'is_sequence'      => 'boolean',
+        'volume'           => 'integer',
+        'bell_volume'      => 'integer',
+        'current_video_id' => 'integer',
+        'organization_id'  => 'integer',
     ];
 
     public function currentVideo()
@@ -38,11 +42,29 @@ class VideoControl extends Model
         if ($organizationId) {
             $query->where('organization_id', $organizationId);
         }
-        return $query->first() ?? self::create([
-            'is_playing' => true,
-            'volume' => 50,
-            'bell_volume' => 100,
-            'organization_id' => $organizationId,
-        ]);
+
+        try {
+            $record = $query->first();
+        } catch (\Illuminate\Database\QueryException $e) {
+            // organization_id column may not exist yet (migration pending).
+            // Fall back to unscoped query so the monitor keeps working.
+            $record = self::query()->first();
+        }
+
+        if ($record) {
+            return $record;
+        }
+
+        $attributes = ['is_playing' => true, 'volume' => 50, 'bell_volume' => 100];
+        if ($organizationId) {
+            $attributes['organization_id'] = $organizationId;
+        }
+
+        try {
+            return self::create($attributes);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // organization_id column still missing — create without it.
+            return self::create(['is_playing' => true, 'volume' => 50, 'bell_volume' => 100]);
+        }
     }
 }

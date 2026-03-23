@@ -11,6 +11,15 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- PWA -->
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="QMS Monitor">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+    <link rel="shortcut icon" href="/icons/icon-96x96.png">
     
     <style>
         /* ========================================
@@ -1140,17 +1149,12 @@
                     STATE.isConnected = false;
                     updateConnectionStatus(false);
                 }
-                
-                // If 403 error, try to reload the page to get new CSRF token
-                if (error.message.includes('403')) {
-                    console.log('403 Forbidden - Will retry in 5 seconds...');
-                    setTimeout(() => {
-                        if (!STATE.isConnected) {
-                            console.log('Still disconnected, attempting page reload...');
-                            location.reload();
-                        }
-                    }, 5000);
-                }
+
+                // For any persistent error (including 403), log it.
+                // Do NOT call location.reload() — that causes an infinite reload
+                // loop when the server consistently rejects or returns an error.
+                // The reconnect logic in updateConnectionStatus handles retrying gracefully.
+                console.warn('[Monitor] Data fetch error, will retry automatically:', error.message);
             } finally {
                 STATE.isFetching = false;
             }
@@ -1861,6 +1865,29 @@
             } else {
                 section.style.display = 'none';
             }
+        }
+    </script>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                    .then(function (registration) {
+                        registration.update();
+                        registration.addEventListener('updatefound', function () {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', function () {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    console.log('[SW] New version available.');
+                                }
+                            });
+                        });
+                    })
+                    .catch(function (err) {
+                        console.warn('[SW] Registration failed:', err);
+                    });
+            });
         }
     </script>
 </body>
