@@ -1,8 +1,13 @@
 // Laravel QMS Service Worker
-const CACHE_NAME = 'laravel-qms-v1';
+const CACHE_NAME = 'laravel-qms-v2';
 const OFFLINE_URL = '/offline.html';
 
-// Assets to cache immediately
+// Assets to cache immediately on install.
+// NOTE: Only same-origin URLs are pre-cached here.
+// External CDN resources (Tailwind, Font Awesome) are intentionally excluded
+// from pre-caching because a single CDN fetch failure during install would
+// abort the entire Service Worker installation. They are served via the
+// stale-while-revalidate fetch handler below instead.
 const STATIC_CACHE_URLS = [
   '/',
   '/login',
@@ -10,9 +15,8 @@ const STATIC_CACHE_URLS = [
   '/monitor',
   '/offline.html',
   '/manifest.json',
-  // External CDN resources
-  'https://cdn.tailwindcss.com',
-  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png'
 ];
 
 // API endpoints to cache with network-first strategy
