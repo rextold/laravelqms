@@ -106,10 +106,10 @@ class MonitorController extends Controller
         // Get waiting queues grouped by counter for clearer display
         $waitingQueues = \App\Models\Queue::where('organization_id', $organization->id)
             ->where('status', 'waiting')
-            ->select(['id', 'queue_number', 'counter_id', 'updated_at'])
+            ->select(['id', 'queue_number', 'counter_id', 'created_at'])
             ->with('counter:id,counter_number,display_name')
             ->orderBy('counter_id')
-            ->orderBy('updated_at')
+            ->orderBy('created_at')
             ->limit(200)
             ->get()
             ->groupBy('counter_id')
@@ -145,11 +145,31 @@ class MonitorController extends Controller
 
         $waitingQueues = $waitingQueues->values();
 
+        // Include the live video list so the monitor JS can track add/remove without page reload
+        $videos = \App\Models\Video::where('organization_id', $organization->id)
+            ->active()
+            ->get()
+            ->map(function ($video) {
+                return [
+                    'id'                => $video->id,
+                    'title'             => $video->title,
+                    'video_type'        => $video->video_type,
+                    'file_path'         => $video->file_path,
+                    'youtube_url'       => $video->youtube_url,
+                    'youtube_embed_url' => $video->youtube_embed_url,
+                    'is_youtube'        => $video->isYoutube(),
+                    'is_file'           => $video->isFile(),
+                    'is_active'         => $video->is_active,
+                    'order'             => $video->order,
+                ];
+            });
+
         return response()->json([
             'counters' => $counterQueues,
             'video_control' => $videoControl,
             'marquee' => $marquee,
             'waiting_queues' => $waitingQueues,
+            'videos' => $videos,
         ])
             ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
             ->header('Pragma', 'no-cache')

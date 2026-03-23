@@ -942,6 +942,10 @@
         function initializeMonitor() {
             updateTime();
             setInterval(updateTime, 1000);
+
+            // Render the initial video state immediately from blade data so the
+            // player is never stuck on "No active video" while the first poll is in-flight.
+            updateVideoPlayer(STATE.videoControl);
             
             // Initialize audio element
             const audio = document.getElementById('notificationSound');
@@ -1113,7 +1117,13 @@
                 }
                 
                 const data = await response.json();
-                
+
+                // Refresh the local video list so add/remove/change in admin is
+                // reflected instantly without a monitor page reload.
+                if (Array.isArray(data.videos)) {
+                    STATE.videos = data.videos;
+                }
+
                 updateCountersDisplay(data.counters || [], data.waiting_queues || []);
                 updateVideoPlayer(data.video_control || STATE.videoControl);
                 updateMarqueeDisplay(data.marquee);
