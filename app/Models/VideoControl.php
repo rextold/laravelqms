@@ -32,12 +32,17 @@ class VideoControl extends Model
         return $this->belongsTo(Video::class, 'current_video_id');
     }
 
-    public static function getCurrent()
+    public static function getCurrent(?int $organizationId = null): self
     {
-        return self::first() ?? self::create([
+        $query = self::query();
+        if ($organizationId) {
+            $query->where('organization_id', $organizationId);
+        }
+        return $query->first() ?? self::create([
             'is_playing' => true,
             'volume' => 50,
             'bell_volume' => 100,
+            'organization_id' => $organizationId,
         ]);
     }
 }

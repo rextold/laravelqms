@@ -55,7 +55,7 @@ class VideoController extends Controller
         
         $videos = Video::where('organization_id', $organization->id)->orderBy('order')->get();
         $playlists = \App\Models\Playlist::where('organization_id', $organization->id)->orderBy('name')->get();
-        $control = VideoControl::getCurrent();
+        $control = VideoControl::getCurrent($organization->id);
         $displaySettings = DisplaySetting::getForOrganization($organization->id);
         
         // Compute effective upload limit from php.ini settings
@@ -224,6 +224,9 @@ class VideoController extends Controller
         }
     }    public function updateControl(Request $request)
     {
+        $orgCode = $request->route('organization_code');
+        $organization = \App\Models\Organization::where('organization_code', $orgCode)->firstOrFail();
+
         $validated = $request->validate([
             'is_playing' => 'required|boolean',
             'volume' => 'required|integer|min:0|max:100',
@@ -231,7 +234,14 @@ class VideoController extends Controller
             'current_video_id' => 'nullable|exists:videos,id',
         ]);
 
-        $control = VideoControl::getCurrent();
+        // Ensure the referenced video belongs to this organization (prevents cross-org injection)
+        if (!empty($validated['current_video_id'])) {
+            Video::where('id', $validated['current_video_id'])
+                ->where('organization_id', $organization->id)
+                ->firstOrFail();
+        }
+
+        $control = VideoControl::getCurrent($organization->id);
         $control->update($validated);
 
         return response()->json(['success' => true]);
@@ -254,7 +264,7 @@ class VideoController extends Controller
                      ->where('organization_id', $organization->id)
                      ->firstOrFail();
 
-        $control = VideoControl::getCurrent();
+        $control = VideoControl::getCurrent($organization->id);
         $control->update([
             'current_video_id' => $video->id,
             'is_playing' => true, // Auto-start when manually selected
@@ -288,7 +298,9 @@ class VideoController extends Controller
                 'bell_sound' => 'required|mimes:mp3,wav,ogg|max:2048', // 2MB max (limited by PHP ini)
             ]);
 
-            $control = VideoControl::getCurrent();
+            $orgCode = $request->route('organization_code');
+            $organization = \App\Models\Organization::where('organization_code', $orgCode)->firstOrFail();
+            $control = VideoControl::getCurrent($organization->id);
 
             // Delete old custom bell sound if exists
             if ($control->bell_sound_path) {
@@ -322,9 +334,11 @@ class VideoController extends Controller
         }
     }
 
-    public function resetBellSound()
+    public function resetBellSound(Request $request)
     {
-        $control = VideoControl::getCurrent();
+        $orgCode = $request->route('organization_code');
+        $organization = \App\Models\Organization::where('organization_code', $orgCode)->firstOrFail();
+        $control = VideoControl::getCurrent($organization->id);
 
         // Delete custom bell sound if exists
         if ($control->bell_sound_path) {
@@ -355,7 +369,7 @@ class VideoController extends Controller
             ->get();
         
         // Get now playing video with eager load
-        $control = VideoControl::getCurrent();
+        $control = VideoControl::getCurrent($organization->id);
         $nowPlaying = null;
         if ($control->current_video_id) {
             $nowPlaying = Video::select('id', 'title', 'video_type', 'file_path', 'youtube_url')
@@ -474,7 +488,9 @@ class VideoController extends Controller
             'is_sequence' => 'nullable|boolean',
         ]);
 
-        $control = VideoControl::getCurrent();
+        $orgCode = $request->route('organization_code');
+        $organization = \App\Models\Organization::where('organization_code', $orgCode)->firstOrFail();
+        $control = VideoControl::getCurrent($organization->id);
         
         if (isset($validated['repeat_mode'])) {
             $control->repeat_mode = $validated['repeat_mode'];
@@ -588,7 +604,7 @@ class VideoController extends Controller
                       ->orderBy('order')
                       ->get();
         
-        $control = VideoControl::getCurrent();
+        $control = VideoControl::getCurrent($organization->id);
         $displaySettings = DisplaySetting::getForOrganization($organization->id);
 
         return view('admin.videos.preview', compact('videos', 'control', 'displaySettings', 'organization'));

@@ -115,7 +115,7 @@ class User extends Authenticatable
     {
         return $this->queues()
             ->where('status', 'waiting')
-            ->orderBy('updated_at')
+            ->orderBy('created_at')
             ->get();
     }
 

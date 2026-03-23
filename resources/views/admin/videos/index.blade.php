@@ -947,18 +947,23 @@ function removeFromPlaylist(videoId) {
 function clearPlaylist() {
     if (!confirm('Clear all videos from the queue?')) return;
     
-    currentPlaylist.forEach(item => {
+    const removals = currentPlaylist.map(item =>
         fetch(`/${orgCode}/admin/playlist/remove`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
             body: JSON.stringify({ video_id: item.video_id })
-        });
-    });
+        })
+    );
     
-    setTimeout(() => {
-        loadPlaylist();
-        showToast('Queue cleared', 'success');
-    }, 500);
+    Promise.all(removals)
+        .then(() => {
+            loadPlaylist();
+            showToast('Queue cleared', 'success');
+        })
+        .catch(() => {
+            loadPlaylist();
+            showToast('Some items may not have been removed', 'error');
+        });
 }
 
 function playNow(videoId) {

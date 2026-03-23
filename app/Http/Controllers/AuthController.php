@@ -66,6 +66,9 @@ class AuthController extends Controller
                 }
             }
 
+            // Regenerate session AFTER auth check succeeds (must happen before saving session_id)
+            $request->session()->regenerate();
+
             // For counter users, prevent multiple simultaneous logins
             if ($user->isCounter()) {
                 // Check if this counter is already logged in from another session
@@ -81,12 +84,9 @@ class AuthController extends Controller
                     ]);
                 }
                 
-                // Update the session_id for this counter
+                // Update the session_id for this counter (after regeneration so ID is stable)
                 $user->update(['session_id' => session()->getId()]);
             }
-
-            // Regenerate session AFTER auth check succeeds
-            $request->session()->regenerate();
             
             // Ensure CSRF token is available
             if (!$request->session()->has('_token')) {
