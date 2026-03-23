@@ -987,6 +987,44 @@
 
     </div>
     
+    <!-- Sound Activation Overlay — shown on first load, dismissed with one tap.
+         Browsers require a user gesture before audio can play (autoplay policy).
+         This overlay IS that gesture — clicking it unlocks audio for the entire session. -->
+    <div id="soundActivationOverlay" style="
+        position: fixed; inset: 0; z-index: 99999;
+        background: linear-gradient(135deg, rgba(0,0,0,0.92) 0%, rgba(15,23,42,0.97) 100%);
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        cursor: pointer; user-select: none;
+        backdrop-filter: blur(6px);
+        animation: overlayFadeIn 0.4s ease;
+    " onclick="activateSoundAndDismiss()">
+        <div style="text-align: center; padding: 2rem; max-width: 480px;">
+            <div style="font-size: 5rem; margin-bottom: 1.5rem; animation: pulse 2s infinite;">🔔</div>
+            <h2 style="color: #fff; font-size: 2rem; font-weight: 800; margin-bottom: 0.75rem; letter-spacing: -0.02em;">
+                Tap to Start Monitor
+            </h2>
+            <p style="color: rgba(255,255,255,0.7); font-size: 1.1rem; margin-bottom: 2rem; line-height: 1.5;">
+                Sound notifications will play automatically<br>when a queue number is called.
+            </p>
+            <div style="
+                background: #3b82f6; color: #fff;
+                padding: 1rem 3rem; border-radius: 50px;
+                font-size: 1.15rem; font-weight: 700;
+                box-shadow: 0 0 30px rgba(59,130,246,0.5);
+                animation: glow 2s ease-in-out infinite alternate;
+            ">
+                <i class="fas fa-volume-up" style="margin-right: 0.6rem;"></i> Enable Sound &amp; Start
+            </div>
+            <p style="color: rgba(255,255,255,0.35); font-size: 0.8rem; margin-top: 1.5rem;">
+                Tap anywhere on this screen to continue
+            </p>
+        </div>
+    </div>
+    <style>
+        @keyframes overlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes glow { from { box-shadow: 0 0 20px rgba(59,130,246,0.4); } to { box-shadow: 0 0 40px rgba(59,130,246,0.8); } }
+    </style>
+
     <!-- Notification Sound - Uses uploaded custom bell or default -->
     <audio id="notificationSound" preload="auto" crossorigin="anonymous">
         @if($videoControl && $videoControl->bell_sound_path)
@@ -1133,20 +1171,23 @@
         // INITIALIZATION
         // ========================================
         
+        function activateSoundAndDismiss() {
+            // This function is called from the overlay click — it IS the user gesture.
+            // Unlock the audio element immediately, then hide the overlay.
+            unlockAudio();
+            const overlay = document.getElementById('soundActivationOverlay');
+            if (overlay) {
+                overlay.style.transition = 'opacity 0.3s ease';
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.remove(), 350);
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             initializeMonitor();
             initializeMarquee();
             startRefreshCycle();
             setupEventListeners();
-            
-            // Show audio unlock prompt after 2 seconds if audio hasn't been unlocked
-            setTimeout(() => {
-                const audio = document.getElementById('notificationSound');
-                if (audio && audio.paused) {
-                    console.log('💡 Audio not yet unlocked - showing prompt');
-                    updateAudioStatus('blocked');
-                }
-            }, 2000);
         });
         
         function initializeMonitor() {
