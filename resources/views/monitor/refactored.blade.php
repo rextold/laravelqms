@@ -935,18 +935,6 @@
                 <span class="status-dot" id="statusDot"></span>
                 <span id="statusText">Connected</span>
             </div>
-            
-            <!-- Audio Status Indicator (for debugging) -->
-            <div style="position: fixed; bottom: 10px; left: 10px; display: flex; gap: 8px; z-index: 1000;">
-                <div class="audio-status" id="audioStatus" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(10px); padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; display: flex; align-items: center; gap: 8px; border: 1px solid rgba(255, 255, 255, 0.1); cursor: pointer;" onclick="testNotificationSound()">
-                    <i class="fas fa-volume-up"></i>
-                    <span>Test Bell</span>
-                </div>
-                <div style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(10px); padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; display: flex; align-items: center; gap: 8px; border: 1px solid rgba(255, 255, 255, 0.1); cursor: pointer;" onclick="testVoiceAnnouncement()">
-                    <i class="fas fa-microphone"></i>
-                    <span>Test Voice</span>
-                </div>
-            </div>
         </div>
         
         <!-- Video Player -->
