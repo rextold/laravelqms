@@ -584,12 +584,8 @@
             border: 1px solid transparent;
         }
 
-        /* Alternating pill colors — semi-transparent background + matching border for dark monitor theme */
-        .waiting-queue-number.alt-0 { color: #fde68a; background: rgba(251,191,36,0.14); border-color: rgba(251,191,36,0.35); }  /* amber  */
-        .waiting-queue-number.alt-1 { color: #93c5fd; background: rgba(96,165,250,0.14); border-color: rgba(96,165,250,0.35); }  /* blue   */
-        .waiting-queue-number.alt-2 { color: #6ee7b7; background: rgba(52,211,153,0.14); border-color: rgba(52,211,153,0.35); }  /* emerald */
-        .waiting-queue-number.alt-3 { color: #fca5a5; background: rgba(248,113,113,0.14); border-color: rgba(248,113,113,0.35); } /* rose   */
-        .waiting-queue-number.alt-4 { color: #c4b5fd; background: rgba(167,139,250,0.14); border-color: rgba(167,139,250,0.35); } /* violet */
+        /* Uniform neutral pill — all queue numbers share the same subtle white tint */
+        .waiting-queue-number { color: rgba(255,255,255,0.9); background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.18); }
 
         /* ========================================
            WAITING QUEUE — COMPACT BOTTOM STRIP
@@ -1696,7 +1692,7 @@
                     <div class="waiting-row">
                         <div class="waiting-counter-label">${counterName}:</div>
                         <div class="waiting-queue-numbers">
-                            ${group.queues.map((q, i) => `<span class="waiting-queue-number alt-${i % 5}">${q.queue_number}</span>`).join('')}
+                            ${group.queues.map(q => `<span class="waiting-queue-number">${q.queue_number}</span>`).join('')}
                         </div>
                     </div>
                 `;
