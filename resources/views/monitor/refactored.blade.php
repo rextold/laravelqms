@@ -626,23 +626,43 @@
             letter-spacing: 0.07em;
         }
 
-        /* Scrollable horizontal row of queue entries */
+        /* Scrollable horizontal row of queue entries.
+           overflow-x is removed — content is paged/batched by JS instead of scrolled.
+           opacity transition enables the fade-in/out batch swap animation. */
         .waiting-queue-section .queue-card-content {
             flex: 1;
             display: flex;
             flex-direction: row;
             flex-wrap: nowrap;
-            overflow-x: auto;
-            overflow-y: hidden;
+            overflow: hidden;
             align-items: center;
             height: 60px;
             padding: 0 0.25rem;
-            scrollbar-width: none;
-            -ms-overflow-style: none;
+            transition: opacity 0.4s ease;
         }
 
         .waiting-queue-section .queue-card-content::-webkit-scrollbar {
             display: none;
+        }
+
+        /* Batch page dot indicators — rendered inside the left header strip */
+        .waiting-batch-dots {
+            display: flex;
+            flex-direction: row;
+            gap: 4px;
+            align-items: center;
+            justify-content: center;
+            margin-top: 2px;
+        }
+        .waiting-batch-dots span {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: rgba(245, 158, 11, 0.25);
+            transition: background 0.3s ease;
+        }
+        .waiting-batch-dots span.active {
+            background: #f59e0b;
         }
 
         /* Each counter entry is an inline non-wrapping row */
@@ -976,6 +996,10 @@
                         <i class="fas fa-users"></i>
                     </div>
                     <div class="queue-card-title waiting">Waiting Queue</div>
+                    <!-- Batch page dots — shown only when there are multiple pages -->
+                    <div class="waiting-batch-dots" id="waitingBatchDots" style="display:none;"></div>
+                </div>
+                    <div class="queue-card-title waiting">Waiting Queue</div>
                 </div>
                 <div class="queue-card-content" id="waitingList">
                     <div class="empty-state">
@@ -1080,6 +1104,10 @@
             ytAudioUnlocked: false,    // true after first user interaction → can unmute YouTube
             lastVolume: -1,            // last volume sent to ytPlayer (avoid redundant calls)
             pendingYouTubeLoad: null,  // { ytId, videoControl } queued before player is ready
+            // Waiting queue batch rotation
+            allWaitingGroups: [],      // full list of counter groups with waiting queues
+            waitingBatchIndex: 0,      // current page (0-based)
+            waitingBatchTimer: null,   // setInterval handle for batch auto-rotation
             // Pre-populated from server-side render — same shape as getData() returns.
             // Used to fill the counter/queue panels immediately on page load.
             initialCounters: @json($initialCounterData ?? []),
@@ -1586,13 +1614,30 @@
             servingList.innerHTML = html;
         }
         
+        // ── Waiting queue batch configuration ─────────────────────────────────
+        // How many counter groups to show per page of the waiting strip.
+        // On a typical full-HD TV, 5 groups fit comfortably without crowding.
+        const WAITING_BATCH_SIZE = 5;
+        // How long each page is displayed before fading to the next (ms).
+        const WAITING_BATCH_INTERVAL = 5000;
+
         function updateWaitingQueues(waitingGroups) {
             const waitingList = document.getElementById('waitingList');
-            
-            // Only show counters that have waiting queues
+            const dotsEl      = document.getElementById('waitingBatchDots');
             const groups = waitingGroups.filter(g => g.queues && g.queues.length > 0);
-            
+
+            // Store latest data so the timer can always reference it
+            STATE.allWaitingGroups = groups;
+
             if (groups.length === 0) {
+                // Stop any running rotation timer
+                if (STATE.waitingBatchTimer) {
+                    clearInterval(STATE.waitingBatchTimer);
+                    STATE.waitingBatchTimer = null;
+                }
+                STATE.waitingBatchIndex = 0;
+                if (dotsEl) dotsEl.style.display = 'none';
+                waitingList.style.opacity = '1';
                 waitingList.innerHTML = `
                     <div class="empty-state">
                         <i class="fas fa-inbox"></i>
@@ -1601,12 +1646,52 @@
                 `;
                 return;
             }
-            
-            // Compact format: Counter 1: 0001 0002 0003 0004
-            const html = groups.map(group => {
+
+            const totalBatches = Math.ceil(groups.length / WAITING_BATCH_SIZE);
+
+            // Clamp index in case groups shrank between polls
+            if (STATE.waitingBatchIndex >= totalBatches) STATE.waitingBatchIndex = 0;
+
+            // Render the current page immediately (no fade — data just refreshed)
+            _renderWaitingPage(groups, STATE.waitingBatchIndex, totalBatches);
+
+            if (totalBatches <= 1) {
+                // Single page — no need for rotation
+                if (STATE.waitingBatchTimer) {
+                    clearInterval(STATE.waitingBatchTimer);
+                    STATE.waitingBatchTimer = null;
+                }
+                if (dotsEl) dotsEl.style.display = 'none';
+                return;
+            }
+
+            // Multiple pages — start rotation timer if not already running
+            if (!STATE.waitingBatchTimer) {
+                STATE.waitingBatchTimer = setInterval(() => {
+                    const all   = STATE.allWaitingGroups;
+                    if (!all.length) return;
+                    const total = Math.ceil(all.length / WAITING_BATCH_SIZE);
+                    STATE.waitingBatchIndex = (STATE.waitingBatchIndex + 1) % total;
+
+                    // Fade out → swap content → fade in
+                    waitingList.style.opacity = '0';
+                    setTimeout(() => {
+                        _renderWaitingPage(all, STATE.waitingBatchIndex, total);
+                        waitingList.style.opacity = '1';
+                    }, 420); // slightly longer than transition (0.4s)
+                }, WAITING_BATCH_INTERVAL);
+            }
+        }
+
+        // Render one page of the waiting strip + update dot indicators.
+        function _renderWaitingPage(groups, pageIndex, totalPages) {
+            const waitingList = document.getElementById('waitingList');
+            const dotsEl      = document.getElementById('waitingBatchDots');
+
+            const batch = groups.slice(pageIndex * WAITING_BATCH_SIZE, (pageIndex + 1) * WAITING_BATCH_SIZE);
+
+            const html = batch.map(group => {
                 const counterName = group.display_name || `Counter ${group.counter_number}`;
-                const queueNumbers = group.queues.map(q => q.queue_number).join('   ');
-                
                 return `
                     <div class="waiting-row">
                         <div class="waiting-counter-label">${counterName}:</div>
@@ -1616,8 +1701,20 @@
                     </div>
                 `;
             }).join('');
-            
+
             waitingList.innerHTML = html;
+
+            // Update dot indicators
+            if (dotsEl) {
+                if (totalPages > 1) {
+                    dotsEl.style.display = 'flex';
+                    dotsEl.innerHTML = Array.from({ length: totalPages }, (_, i) =>
+                        `<span class="${i === pageIndex ? 'active' : ''}"></span>`
+                    ).join('');
+                } else {
+                    dotsEl.style.display = 'none';
+                }
+            }
         }
         
         function detectAlerts(servingCounters) {
