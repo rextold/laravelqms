@@ -296,20 +296,19 @@
         
         /* Connection Status - Bottom Left */
         .connection-status {
-            position: fixed;
-            bottom: 10px;
-            left: 10px;
-            background: rgba(0, 0, 0, 0.7);
+            /* Sits inside the header — no fixed positioning so it never
+               overlaps the waiting list strip or other content. */
+            background: rgba(0, 0, 0, 0.35);
             backdrop-filter: blur(10px);
-            padding: 6px 12px;
+            padding: 5px 10px;
             border-radius: 20px;
-            font-size: 0.75rem;
+            font-size: 0.72rem;
             font-weight: 600;
             display: flex;
             align-items: center;
-            gap: 8px;
-            z-index: 1000;
+            gap: 6px;
             border: 1px solid rgba(255, 255, 255, 0.1);
+            flex-shrink: 0;
         }
         
         .status-dot {
