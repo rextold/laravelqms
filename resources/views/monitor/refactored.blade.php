@@ -1086,8 +1086,11 @@
             ytCurrentVideoId: null,    // YouTube video ID string loaded in player (not our DB id)
             ytAudioUnlocked: false,    // true after first user interaction → can unmute YouTube
             lastVolume: -1,            // last volume sent to ytPlayer (avoid redundant calls)
-            pendingYouTubeLoad: null,  // { ytId, videoControl } queued before player is ready
-            // Waiting queue batch rotation
+            // Watchdog timer: poll getPlayerState() as a fallback for the
+            // onStateChange(ENDED) event, which is suppressed on many browsers
+            // when controls=0 or when a video has YouTube end-screens.
+            // Cleared whenever a definitive state (ENDED/PAUSED/UNSTARTED) fires.
+            ytEndedWatchdog: null,
             allWaitingGroups: [],      // full list of counter groups with waiting queues
             waitingBatchIndex: 0,      // current page (0-based)
             waitingBatchTimer: null,   // setInterval handle for batch auto-rotation
@@ -2208,15 +2211,54 @@
                         }
                     },
                     onStateChange: function (event) {
-                        if (event.data === YT.PlayerState.ENDED) {
-                            advancePlaylist();
+                        // Clear any pending watchdog on every state change.
+                        if (STATE.ytEndedWatchdog) {
+                            clearTimeout(STATE.ytEndedWatchdog);
+                            STATE.ytEndedWatchdog = null;
                         }
+
+                        if (event.data === YT.PlayerState.ENDED) {
+                            // Primary path — event fired reliably.
+                            advancePlaylist();
+                        } else if (event.data === YT.PlayerState.PLAYING) {
+                            // Watchdog: if the player stops reporting state changes
+                            // (e.g. YouTube end-screen overlay suppresses ENDED),
+                            // poll getPlayerState() after a timeout.
+                            // Duration is checked via getPlayerState() polling every 3 s.
+                            _startYtEndedWatchdog();
+                        }
+                        // PAUSED(2) / BUFFERING(3) / CUED(5): watchdog already cleared above.
                     },
                     onError: function (event) {
                         console.error('[YouTube] Player error:', event.data);
                     }
                 }
             });
+        }
+
+        /**
+         * Watchdog for YouTube ENDED detection.
+         * Some browsers / YouTube videos suppress onStateChange(ENDED) when
+         * controls=0 is set or when the video has end-screens. This function
+         * polls getPlayerState() every 3 s while the player is in PLAYING state.
+         * If it finds ENDED(0) it triggers advancePlaylist() as a fallback.
+         */
+        function _startYtEndedWatchdog() {
+            if (STATE.ytEndedWatchdog) return; // already running
+            STATE.ytEndedWatchdog = setInterval(() => {
+                if (!STATE.ytPlayer || !STATE.ytPlayerReady) return;
+                const ps = STATE.ytPlayer.getPlayerState();
+                if (ps === 0) { // ENDED
+                    clearInterval(STATE.ytEndedWatchdog);
+                    STATE.ytEndedWatchdog = null;
+                    console.log('[YouTube] Watchdog detected ENDED — advancing playlist.');
+                    advancePlaylist();
+                } else if (ps !== 1 && ps !== 3) {
+                    // Not PLAYING or BUFFERING — stop polling (paused, cued, unstarted)
+                    clearInterval(STATE.ytEndedWatchdog);
+                    STATE.ytEndedWatchdog = null;
+                }
+            }, 3000);
         }
 
         /**
@@ -2289,6 +2331,11 @@
                 if (STATE.ytPlayer && STATE.ytPlayerReady) {
                     // Pause instead of destroy — keeps the player alive for next use.
                     try { STATE.ytPlayer.pauseVideo(); } catch (e) {}
+                }
+                // Stop the ended watchdog — no point polling a hidden player.
+                if (STATE.ytEndedWatchdog) {
+                    clearInterval(STATE.ytEndedWatchdog);
+                    STATE.ytEndedWatchdog = null;
                 }
                 STATE.ytCurrentVideoId = null;
             }
@@ -2363,7 +2410,11 @@
                 return;
             }
 
-            const multipleVideos = STATE.videos.length > 1;
+            // Use the PLAYLIST order length (not the full library) to decide whether
+            // to loop vs advance. If only 1 video is in the queue, it should loop
+            // regardless of how many videos exist in the library.
+            const effectiveOrder  = STATE.playlistOrder.length > 0 ? STATE.playlistOrder : STATE.videos.map(v => v.id);
+            const multipleVideos  = effectiveOrder.length > 1;
 
             // ════════════════════════════════════════════════════════════════════
             // YOUTUBE PATH — persistent player, loadVideoById for instant switch
@@ -2424,6 +2475,12 @@
                     if (!videoControl.is_playing) {
                         existing.pause();
                     } else if (existing.paused) {
+                        // Re-attach the ended listener in case it was consumed by { once: true }
+                        // on the previous cycle through a multi-video playlist.
+                        if (multipleVideos) {
+                            existing.removeEventListener('ended', advancePlaylist);
+                            existing.addEventListener('ended', advancePlaylist, { once: true });
+                        }
                         existing.play().catch(() => {});
                     }
                 } else {
