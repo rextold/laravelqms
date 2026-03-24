@@ -443,13 +443,10 @@ html, body { overflow-x: hidden; }
         
         // Skipped list
         const skippedList = document.getElementById('skippedList');
-        const hasCurrentQueue = !!state.currentQueue;
         skippedList.innerHTML = state.skippedQueues.map(q => `
             <div class="queue-item bg-orange-50">
                 <span class="text-lg font-bold text-orange-700">${formatQueueNumber(q.queue_number)}</span>
-                <button onclick="window.counterActions.recall(${q.id})"
-                    class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
-                    ${hasCurrentQueue ? 'disabled title="Complete or skip the current queue first"' : ''}>Recall</button>
+                <button onclick="window.counterActions.recall(${q.id})" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">Recall</button>
             </div>
         `).join('') || '<p class="text-gray-500 text-center py-4">No skipped queues</p>';
         
